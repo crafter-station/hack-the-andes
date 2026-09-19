@@ -6,6 +6,103 @@ import {
 } from "./admin/roles";
 import { HttpError } from "./registration/http";
 
+export const retiredCliOAuthClientId = "1YfuXKgOXkdH094s";
+export const retiredClerkIssuer = "https://close-newt-8265.clerk.accounts.dev";
+
+export const legacyCliAuthenticationMessage =
+  "This CLI is signed in to a retired Clerk application. Update with `chofex update` or `npm install --global chofex-cli@latest`, then run `chofex logout` and `chofex login`.";
+
+const normalizeIssuer = (value: string): string => value.replace(/\/+$/, "");
+
+const decodeBase64UrlJson = (value: string): unknown => {
+  try {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+    const pad =
+      padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    return JSON.parse(atob(`${padded}${pad}`)) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+export const unverifiedBearerJwtClaims = (
+  authorization: string | null,
+): { readonly issuer?: string; readonly clientId?: string } | undefined => {
+  if (!authorization) return;
+  const match = /^Bearer\s+(\S+)$/i.exec(authorization.trim());
+  if (!match) return;
+  const token = match[1] ?? "";
+  const payloadSegment = token.split(".")[1];
+  if (!payloadSegment) return;
+  const payload = decodeBase64UrlJson(payloadSegment);
+  if (!payload || typeof payload !== "object") return;
+
+  const record = payload as Record<string, unknown>;
+  let issuer: string | undefined;
+  if (typeof record.iss === "string" && record.iss.length > 0) {
+    issuer = record.iss;
+  }
+  let clientId: string | undefined;
+  if (typeof record.azp === "string" && record.azp.length > 0) {
+    clientId = record.azp;
+  } else if (
+    typeof record.client_id === "string" &&
+    record.client_id.length > 0
+  ) {
+    clientId = record.client_id;
+  }
+  if (!issuer && !clientId) return;
+  return { issuer, clientId };
+};
+
+export const isLegacyCliCredential = (
+  authorization: string | null,
+  currentIssuer = process.env.CLERK_OAUTH_ISSUER,
+  currentClientId = process.env.CLERK_CLI_OAUTH_CLIENT_ID,
+): boolean => {
+  const claims = unverifiedBearerJwtClaims(authorization);
+  if (!claims) return false;
+  if (claims.clientId === retiredCliOAuthClientId) return true;
+  if (
+    claims.issuer &&
+    normalizeIssuer(claims.issuer) === normalizeIssuer(retiredClerkIssuer)
+  ) {
+    return true;
+  }
+  if (
+    currentIssuer &&
+    claims.issuer &&
+    normalizeIssuer(claims.issuer) !== normalizeIssuer(currentIssuer)
+  ) {
+    return true;
+  }
+  if (
+    currentClientId &&
+    claims.clientId &&
+    claims.clientId !== currentClientId
+  ) {
+    return true;
+  }
+  return false;
+};
+
+export const authenticationFailureMessage = (
+  request: Request,
+  currentIssuer = process.env.CLERK_OAUTH_ISSUER,
+  currentClientId = process.env.CLERK_CLI_OAUTH_CLIENT_ID,
+): string => {
+  if (
+    isLegacyCliCredential(
+      request.headers.get("authorization"),
+      currentIssuer,
+      currentClientId,
+    )
+  ) {
+    return legacyCliAuthenticationMessage;
+  }
+  return "Authentication failed";
+};
+
 export interface AuthenticatedParticipant {
   readonly clerkUserId: string;
   readonly tokenType: "oauth_token" | "session_token";
@@ -100,7 +197,7 @@ export const requireAuthenticatedParticipant = async (
     throw new HttpError(
       401,
       "AUTHENTICATION_REQUIRED",
-      "Authentication failed",
+      authenticationFailureMessage(request),
     );
   }
   return authentication;

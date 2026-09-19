@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { Effect } from "effect";
 
 import {
+  authenticationRecoveryMessage,
   beginPictureUpload,
   completePictureUpload,
   getBadge,
@@ -165,6 +166,43 @@ describe("registration API client", () => {
 
     expect(error.code).toBe("REGISTRATION_NOT_FOUND");
     expect(error.requestId).toBe("request-456");
+  });
+
+  test("explains how to recover from a post-login authentication rejection", async () => {
+    expect(
+      authenticationRecoveryMessage(
+        "AUTHENTICATION_REQUIRED",
+        "Authentication failed",
+      ),
+    ).toContain("chofex update");
+
+    globalThis.fetch = async () =>
+      Response.json(
+        {
+          version: 1,
+          ok: false,
+          requestId: "request-auth-failed",
+          error: {
+            code: "AUTHENTICATION_REQUIRED",
+            message: "Authentication failed",
+            retryable: false,
+          },
+        },
+        { status: 401 },
+      );
+
+    const error = await Effect.runPromise(
+      Effect.flip(
+        getCurrentUser({
+          apiUrl: "https://hack.example",
+          token: "oauth-token",
+        }),
+      ),
+    );
+
+    expect(error.code).toBe("AUTHENTICATION_REQUIRED");
+    expect(error.requestId).toBe("request-auth-failed");
+    expect(error.message).toContain("chofex logout");
   });
 
   test("ignores additive fields in a v1 response", async () => {

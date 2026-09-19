@@ -36,6 +36,15 @@ import { Effect, Result, Schema } from "effect";
 import { authentication, type Credentials } from "./auth.js";
 import { type CliError, cliError } from "./errors.js";
 
+export const authenticationRecoveryMessage = (
+  code: string,
+  message: string,
+): string => {
+  if (code !== "AUTHENTICATION_REQUIRED") return message;
+  if (message !== "Authentication failed") return message;
+  return `${message}. If login just succeeded, update the CLI with \`chofex update\` or \`npm install --global chofex-cli@latest\`, then run \`chofex logout\` and \`chofex login\`.`;
+};
+
 export interface ApiClientOptions {
   readonly apiUrl: string;
   readonly campaignAttribution?: CampaignAttributionHandoff;
@@ -115,7 +124,10 @@ const decodeHttpBody = Effect.fn("decodeHttpBody")(function* <A, R>(
     if (Result.isSuccess(failure)) {
       return yield* cliError(
         failure.success.error.code,
-        failure.success.error.message,
+        authenticationRecoveryMessage(
+          failure.success.error.code,
+          failure.success.error.message,
+        ),
         failure.success.error.retryable,
         failure.success.error.details,
         failure.success.requestId,

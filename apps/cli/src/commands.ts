@@ -282,17 +282,27 @@ const loginCommand = Command.make(
         try: () => oauthLogin(),
         catch: (error) => cliError("LOGIN_FAILED", String(error)),
       });
-      yield* getCurrentUser({ apiUrl: options.apiUrl, token }).pipe(
-        Effect.catch(() => Effect.succeed(undefined)),
-      );
+      const currentUser = yield* getCurrentUser({
+        apiUrl: options.apiUrl,
+        token,
+      });
+      const environmentTokenActive = Boolean(process.env.CHOFEX_TOKEN);
       return {
         version: 1 as const,
         ok: true as const,
-        requestId: crypto.randomUUID(),
-        data: { authenticated: true as const },
+        requestId: currentUser.requestId,
+        data: {
+          authenticated: true as const,
+          environmentTokenActive,
+        },
       };
     });
-    yield* execute(options.output, operation, () => "Signed in successfully.");
+    yield* execute(options.output, operation, (result) => {
+      if (result.environmentTokenActive) {
+        return "Signed in successfully. CHOFEX_TOKEN is set and will override the stored session; unset it before running other commands.";
+      }
+      return "Signed in successfully.";
+    });
   }),
 ).pipe(Command.withDescription("Sign in through Clerk OAuth in your browser"));
 
