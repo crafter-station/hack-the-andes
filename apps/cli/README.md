@@ -101,11 +101,14 @@ chofex --output json whoami
 ```
 
 Versions before `0.1.140` used a retired API origin whose cross-origin redirect
-removed the bearer token. Current releases call `https://hacktheandes.com`
-directly. If the API still responds with `Authentication failed`, share the CLI
-version, error code, and request ID when asking for support. For a different
-local authentication error, share its code and message instead. Never share the
-access or refresh token.
+removed the bearer token. Versions `0.1.140` through `0.1.145` call
+`https://hacktheandes.com` but still mint OAuth tokens from the retired Clerk
+application, so login can print success while `whoami` and `status` return
+`AUTHENTICATION_REQUIRED`. Current releases (`0.1.146` and later) use
+`https://clerk.hacktheandes.com`. If the API still responds with
+`Authentication failed` after updating, share the CLI version, error code, and
+request ID when asking for support. For a different local authentication error,
+share its code and message instead. Never share the access or refresh token.
 
 When applying again after a rejection, interactive registration pre-fills the
 previous application's answers. Keep a value by pressing Enter, or press Ctrl+U

@@ -27,6 +27,22 @@ describe("registration HTTP boundary", () => {
     });
   });
 
+  test("advertises the public origin when the process is bound to 0.0.0.0", async () => {
+    const request = new Request("https://0.0.0.0:3000/api/v1/registration", {
+      headers: {
+        "x-forwarded-host": "hacktheandes.com",
+        "x-forwarded-proto": "https",
+      },
+    });
+    const response = await withApiHandler(request, () => {
+      throw new HttpError(401, "AUTHENTICATION_REQUIRED", "Sign in first");
+    });
+
+    expect(response.headers.get("www-authenticate")).toBe(
+      'Bearer resource_metadata="https://hacktheandes.com/.well-known/oauth-protected-resource"',
+    );
+  });
+
   test("returns structured errors and OAuth discovery on 401", async () => {
     const request = new Request("https://hack.example/api/v1/registration", {
       headers: { "x-request-id": "request-123" },

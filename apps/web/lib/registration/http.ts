@@ -1,5 +1,7 @@
 import type { ApiFailure, ApiSuccess } from "@chofex/registration-contract";
 
+import { publicRequestOrigin } from "../public-origin";
+
 export class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -53,7 +55,7 @@ const jsonFailure = (
   };
   const headers: Record<string, string> = { ...responseHeaders };
   if (error.status === 401) {
-    const origin = new URL(request.url).origin;
+    const origin = publicRequestOrigin(request);
     headers["www-authenticate"] =
       `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource"`;
   }
