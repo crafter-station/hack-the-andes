@@ -159,14 +159,23 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
   decodeResponse: (input: unknown) => Effect.Effect<ApiSuccess<A>, unknown, R>,
 ): Effect.fn.Return<ApiSuccess<A>, CliError, R> {
   const suppliedToken = options.token ?? process.env.CHOFEX_TOKEN;
-  let credentials = yield* resolveAuthentication(
+  const credentials = yield* resolveAuthentication(
     suppliedToken,
     options.campaignAttribution,
   );
   let response = yield* sendRequest(options, path, init, credentials);
   if (response.status === 401 && !suppliedToken) {
-    credentials = yield* resolveAuthentication(undefined, undefined, true);
-    response = yield* sendRequest(options, path, init, credentials);
+    const refreshed = yield* resolveAuthentication(
+      undefined,
+      undefined,
+      true,
+    ).pipe(
+      Effect.map((value) => ({ ok: true as const, value })),
+      Effect.catch(() => Effect.succeed({ ok: false as const })),
+    );
+    if (refreshed.ok) {
+      response = yield* sendRequest(options, path, init, refreshed.value);
+    }
   }
   return yield* decodeHttpBody(response, decodeResponse);
 });

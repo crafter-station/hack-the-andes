@@ -9,17 +9,30 @@ const firstForwardedValue = (value: string | null): string | undefined => {
   return candidate;
 };
 
+const hostnameFromAuthority = (authority: string): string | undefined => {
+  try {
+    return new URL(`http://${authority}`).hostname;
+  } catch {
+    try {
+      return new URL(`http://[${authority}]`).hostname;
+    } catch {
+      return undefined;
+    }
+  }
+};
+
 export const publicRequestOrigin = (request: Request): string => {
   const forwardedHost = firstForwardedValue(
     request.headers.get("x-forwarded-host"),
   );
-  if (
-    forwardedHost &&
-    !isUnroutableHostname(forwardedHost.split(":")[0] ?? "")
-  ) {
-    const forwardedProto =
-      firstForwardedValue(request.headers.get("x-forwarded-proto")) ?? "https";
-    return `${forwardedProto}://${forwardedHost}`;
+  if (forwardedHost) {
+    const forwardedHostname = hostnameFromAuthority(forwardedHost);
+    if (forwardedHostname && !isUnroutableHostname(forwardedHostname)) {
+      const forwardedProto =
+        firstForwardedValue(request.headers.get("x-forwarded-proto")) ??
+        "https";
+      return `${forwardedProto}://${forwardedHost}`;
+    }
   }
 
   const origin = new URL(request.url).origin;

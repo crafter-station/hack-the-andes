@@ -162,13 +162,7 @@ describe("legacy CLI credential detection", () => {
       azp: retiredCliOAuthClientId,
     });
 
-    expect(
-      isLegacyCliCredential(
-        `Bearer ${token}`,
-        "https://clerk.hacktheandes.com",
-        "HddO78wKpq5PFIEl",
-      ),
-    ).toBe(true);
+    expect(isLegacyCliCredential(`Bearer ${token}`)).toBe(true);
   });
 
   test("does not treat current Clerk tokens as legacy", () => {
@@ -177,13 +171,23 @@ describe("legacy CLI credential detection", () => {
       azp: "HddO78wKpq5PFIEl",
     });
 
+    expect(isLegacyCliCredential(`Bearer ${token}`)).toBe(false);
+  });
+
+  test("does not treat rejected browser sessions as a retired CLI", () => {
+    const token = unsignedJwt({
+      iss: "https://clerk.hacktheandes.com",
+      azp: "https://hacktheandes.com",
+    });
+
+    expect(isLegacyCliCredential(`Bearer ${token}`)).toBe(false);
     expect(
-      isLegacyCliCredential(
-        `Bearer ${token}`,
-        "https://clerk.hacktheandes.com",
-        "HddO78wKpq5PFIEl",
+      authenticationFailureMessage(
+        new Request("https://hacktheandes.com/api/v1/me", {
+          headers: { authorization: `Bearer ${token}` },
+        }),
       ),
-    ).toBe(false);
+    ).toBe("Authentication failed");
   });
 
   test("tells participants to update the CLI when the token is from retired Clerk", () => {
@@ -195,13 +199,7 @@ describe("legacy CLI credential detection", () => {
       headers: { authorization: `Bearer ${token}` },
     });
 
-    expect(
-      authenticationFailureMessage(
-        request,
-        "https://clerk.hacktheandes.com",
-        "HddO78wKpq5PFIEl",
-      ),
-    ).toContain("chofex update");
+    expect(authenticationFailureMessage(request)).toContain("chofex update");
   });
 
   test("keeps the generic failure for missing or opaque credentials", () => {

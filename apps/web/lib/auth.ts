@@ -57,47 +57,24 @@ export const unverifiedBearerJwtClaims = (
 
 export const isLegacyCliCredential = (
   authorization: string | null,
-  currentIssuer = process.env.CLERK_OAUTH_ISSUER,
-  currentClientId = process.env.CLERK_CLI_OAUTH_CLIENT_ID,
 ): boolean => {
   const claims = unverifiedBearerJwtClaims(authorization);
   if (!claims) return false;
-  if (claims.clientId === retiredCliOAuthClientId) return true;
-  if (
-    claims.issuer &&
-    normalizeIssuer(claims.issuer) === normalizeIssuer(retiredClerkIssuer)
-  ) {
-    return true;
+  if (claims.clientId) {
+    if (
+      claims.clientId.startsWith("http://") ||
+      claims.clientId.startsWith("https://")
+    ) {
+      return false;
+    }
+    return claims.clientId === retiredCliOAuthClientId;
   }
-  if (
-    currentIssuer &&
-    claims.issuer &&
-    normalizeIssuer(claims.issuer) !== normalizeIssuer(currentIssuer)
-  ) {
-    return true;
-  }
-  if (
-    currentClientId &&
-    claims.clientId &&
-    claims.clientId !== currentClientId
-  ) {
-    return true;
-  }
-  return false;
+  if (!claims.issuer) return false;
+  return normalizeIssuer(claims.issuer) === normalizeIssuer(retiredClerkIssuer);
 };
 
-export const authenticationFailureMessage = (
-  request: Request,
-  currentIssuer = process.env.CLERK_OAUTH_ISSUER,
-  currentClientId = process.env.CLERK_CLI_OAUTH_CLIENT_ID,
-): string => {
-  if (
-    isLegacyCliCredential(
-      request.headers.get("authorization"),
-      currentIssuer,
-      currentClientId,
-    )
-  ) {
+export const authenticationFailureMessage = (request: Request): string => {
+  if (isLegacyCliCredential(request.headers.get("authorization"))) {
     return legacyCliAuthenticationMessage;
   }
   return "Authentication failed";
