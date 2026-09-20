@@ -42,6 +42,25 @@ describe("credential-card", () => {
     expect(card).not.toMatch(/@react-three/);
   });
 
+  test("screens only the confirmed picture onto the card", async () => {
+    // The same rule as the static card, now that a second surface draws
+    // a face: CONTEXT.md forbids using an available image before the
+    // participant picks a source. The texture may read the credential's
+    // own picture and nothing else — reaching for a Clerk avatar or a
+    // GitHub profile directly is the defect.
+    //
+    // The proposal shown before anybody confirms is resolved one layer
+    // up, in `portraitFor`, so that the choice is visible in one place
+    // rather than implied in two.
+    const texture = await Bun.file(
+      new URL("../../lib/credential/card-texture.tsx", import.meta.url),
+    ).text();
+
+    expect(texture).toContain("credential.pictureUrl");
+    expect(texture).not.toContain("clerkPictureUrl");
+    expect(texture).not.toContain("githubAvatarUrl");
+  });
+
   test("shows no picture the participant did not confirm", async () => {
     // Replaces a test that warned the card carried a stranger's face —
     // true while anyone could generate anyone's badge from a GitHub
