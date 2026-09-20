@@ -26,6 +26,8 @@ import {
   type Credential,
   initialsFor,
 } from "@/components/credential/credential-model";
+import { halftoneSvg } from "@/lib/portrait/halftone";
+import { lumaFromRgba, normalise } from "@/lib/portrait/luminance";
 import {
   ridgeDataUri,
   type Sponsor,
@@ -78,6 +80,17 @@ const FACE_HEIGHT = Math.round(LIVE_HEIGHT / SAMPLED_V);
 const DEAD_HEIGHT = FACE_HEIGHT - LIVE_HEIGHT;
 
 const PICTURE_TIMEOUT_MS = 2_500;
+
+/**
+ * The halftone's pitch, in texture pixels.
+ *
+ * Five, measured: the window renders at 113px on screen, where a 5px
+ * cell lands at about 1.15px per dot and reads. The ASCII grid that was
+ * considered for the same slot lands at 1.38px per character and does
+ * not — a dot carries one value, its radius, while a character needs its
+ * shape distinguished, and a shape needs several pixels to have one.
+ */
+const HALFTONE_CELL = 5;
 
 const colors = brandColors.dark;
 
@@ -185,22 +198,27 @@ const PORTRAIT_HEIGHT = Math.round(PORTRAIT_WIDTH / 0.863);
 export const revalidate = 86_400;
 
 /**
- * The confirmed picture, as a data URI.
+ * The confirmed picture, screened into dots.
  *
- * Satori cannot place a remote image, so the bytes have to come here. And
- * it is only ever the picture the participant confirmed: `CONTEXT.md` is
- * explicit that available images are not used until they choose a source,
- * so a card with nothing confirmed falls through to initials rather than
- * reaching for a photograph they did not pick.
+ * Only ever the picture the participant confirmed: `CONTEXT.md` is
+ * explicit that available images are not used until they choose a
+ * source, so a card with nothing confirmed falls through to initials
+ * rather than reaching for a photograph they did not pick.
  *
- * Every failure returns null rather than throwing. A credential with
- * initials on it is a credential; one that 500s because a picture host
- * was slow is not.
+ * Screened here rather than stored. What is stored is the cut-out, and
+ * deriving the dots on each render means changing the grid does not
+ * oblige anybody to regenerate what they already confirmed.
+ *
+ * Every failure answers null. A credential with initials on it is a
+ * credential; one that 500s because a picture host was slow is not.
  */
-const pictureDataUri = async (url: string | null): Promise<string | null> => {
+export const halftonePortrait = async (
+  url: string | null,
+): Promise<string | null> => {
   if (!url) {
     return null;
   }
+
   try {
     const response = await fetch(url, {
       next: { revalidate },
@@ -212,11 +230,53 @@ const pictureDataUri = async (url: string | null): Promise<string | null> => {
     const type = (response.headers.get("content-type") ?? "")
       .split(";")[0]
       ?.trim();
+    // A sign-in page returned as HTML with a 200 is the shape this
+    // guards: without it, markup reaches sharp as an image buffer.
     if (!type?.startsWith("image/")) {
       return null;
     }
-    const bytes = Buffer.from(await response.arrayBuffer());
-    return `data:${type};base64,${bytes.toString("base64")}`;
+
+    const columns = Math.floor(PORTRAIT_WIDTH / HALFTONE_CELL);
+    const rows = Math.floor(PORTRAIT_HEIGHT / HALFTONE_CELL);
+
+    const { default: sharp } = await import("sharp");
+    const source = Buffer.from(await response.arrayBuffer());
+    /*
+      `top`, not centred. A portrait puts the face in the upper half of
+      the frame, so a centre crop of a standing photograph takes the head
+      off — and the crop has to happen before the luminance read, because
+      the grid is the window's shape and not the photograph's.
+    */
+    const { data, info } = await sharp(source)
+      .resize(columns, rows, { fit: "cover", position: "top" })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const pixels = new Uint8ClampedArray(data);
+    const grid = lumaFromRgba(pixels, info.width, info.height);
+    const values = normalise(grid.values);
+
+    /*
+      Alpha wins over luminance.
+
+      The cut-out arrives with its background transparent, and a
+      transparent pixel reads as bright. Without this the erased
+      background comes back as a full field of dots and the cut-out was
+      for nothing.
+    */
+    for (let i = 0; i < values.length; i += 1) {
+      if ((pixels[i * info.channels + 3] ?? 255) < 128) {
+        values[i] = 0;
+      }
+    }
+
+    const svg = halftoneSvg(
+      { width: info.width, height: info.height, values },
+      { cell: HALFTONE_CELL, ink: colors.ink },
+    );
+    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
   } catch {
     return null;
   }
@@ -254,7 +314,7 @@ export const renderCardTexture = async (
   { origin }: CardTextureOptions,
 ): Promise<Response> => {
   const [portrait, ridgeFront, ridgeBack, qr, sponsors] = await Promise.all([
-    pictureDataUri(credential.pictureUrl),
+    halftonePortrait(credential.pictureUrl),
     ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
     ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_BACK }),
     qrDataUri(new URL("/carnet", origin).href),
