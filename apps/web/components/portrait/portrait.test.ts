@@ -1,0 +1,135 @@
+import { describe, expect, test } from "bun:test";
+
+const read = async (name: string): Promise<string> =>
+  await Bun.file(new URL(`./${name}`, import.meta.url)).text();
+
+describe("portrait-sweep", () => {
+  test("honours a request for reduced motion", async () => {
+    // A diagonal wipe across the whole page is exactly the motion that
+    // setting exists for.
+    const sweep = await read("portrait-sweep.tsx");
+
+    expect(sweep).toContain("prefers-reduced-motion");
+  });
+
+  test("reports done on every path out", async () => {
+    // The scene underneath is revealed by `onDone`. Any path that skips
+    // it — no picture, no canvas, reduced motion, a picture that will
+    // not load — leaves the page stuck behind an overlay.
+    const sweep = await read("portrait-sweep.tsx");
+    const calls = sweep.match(/done\.current\(\)/g) ?? [];
+
+    expect(calls.length).toBeGreaterThanOrEqual(6);
+  });
+
+  test("calls back through a ref, not a captured prop", async () => {
+    // The frame loop starts once and runs for the whole sweep. Closing
+    // over the prop would leave it calling whichever `onDone` existed
+    // when it started, which is stale the moment the parent re-renders.
+    const sweep = await read("portrait-sweep.tsx");
+
+    expect(sweep).toContain("const done = useRef(onDone)");
+    expect(sweep).not.toMatch(/\bonDone\(\)/);
+  });
+
+  test("cancels its frame loop on unmount", async () => {
+    // Navigating away mid-sweep otherwise leaves a loop drawing into a
+    // detached canvas for as long as the tab lives.
+    const sweep = await read("portrait-sweep.tsx");
+
+    expect(sweep).toContain("cancelAnimationFrame");
+  });
+
+  test("reads the picture once, not once per frame", async () => {
+    // Sixty decodes a second for a result that never changes, on a page
+    // that is also compiling shaders.
+    const sweep = await read("portrait-sweep.tsx");
+    const reads = sweep.match(/getImageData/g) ?? [];
+
+    expect(reads).toHaveLength(1);
+  });
+
+  test("lets alpha beat luminance, as the card does", async () => {
+    // A transparent pixel reads as bright, so without this the cut-out's
+    // erased background comes back as characters and the two surfaces
+    // disagree about the same photograph.
+    const sweep = await read("portrait-sweep.tsx");
+
+    expect(sweep).toMatch(/data\[index \* 4 \+ 3\]/);
+  });
+});
+
+describe("portrait-picker", () => {
+  test("shows the cut-out before anything is stored", async () => {
+    // Segmentation fails honestly on a busy background, and somebody has
+    // to see that and say no. A picker that uploaded first would put a
+    // half-erased room on a badge.
+    const picker = await read("portrait-picker.tsx");
+
+    expect(picker).toContain("Así quedará en tu carnet");
+    expect(picker).toContain("Confirmar");
+    expect(picker).toContain("Elegir otra");
+  });
+
+  test("writes through the endpoint, never the columns", async () => {
+    // `pictureSource` is also an acceptance-details field. Two paths
+    // writing it is how one silently reverts the other.
+    const picker = await read("portrait-picker.tsx");
+
+    expect(picker).not.toContain("@chofex/db");
+    expect(picker).toContain("/api/v1/profile-picture");
+  });
+
+  test("says what went wrong when the cut-out fails", async () => {
+    const picker = await read("portrait-picker.tsx");
+
+    expect(picker).toContain("CutoutError");
+    expect(picker).toContain("fondo liso");
+  });
+
+  test("frees the preview it replaces", async () => {
+    // Object URLs are not collected. Trying five photographs would pin
+    // five bitmaps in memory for the life of the tab.
+    const picker = await read("portrait-picker.tsx");
+
+    expect(picker).toContain("revokeObjectURL");
+  });
+
+  test("puts one line of text on every button", async () => {
+    // The repository's own rule: subtitles and status go beside a
+    // button, never inside it.
+    const picker = await read("portrait-picker.tsx");
+    const labels = [
+      ...picker.matchAll(
+        />\s*\n?\s*([A-ZÁÉÍÓÚÑ][^<>{]*?)\s*\n?\s*<\/(?:button|label)>/g,
+      ),
+    ];
+
+    expect(labels.length).toBeGreaterThan(0);
+    for (const [, label] of labels) {
+      expect(`${label?.trim()} -> ${!label?.includes("\n")}`).toContain("true");
+    }
+  });
+});
+
+describe("credential-stage", () => {
+  test("says a proposal is a proposal", async () => {
+    // CONTEXT.md forbids using an available image before its owner picks
+    // a source. Drawing their GitHub photo unasked is defensible only
+    // while the page says that is what it is doing.
+    const stage = await read("credential-stage.tsx");
+
+    expect(stage).toContain("foto de GitHub");
+    expect(stage).toContain("confirmed");
+  });
+
+  test("mounts the scene under the sweep, not after it", async () => {
+    // WebGL should compile its shaders while somebody watches characters
+    // assemble, rather than in the silence afterwards.
+    const stage = await read("credential-stage.tsx");
+    const scene = stage.indexOf("CredentialScene");
+    const sweep = stage.indexOf("PortraitSweep onDone");
+
+    expect(scene).toBeLessThan(sweep);
+  });
+});

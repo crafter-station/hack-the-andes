@@ -18,9 +18,13 @@ import { redirect } from "next/navigation";
 
 import "@/components/credential/credential.css";
 import { CredentialCard } from "@/components/credential/credential-card";
-import { CredentialScene } from "@/components/credential/credential-scene";
 import { brandName } from "@/components/landing/content";
-import { acceptedByClerkUser, credentialFor } from "@/lib/credential/accepted";
+import { CredentialStage } from "@/components/portrait/credential-stage";
+import {
+  acceptedByClerkUser,
+  credentialFor,
+  portraitFor,
+} from "@/lib/credential/accepted";
 
 /** The session decides what this page is, so it cannot be prerendered. */
 export const dynamic = "force-dynamic";
@@ -44,6 +48,9 @@ export default async function CarnetPage() {
     redirect("/welcome");
   }
 
+  const credential = credentialFor(accepted);
+  const portrait = portraitFor(accepted);
+
   return (
     <BrandCenteredPage contentClassName="max-w-3xl text-center">
       <Link className="credential-back-link" href="/">
@@ -55,9 +62,14 @@ export default async function CarnetPage() {
         reads and what the browser paints before hydration, with the
         simulated lanyard mounted over it.
       */}
-      <CredentialScene faceUrl="/carnet/card-texture">
-        <CredentialCard credential={credentialFor(accepted)} />
-      </CredentialScene>
+      <CredentialStage
+        confirmed={portrait.confirmed}
+        githubAvatarUrl={portrait.confirmed ? null : portrait.url}
+        portraitUrl={portrait.url}
+        textureUrl="/carnet/card-texture"
+      >
+        <CredentialCard credential={credential} />
+      </CredentialStage>
     </BrandCenteredPage>
   );
 }

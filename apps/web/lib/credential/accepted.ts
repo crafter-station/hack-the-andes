@@ -20,9 +20,14 @@
  *   badge from a form they filled in once;
  * - a confirmed profile picture is one the participant *explicitly chose*
  *   during attendance confirmation, and available images are not used
- *   until they do. `pictureUrl` is that confirmation's output, so it is
- *   the only picture column this reads. A card with no confirmed picture
- *   shows initials rather than reaching for one they did not pick.
+ *   until they do.
+ *
+ * That second rule is why `pictureUrl` and `githubUrl` arrive here as
+ * separate fields rather than one resolved picture. The confirmed one is
+ * the picture; the GitHub one is a *proposal*, shown to its owner behind
+ * their own session so they can accept or replace it, and never stored,
+ * printed or shared until they say so. Collapsing the two here is how a
+ * photograph nobody chose ends up on a printed badge.
  */
 
 import { db } from "@chofex/db";
@@ -32,6 +37,7 @@ import {
   type Credential,
   credentialNumber,
 } from "@/components/credential/credential-model";
+import { githubAvatarUrl } from "@/lib/registration/pictures";
 
 export interface AcceptedParticipant {
   /** As they wrote it, not as any profile spells it. */
@@ -41,6 +47,13 @@ export interface AcceptedParticipant {
   readonly organization: string | null;
   /** Only ever the confirmed one. Null until they choose. */
   readonly pictureUrl: string | null;
+  /**
+   * What their form said, if anything — a proposal, not a picture.
+   *
+   * Free text, so it is a URL and not a handle. Only ever offered back
+   * to its owner.
+   */
+  readonly githubUrl: string | null;
 }
 
 const fullNameOf = (
@@ -66,6 +79,7 @@ export const acceptedByClerkUser = async (
       role: applications.role,
       organization: applications.organization,
       pictureUrl: applications.pictureUrl,
+      githubUrl: applications.githubUrl,
     })
     .from(applications)
     .innerJoin(participants, eq(applications.participantId, participants.id))
@@ -93,15 +107,43 @@ export const acceptedByClerkUser = async (
     role: row.role?.trim() || null,
     organization: row.organization?.trim() || null,
     pictureUrl: row.pictureUrl?.trim() || null,
+    githubUrl: row.githubUrl?.trim() || null,
   };
 };
 
-/** The same participant, as the thing the card prints. */
+/**
+ * The picture to draw, and whether its owner has agreed to it.
+ *
+ * `confirmed` is what the page reads to decide between showing the
+ * credential and asking about it. A proposal draws exactly the same —
+ * somebody should see their own face immediately — but nothing downstream
+ * may treat it as settled.
+ */
+export interface PortraitChoice {
+  readonly url: string | null;
+  readonly confirmed: boolean;
+}
+
+export const portraitFor = (accepted: AcceptedParticipant): PortraitChoice => {
+  if (accepted.pictureUrl) {
+    return { url: accepted.pictureUrl, confirmed: true };
+  }
+  return { url: githubAvatarUrl(accepted.githubUrl) ?? null, confirmed: false };
+};
+
+/**
+ * The same participant, as the thing the card prints.
+ *
+ * Draws the proposal when nothing is confirmed, so somebody sees their
+ * own face the first time they open the page rather than their initials
+ * and no explanation. Whether it is settled is a separate question, and
+ * `portraitFor` is where the page asks it.
+ */
 export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   name: accepted.name,
   role: accepted.role,
   organization: accepted.organization,
-  pictureUrl: accepted.pictureUrl,
+  pictureUrl: portraitFor(accepted).url,
   // Seeded from the name, which is the only identifier left that every
   // accepted participant has.
   number: credentialNumber(accepted.name),
