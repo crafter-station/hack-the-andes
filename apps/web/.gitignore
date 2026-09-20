@@ -38,3 +38,6 @@ next-env.d.ts
 .clerk/
 
 .terrain-cache/
+
+# Copied from node_modules by scripts/vendor-vision.mjs; never committed.
+public/vision/

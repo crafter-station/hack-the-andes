@@ -11,7 +11,10 @@
     "start": "next start",
     "lint": "biome lint --error-on-warnings .",
     "format": "biome format --write .",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "vendor:vision": "node scripts/vendor-vision.mjs",
+    "prebuild": "node scripts/vendor-vision.mjs",
+    "predev": "node scripts/vendor-vision.mjs"
   },
   "dependencies": {
     "@chofex/challenges-contract": "*",
@@ -20,6 +23,7 @@
     "@chofex/ui": "*",
     "@clerk/nextjs": "^7.9.1",
     "@clerk/ui": "^1.32.2",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@react-three/rapier": "^2.2.0",
