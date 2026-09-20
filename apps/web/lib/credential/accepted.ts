@@ -1,0 +1,108 @@
+/**
+ * The accepted participant behind a session.
+ *
+ * The credential is for people who were accepted, and everything it
+ * prints comes from their own application: the name they gave, the role
+ * they described themselves with, and the picture they confirmed.
+ *
+ * There is no lookup by GitHub handle any more, and its absence is the
+ * design rather than an omission. A public route keyed on a handle could
+ * only reach someone through the optional, free-text link on their form,
+ * so it missed every participant who left it blank and let anyone
+ * enumerate the ones who did not. The session has neither problem.
+ *
+ * Two rules out of `CONTEXT.md` bind every query here:
+ *
+ * - an *active* application is one being drafted, awaiting a decision, or
+ *   accepted, and a participant may have only one at a time. Rejected and
+ *   withdrawn applications are history. A credential must never be built
+ *   from history — someone rejected this year would otherwise keep a
+ *   badge from a form they filled in once;
+ * - a confirmed profile picture is one the participant *explicitly chose*
+ *   during attendance confirmation, and available images are not used
+ *   until they do. `pictureUrl` is that confirmation's output, so it is
+ *   the only picture column this reads. A card with no confirmed picture
+ *   shows initials rather than reaching for one they did not pick.
+ */
+
+import { db } from "@chofex/db";
+import { and, eq } from "@chofex/db/orm";
+import { applications, participants } from "@chofex/db/schema";
+import {
+  type Credential,
+  credentialNumber,
+} from "@/components/credential/credential-model";
+
+export interface AcceptedParticipant {
+  /** As they wrote it, not as any profile spells it. */
+  readonly name: string;
+  /** What they said they are. The design's line under the name. */
+  readonly role: string | null;
+  readonly organization: string | null;
+  /** Only ever the confirmed one. Null until they choose. */
+  readonly pictureUrl: string | null;
+}
+
+const fullNameOf = (
+  firstName: string | null,
+  lastName: string | null,
+): string => [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
+
+/**
+ * The participant, reached through their session.
+ *
+ * `participantId` is the join, and the status filter is what makes the
+ * single row safe: `CONTEXT.md` allows a participant only one active
+ * application, and accepted is active, so this cannot return two rows for
+ * one person.
+ */
+export const acceptedByClerkUser = async (
+  clerkUserId: string,
+): Promise<AcceptedParticipant | null> => {
+  const [row] = await db
+    .select({
+      firstName: applications.firstName,
+      lastName: applications.lastName,
+      role: applications.role,
+      organization: applications.organization,
+      pictureUrl: applications.pictureUrl,
+    })
+    .from(applications)
+    .innerJoin(participants, eq(applications.participantId, participants.id))
+    .where(
+      and(
+        eq(participants.clerkUserId, clerkUserId),
+        eq(applications.status, "accepted"),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  const name = fullNameOf(row.firstName, row.lastName);
+  if (name === "") {
+    // Accepted but nameless is a data problem, not a credential: a card
+    // with an empty name reads as broken rather than as incomplete.
+    return null;
+  }
+
+  return {
+    name,
+    role: row.role?.trim() || null,
+    organization: row.organization?.trim() || null,
+    pictureUrl: row.pictureUrl?.trim() || null,
+  };
+};
+
+/** The same participant, as the thing the card prints. */
+export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
+  name: accepted.name,
+  role: accepted.role,
+  organization: accepted.organization,
+  pictureUrl: accepted.pictureUrl,
+  // Seeded from the name, which is the only identifier left that every
+  // accepted participant has.
+  number: credentialNumber(accepted.name),
+});
