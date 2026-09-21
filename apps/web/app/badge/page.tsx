@@ -31,18 +31,62 @@ import {
 /** The session decides what this page is, so it cannot be prerendered. */
 export const dynamic = "force-dynamic";
 
+const title = `Mi carnet | ${brandName}`;
+const description = `Tu credencial para ${brandName}.`;
+
 export const metadata: Metadata = {
-  title: `Mi carnet | ${brandName}`,
-  description: `Tu credencial para ${brandName}.`,
-  // Signed-in, personal, and the card carries a name and a role. Nothing
-  // about it belongs in an index.
+  title,
+  description,
+  /*
+    Restated for the unfurl rather than left to inherit.
+
+    Next does not merge a page's title and description into the root
+    layout's `openGraph` object — it takes that object wholesale. Without
+    these, a participant pasting their badge somewhere gets the
+    site-wide event promo instead, which is the feature failing in the
+    one place it is meant to work.
+  */
+  openGraph: { title, description, type: "profile" },
+  twitter: { card: "summary_large_image", title, description },
+  // Signed-in and personal: the card carries a name and a role. It
+  // unfurls for whoever the participant shares it with; it does not
+  // belong in an index.
   robots: { index: false, follow: false },
 };
 
-export default async function CarnetPage() {
+export default async function BadgePage() {
   const authentication = await auth();
+  /*
+    Rendered, not redirected.
+
+    A redirect answers with a 307, a 307 carries no HTML, and no HTML
+    carries no meta — so every link a participant pasted unfurled as the
+    sign-in page rather than as their badge. Measured, not assumed: the
+    image was being served at 200 and no crawler could ever reach the
+    tag that points at it.
+
+    Nothing personal renders here. Somebody arriving without a session
+    is told what this is and offered the way in, which is also a better
+    answer than being bounced to a form with no explanation.
+  */
   if (!authentication.userId) {
-    redirect("/sign-in?redirect_url=/badge");
+    return (
+      <BrandCenteredPage contentClassName="max-w-xl text-center">
+        <Link className="credential-back-link" href="/">
+          {brandName}
+        </Link>
+        <BrandTitle as="h1">Tu carnet</BrandTitle>
+        <p className="badge-gate">
+          Los participantes aceptados tienen aquí su credencial de {brandName}.
+        </p>
+        <Link
+          className="badge-download-link"
+          href="/sign-in?redirect_url=/badge"
+        >
+          Iniciar sesión
+        </Link>
+      </BrandCenteredPage>
+    );
   }
 
   const accepted = await acceptedByClerkUser(authentication.userId);
