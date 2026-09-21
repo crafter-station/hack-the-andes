@@ -16,9 +16,5 @@ export default async function CreditsPage() {
     "utf8",
   );
 
-  return (
-    <LegalPage alternateHref="/terms" alternateLabel="Términos">
-      {markdown}
-    </LegalPage>
-  );
+  return <LegalPage>{markdown}</LegalPage>;
 }

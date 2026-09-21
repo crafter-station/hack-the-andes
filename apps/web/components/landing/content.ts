@@ -495,3 +495,17 @@ export const chromeCopy = {
   sections: "Secciones",
   apply: "Aplicar",
 } as const;
+
+export const legalCopy = {
+  home: "Inicio",
+  navigationLabel: "Páginas legales",
+  eventKicker: "Lima presencial · 17–18 oct 2026",
+  termsHref: "/terms",
+  privacyHref: "/privacy",
+  termsLabel: "Términos",
+  privacyLabel: "Privacidad",
+  termsTitle: "Términos y Condiciones",
+  privacyTitle: "Privacidad",
+  termsDescription: `Términos y condiciones de participación para ${brandName}, evento presencial en Lima el 17 y 18 de octubre de 2026.`,
+  privacyDescription: `Política de privacidad de ${brandName} para la postulación y el evento presencial en Lima, 17–18 de octubre de 2026.`,
+} as const;

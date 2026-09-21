@@ -2,12 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { Metadata } from "next";
-import { brandName } from "@/components/landing/content";
+import { brandName, legalCopy } from "@/components/landing/content";
 import { LegalPage } from "@/components/legal-page";
 
 export const metadata: Metadata = {
-  title: `Privacy Policy | ${brandName}`,
-  description: `Privacy Policy for ${brandName} registration.`,
+  title: `${legalCopy.privacyTitle} | ${brandName}`,
+  description: legalCopy.privacyDescription,
 };
 
 export default async function PrivacyPage() {
@@ -16,12 +16,5 @@ export default async function PrivacyPage() {
     "utf8",
   );
 
-  return (
-    <LegalPage
-      alternateHref="/terms"
-      alternateLabel="Terms and Code of Conduct"
-    >
-      {markdown}
-    </LegalPage>
-  );
+  return <LegalPage>{markdown}</LegalPage>;
 }

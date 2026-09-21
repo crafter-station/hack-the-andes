@@ -16,6 +16,7 @@ import {
   footerNavigation,
   formatSoles,
   heroCopy,
+  legalCopy,
   metadataCopy,
   panelBrands,
   partners,
@@ -65,14 +66,22 @@ test("publishes the 17–18 octubre 2026 weekend in participant-facing copy", ()
   expect(heroCopy.metaDate).toBe("17–18 oct 2026");
   expect(heroCopy.metaLocation).toBe("Lima, Perú");
   expect(footerCopy.meta).toContain("17–18 oct 2026");
+  expect(legalCopy.eventKicker).toContain("17–18 oct 2026");
+  expect(legalCopy.eventKicker).toMatch(/Lima presencial/i);
   expect(
     footerNavigation.flatMap((group) => group.links.map((link) => link.label)),
   ).toContain("Créditos");
+  expect(
+    footerNavigation.flatMap((group) => group.links.map((link) => link.href)),
+  ).toEqual(
+    expect.arrayContaining([legalCopy.termsHref, legalCopy.privacyHref]),
+  );
 
   const blob = JSON.stringify({
     facts,
     footerCopy,
     heroCopy,
+    legalCopy,
     metadataCopy,
   });
   expect(blob).not.toMatch(/10–11/);
@@ -117,6 +126,7 @@ test("keeps the public pitch in Spanish and names Chofex as principal sponsor", 
     chromeCopy,
     footerCopy,
     heroCopy,
+    legalCopy,
     peopleCopy,
     sectionNav,
     partners,
