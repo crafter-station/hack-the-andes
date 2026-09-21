@@ -12,8 +12,14 @@ describe("accepted participant picture confirmation", () => {
     };
 
     expect(confirmedPictureUrl("clerk", options)).toBe(options.clerkPictureUrl);
+    // 460, not the 112 this pinned before. What gets confirmed is
+    // stored and then drawn at 490px in the credential's photo window
+    // and screened into an 800px portrait for the emailed badge; a
+    // 112px thumbnail upscaled four times is why the halftone came out
+    // as mush. 460 is what GitHub actually serves — asking for more
+    // returns the same bytes.
     expect(confirmedPictureUrl("github", options)).toBe(
-      "https://github.com/ada.png?size=112",
+      "https://github.com/ada.png?size=460",
     );
     expect(confirmedPictureUrl("upload", options)).toBe(
       options.uploadedPictureUrl,

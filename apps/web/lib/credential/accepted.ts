@@ -41,7 +41,7 @@ import {
   type Credential,
   credentialNumber,
 } from "@/components/credential/credential-model";
-import { githubAvatarUrl } from "@/lib/registration/pictures";
+import { AVATAR_PORTRAIT, githubAvatarUrl } from "@/lib/registration/pictures";
 
 export interface AcceptedParticipant {
   /** As they wrote it, not as any profile spells it. */
@@ -132,7 +132,10 @@ export const portraitFor = (accepted: AcceptedParticipant): PortraitChoice => {
   if (accepted.pictureUrl) {
     return { url: accepted.pictureUrl, confirmed: true };
   }
-  return { url: githubAvatarUrl(accepted.githubUrl) ?? null, confirmed: false };
+  return {
+    url: githubAvatarUrl(accepted.githubUrl, AVATAR_PORTRAIT) ?? null,
+    confirmed: false,
+  };
 };
 
 /**
