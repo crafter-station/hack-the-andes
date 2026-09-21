@@ -17,11 +17,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import "@/components/credential/credential.css";
+import { BadgeDownload } from "@/components/credential/badge-download";
 import { CredentialCard } from "@/components/credential/credential-card";
 import { brandName } from "@/components/landing/content";
 import { CredentialStage } from "@/components/portrait/credential-stage";
 import {
   acceptedByClerkUser,
+  badgeImageForClerkUser,
   credentialFor,
   portraitFor,
 } from "@/lib/credential/accepted";
@@ -50,6 +52,7 @@ export default async function CarnetPage() {
 
   const credential = credentialFor(accepted);
   const portrait = portraitFor(accepted);
+  const badge = await badgeImageForClerkUser(authentication.userId);
 
   return (
     <BrandCenteredPage contentClassName="max-w-3xl text-center">
@@ -70,6 +73,7 @@ export default async function CarnetPage() {
       >
         <CredentialCard credential={credential} />
       </CredentialStage>
+      <BadgeDownload badge={badge} participantName={credential.name} />
     </BrandCenteredPage>
   );
 }

@@ -32,7 +32,11 @@
 
 import { db } from "@chofex/db";
 import { and, eq } from "@chofex/db/orm";
-import { applications, participants } from "@chofex/db/schema";
+import {
+  applications,
+  participantBadges,
+  participants,
+} from "@chofex/db/schema";
 import {
   type Credential,
   credentialNumber,
@@ -148,3 +152,49 @@ export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   // accepted participant has.
   number: credentialNumber(accepted.name),
 });
+
+/**
+ * The generated badge image, and how far along it is.
+ *
+ * A separate query from the credential because it answers a different
+ * question and fails differently: the credential is data somebody
+ * already gave, while this is the output of a job that may still be
+ * running, may have failed, and may not have been started at all.
+ *
+ * Its existence is the point. The image used to reach people only as a
+ * link in one email, so anybody who lost that email lost the badge; this
+ * is what lets the page they can always reach show it to them.
+ */
+export interface BadgeImage {
+  readonly status: "pending" | "running" | "completed" | "failed";
+  /** Only ever set once the job finished. */
+  readonly url: string | null;
+}
+
+export const badgeImageForClerkUser = async (
+  clerkUserId: string,
+): Promise<BadgeImage | null> => {
+  const [row] = await db
+    .select({
+      status: participantBadges.status,
+      badgeUrl: participantBadges.badgeUrl,
+    })
+    .from(participantBadges)
+    .innerJoin(
+      applications,
+      eq(participantBadges.applicationId, applications.id),
+    )
+    .innerJoin(participants, eq(applications.participantId, participants.id))
+    .where(
+      and(
+        eq(participants.clerkUserId, clerkUserId),
+        eq(applications.status, "accepted"),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+  return { status: row.status, url: row.badgeUrl };
+};

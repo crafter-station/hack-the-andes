@@ -9,7 +9,7 @@ import { logger, task } from "@trigger.dev/sdk";
 
 import { sendBadgeReadyEmail } from "../lib/badges/email";
 import { generateBadge } from "./generate-badge";
-import { generatePixelArt } from "./generate-pixel-art";
+import { generatePortrait } from "./generate-portrait";
 
 export interface GenerateParticipantBadgePayload {
   readonly applicationId: string;
@@ -90,7 +90,7 @@ export const generateParticipantBadge = task<
     logger.info("Starting participant badge workflow", {
       applicationId: payload.applicationId,
     });
-    const pixelArt = await generatePixelArt
+    const pixelArt = await generatePortrait
       .triggerAndWait(
         { applicationId: payload.applicationId, pictureUrl },
         { idempotencyKey: `pixel-art/${ctx.run.id}` },
