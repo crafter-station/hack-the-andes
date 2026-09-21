@@ -1,15 +1,10 @@
 import { expect, test } from "bun:test";
 
+import type { CandidateFunnelStatus } from "./types";
 import { whatsappMessage, whatsappUrl } from "./whatsapp";
 
 const messageFor = (
-  funnelStatus:
-    | "registration_started"
-    | "registration_completed"
-    | "challenge_started"
-    | "challenge_completed"
-    | "approved"
-    | "declined",
+  funnelStatus: CandidateFunnelStatus,
   attendanceCompleted = false,
 ) =>
   whatsappMessage({
@@ -63,6 +58,14 @@ test("uses a natural greeting when the participant name is unavailable", () => {
       attendanceCompleted: false,
     }),
   ).toStartWith("Hola, soy Anthony de Hack the Andes.");
+  expect(
+    whatsappMessage({
+      participantFirstName: "Unknown",
+      adminFirstName: "Anthony",
+      funnelStatus: "registration_started",
+      attendanceCompleted: false,
+    }),
+  ).toStartWith("Hola, soy Anthony de Hack the Andes.");
 });
 
 test("builds a wa.me URL with a normalized international number", () => {
@@ -78,4 +81,7 @@ test("builds a wa.me URL with a normalized international number", () => {
 test("does not build a link without a usable phone number", () => {
   expect(whatsappUrl(undefined, "Hola")).toBeUndefined();
   expect(whatsappUrl("+ ( )", "Hola")).toBeUndefined();
+  expect(whatsappUrl("999 888 777", "Hola")).toBeUndefined();
+  expect(whatsappUrl("+51 call-me", "Hola")).toBeUndefined();
+  expect(whatsappUrl("+123", "Hola")).toBeUndefined();
 });
