@@ -18,6 +18,7 @@ import {
   fullNameColumnRequirements,
   hackathonCountryCode,
   hackathonParticipationMode,
+  PictureSource,
   type RegistrationResult,
   type RegistrationView,
   splitFullName,
@@ -522,4 +523,60 @@ export const submitAcceptedDetails = async (
     throw new Error("Application picture update returned no row");
   if (!details) throw new Error("Acceptance details update returned no row");
   return resultFor(application, details);
+};
+
+/**
+ * Changes which picture a confirmed participant's badge carries.
+ *
+ * Narrow on purpose. Confirming attendance is a one-time submission of
+ * private details — a date of birth, a national id, an emergency contact
+ * — and re-sending all of it to swap a photograph would re-validate and
+ * rewrite data the change does not touch. This moves the two columns the
+ * badge reads and nothing else.
+ *
+ * It is the step the web picker was missing: uploading a picture writes
+ * `customPictureUrl`, and only a confirmation turns that into the
+ * `pictureUrl` the card draws. Without this the picker stored a
+ * cut-out, reported success and changed nothing on the badge.
+ *
+ * Refuses anybody who has not confirmed attendance yet, because for them
+ * `chofex confirm` is the flow and it sets this as part of a larger
+ * whole.
+ */
+export const changePictureSource = async (
+  identity: RegistrationIdentity,
+  rawSource: unknown,
+): Promise<RegistrationResult> => {
+  const pictureSource = parseInput(PictureSource, rawSource);
+  const current = await latestApplicationRecord(identity.clerkUserId);
+  if (!current) {
+    throw new HttpError(404, "APPLICATION_NOT_FOUND", "No application found");
+  }
+  if (current.application.status !== "accepted") {
+    throw new HttpError(
+      409,
+      "INVALID_APPLICATION_STATE",
+      "Only an accepted participant can change their badge picture",
+    );
+  }
+  if (!current.application.pictureSource) {
+    throw new HttpError(
+      409,
+      "ATTENDANCE_NOT_CONFIRMED",
+      "Confirm your attendance before changing your picture",
+    );
+  }
+
+  const pictureUrl = confirmedPictureUrl(pictureSource, {
+    clerkPictureUrl: identity.clerkPictureUrl,
+    githubUrl: current.application.githubUrl,
+    uploadedPictureUrl: current.application.customPictureUrl,
+  });
+
+  await db
+    .update(applications)
+    .set({ pictureSource, pictureUrl, updatedAt: new Date() })
+    .where(eq(applications.id, current.application.id));
+
+  return await getRegistration(identity.clerkUserId);
 };

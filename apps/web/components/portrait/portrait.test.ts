@@ -71,6 +71,32 @@ describe("portrait-picker", () => {
     expect(picker).toContain("Elegir otra");
   });
 
+  test("confirms the source, not only the upload", async () => {
+    // The defect this exists for shipped and was found by reading the
+    // service rather than by using the picker: storing an upload writes
+    // `customPictureUrl`, the card reads `pictureUrl`, and only a
+    // confirmation turns one into the other. Without the PATCH the
+    // picker told somebody their photograph was saved, reloaded, and
+    // changed nothing on their badge.
+    const picker = await read("portrait-picker.tsx");
+    const verbs = [...picker.matchAll(/method: "(POST|PUT|PATCH)"/g)].map(
+      (m) => m[1],
+    );
+
+    expect(verbs).toEqual(["POST", "PUT", "PATCH"]);
+    expect(picker).toContain("pictureSource");
+  });
+
+  test("says what to do when attendance is not confirmed yet", async () => {
+    // Changing a picture is only possible after `chofex confirm`, which
+    // is where the source is first set. "No pudimos guardar la foto" for
+    // that case sends somebody looking for a bug instead of a command.
+    const picker = await read("portrait-picker.tsx");
+
+    expect(picker).toContain("ATTENDANCE_NOT_CONFIRMED");
+    expect(picker).toContain("chofex confirm");
+  });
+
   test("writes through the endpoint, never the columns", async () => {
     // `pictureSource` is also an acceptance-details field. Two paths
     // writing it is how one silently reverts the other.

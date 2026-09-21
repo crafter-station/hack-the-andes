@@ -157,6 +157,36 @@ export function PortraitPicker({
         return;
       }
 
+      /*
+        The step without which none of the above shows on the badge.
+
+        Storing an upload writes `customPictureUrl`; the card reads
+        `pictureUrl`, and only a confirmation turns one into the other.
+        The first version stopped at the line above, told somebody their
+        photograph was saved, reloaded, and changed nothing.
+
+        Always `upload`: a GitHub photo reaches here having been through
+        the segmenter too, so what is stored is a new picture regardless
+        of where it came from.
+      */
+      const confirmedSource = await fetch("/api/v1/profile-picture", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pictureSource: "upload" }),
+      });
+      if (!confirmedSource.ok) {
+        const reason = await confirmedSource.json().catch(() => null);
+        if (reason?.error?.code === "ATTENDANCE_NOT_CONFIRMED") {
+          setMessage(
+            "Confirma tu asistencia con `chofex confirm` antes de cambiar la foto.",
+          );
+          setStage("failed");
+          return;
+        }
+        fail();
+        return;
+      }
+
       setStage("closed");
       onStored();
     } catch {
