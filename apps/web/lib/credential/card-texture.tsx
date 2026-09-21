@@ -317,7 +317,7 @@ export const renderCardTexture = async (
     halftonePortrait(credential.pictureUrl),
     ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
     ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_BACK }),
-    qrDataUri(new URL("/carnet", origin).href),
+    qrDataUri(new URL("/badge", origin).href),
     Promise.all(
       SPONSOR_WIDTHS.map(async ([sponsor, width]) => ({
         sponsor,

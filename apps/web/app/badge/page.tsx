@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 export default async function CarnetPage() {
   const authentication = await auth();
   if (!authentication.userId) {
-    redirect("/sign-in?redirect_url=/carnet");
+    redirect("/sign-in?redirect_url=/badge");
   }
 
   const accepted = await acceptedByClerkUser(authentication.userId);
@@ -66,7 +66,7 @@ export default async function CarnetPage() {
         confirmed={portrait.confirmed}
         githubAvatarUrl={portrait.confirmed ? null : portrait.url}
         portraitUrl={portrait.url}
-        textureUrl="/carnet/card-texture"
+        textureUrl="/badge/card-texture"
       >
         <CredentialCard credential={credential} />
       </CredentialStage>
