@@ -1260,7 +1260,7 @@ export function CandidateDashboard({
                 <span>Candidate</span>
                 <span>Background</span>
                 <span>Status</span>
-                <span className="text-right">Submitted</span>
+                <span className="text-right">Last updated at</span>
               </div>
               {currentData.candidates.length === 0 && <EmptyCandidates />}
               {currentData.candidates.length > 0 && (
@@ -1590,8 +1590,7 @@ const CandidateRows = ({
   <div className="divide-y">
     {candidates.map((candidate) => {
       const challengeSummary = completedChallengeSummary(candidate);
-      let submitted = "Not submitted";
-      if (candidate.submittedAt) submitted = formatDate(candidate.submittedAt);
+      const updatedAt = formatDate(candidate.updatedAt);
       return (
         <RowAction
           label={`Review ${displayName(candidate)}`}
@@ -1629,7 +1628,7 @@ const CandidateRows = ({
             <FunnelStatusBadge status={candidate.funnelStatus} />
           </span>
           <span className="hidden items-center justify-end gap-2 text-xs text-muted-foreground sm:flex">
-            {submitted}
+            {updatedAt}
             <ChevronRightIcon className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
           </span>
         </RowAction>

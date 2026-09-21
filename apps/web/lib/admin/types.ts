@@ -67,6 +67,7 @@ export interface Candidate {
   readonly funnelStatus: CandidateFunnelStatus;
   readonly mediaConsent: boolean;
   readonly createdAt: string;
+  readonly updatedAt: string;
   readonly submittedAt?: string;
   readonly decidedAt?: string;
   readonly approvedBy?: string;

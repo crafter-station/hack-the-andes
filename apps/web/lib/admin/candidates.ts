@@ -140,6 +140,7 @@ const toCandidate = (
     ),
     mediaConsent: details?.mediaConsent ?? application.mediaConsent,
     createdAt: application.createdAt.toISOString(),
+    updatedAt: application.updatedAt.toISOString(),
     submittedAt,
     decidedAt: instantString(application.decidedAt),
     approvedBy,
