@@ -11,7 +11,7 @@ type CandidateTimelineSource = Pick<
   Candidate,
   | "signedUpAt"
   | "applicationHistory"
-  | "challenges"
+  | "challengeHistory"
   | "attendanceCompletedAt"
   | "checkedInAt"
 >;
@@ -61,10 +61,10 @@ export const candidateTimeline = (
     }
   }
 
-  for (const challenge of candidate.challenges) {
+  for (const challenge of candidate.challengeHistory) {
     if (challenge.startedAt) {
       events.push({
-        id: `${challenge.slug}-started`,
+        id: `${challenge.attemptId}-started`,
         title: "Challenge started",
         description: challenge.title,
         at: challenge.startedAt,
@@ -72,7 +72,7 @@ export const candidateTimeline = (
     }
     if (challenge.completedAt) {
       events.push({
-        id: `${challenge.slug}-completed`,
+        id: `${challenge.attemptId}-completed`,
         title: "Challenge completed",
         description: challenge.title,
         at: challenge.completedAt,

@@ -13,16 +13,13 @@ import {
 import {
   acceptanceDetails,
   applications,
-  challengeAttempts,
-  challengeEvaluations,
   participantBadges,
   participants,
 } from "@chofex/db/schema";
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { HttpError } from "@/lib/registration/http";
-import { currentChallengeVersion } from "../challenges/engine";
-import { challengeProgressForParticipants } from "../challenges/service";
+import { challengeActivityForParticipants } from "../challenges/service";
 import { candidateAvatarUrl } from "./avatars";
 import { type ApplicationDecision, buildDecisionEmail } from "./decision-email";
 import {
@@ -85,64 +82,14 @@ type CandidateRecord = {
   readonly decisionHistory: ReadonlyArray<DecisionRecord>;
 };
 
-interface ChallengeMilestone {
-  readonly startedAt: string;
-  readonly completedAt?: string;
-}
-
-const challengeMilestonesForParticipants = async (
-  participantIds: ReadonlyArray<string>,
-): Promise<ReadonlyMap<string, ReadonlyMap<string, ChallengeMilestone>>> => {
-  if (participantIds.length === 0) return new Map();
-  const attempts = await db
-    .select()
-    .from(challengeAttempts)
-    .where(
-      and(
-        inArray(challengeAttempts.participantId, participantIds),
-        eq(challengeAttempts.challengeVersion, currentChallengeVersion),
-      ),
-    );
-  const attemptIds = attempts.map((attempt) => attempt.id);
-  const completedAtByAttemptId = new Map<string, Date>();
-  if (attemptIds.length > 0) {
-    const evaluations = await db
-      .select({
-        attemptId: challengeEvaluations.attemptId,
-        createdAt: challengeEvaluations.createdAt,
-      })
-      .from(challengeEvaluations)
-      .where(inArray(challengeEvaluations.attemptId, attemptIds));
-    for (const evaluation of evaluations) {
-      const completedAt = completedAtByAttemptId.get(evaluation.attemptId);
-      if (!completedAt || evaluation.createdAt < completedAt) {
-        completedAtByAttemptId.set(evaluation.attemptId, evaluation.createdAt);
-      }
-    }
-  }
-
-  const milestonesByParticipant = new Map<
-    string,
-    Map<string, ChallengeMilestone>
-  >();
-  for (const attempt of attempts) {
-    const participantMilestones =
-      milestonesByParticipant.get(attempt.participantId) ?? new Map();
-    participantMilestones.set(attempt.challengeSlug, {
-      startedAt: attempt.createdAt.toISOString(),
-      completedAt: instantString(completedAtByAttemptId.get(attempt.id)),
-    });
-    milestonesByParticipant.set(attempt.participantId, participantMilestones);
-  }
-  return milestonesByParticipant;
-};
-
 const toCandidate = (
   record: CandidateRecord,
   clerkPictureUrl: string | undefined,
+  clerkCreatedAt: string | undefined,
   approvedBy: string | undefined,
   clerkNames: ReadonlyMap<string, string>,
   challenges: Candidate["challenges"],
+  challengeHistory: Candidate["challengeHistory"],
 ): Candidate => {
   const { application, details } = record;
   const submittedAt = instantString(application.submittedAt);
@@ -221,7 +168,7 @@ const toCandidate = (
       challenges,
     ),
     mediaConsent: details?.mediaConsent ?? application.mediaConsent,
-    signedUpAt: record.participantCreatedAt.toISOString(),
+    signedUpAt: clerkCreatedAt ?? record.participantCreatedAt.toISOString(),
     createdAt: application.createdAt.toISOString(),
     updatedAt: application.updatedAt.toISOString(),
     submittedAt,
@@ -242,6 +189,7 @@ const toCandidate = (
     checkedInAt: instantString(details?.checkedInAt),
     nationalIdProvided: Boolean(details?.nationalIdNumber),
     challenges,
+    challengeHistory,
   };
 };
 
@@ -251,12 +199,10 @@ const toCandidates = async (
   const participantIds = [
     ...new Set(records.map((record) => record.application.participantId)),
   ];
-  const [clerk, challengeProgressByParticipant, milestonesByParticipant] =
-    await Promise.all([
-      clerkClient(),
-      challengeProgressForParticipants(participantIds),
-      challengeMilestonesForParticipants(participantIds),
-    ]);
+  const [clerk, challengeActivity] = await Promise.all([
+    clerkClient(),
+    challengeActivityForParticipants(participantIds),
+  ]);
   const clerkUserIds = [
     ...new Set(records.map((record) => record.clerkUserId)),
   ];
@@ -277,6 +223,7 @@ const toCandidates = async (
     ...new Set([...clerkUserIds, ...reviewerIds, ...approverIds]),
   ];
   const clerkPictures = new Map<string, string>();
+  const clerkCreatedAt = new Map<string, string>();
   const clerkNames = new Map<string, string>();
 
   await Promise.all(
@@ -284,6 +231,7 @@ const toCandidates = async (
       try {
         const user = await clerk.users.getUser(clerkUserId);
         if (user.hasImage) clerkPictures.set(clerkUserId, user.imageUrl);
+        clerkCreatedAt.set(clerkUserId, new Date(user.createdAt).toISOString());
         const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
         const primaryEmail = user.emailAddresses.find(
           (email) => email.id === user.primaryEmailAddressId,
@@ -301,21 +249,15 @@ const toCandidates = async (
       const approverId = record.application.decidedByClerkUserId;
       if (approverId) approvedBy = clerkNames.get(approverId) ?? approverId;
     }
-    const milestones = milestonesByParticipant.get(
-      record.application.participantId,
-    );
-    const challenges = (
-      challengeProgressByParticipant.get(record.application.participantId) ?? []
-    ).map((challenge) => ({
-      ...challenge,
-      ...milestones?.get(challenge.slug),
-    }));
+    const participantId = record.application.participantId;
     return toCandidate(
       record,
       clerkPictures.get(record.clerkUserId),
+      clerkCreatedAt.get(record.clerkUserId),
       approvedBy,
       clerkNames,
-      challenges,
+      challengeActivity.progressByParticipant.get(participantId) ?? [],
+      challengeActivity.milestonesByParticipant.get(participantId) ?? [],
     );
   });
 };

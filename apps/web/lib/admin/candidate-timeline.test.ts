@@ -15,18 +15,11 @@ test("builds a chronological candidate timeline from persisted milestones", () =
         decidedAt: "2026-09-04T10:00:00.000Z",
       },
     ],
-    challenges: [
+    challengeHistory: [
       {
+        attemptId: "challenge-attempt-1",
         slug: "black-box",
         title: "The Shipping Machine",
-        theme: "Black Box",
-        status: "evaluated",
-        open: true,
-        playable: true,
-        queriesUsed: 10,
-        queriesLimit: 25,
-        evaluationsUsed: 1,
-        evaluationsLimit: 3,
         startedAt: "2026-09-03T09:00:00.000Z",
         completedAt: "2026-09-03T10:00:00.000Z",
       },
@@ -59,7 +52,7 @@ test("omits milestones that have not happened", () => {
         startedAt: "2026-09-01T10:05:00.000Z",
       },
     ],
-    challenges: [],
+    challengeHistory: [],
   });
 
   expect(timeline.map((event) => event.title)).toEqual([
