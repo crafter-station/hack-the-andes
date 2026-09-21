@@ -32,7 +32,7 @@ import {
 } from "@chofex/ui/components/input-group";
 import { RowAction } from "@chofex/ui/components/row-action";
 import { Textarea } from "@chofex/ui/components/textarea";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import {
   keepPreviousData,
   useMutation,
@@ -92,6 +92,7 @@ import {
   parseCandidateFilter,
   reviewableCandidateStatuses,
 } from "@/lib/admin/types";
+import { whatsappMessage, whatsappUrl } from "@/lib/admin/whatsapp";
 
 interface CandidateDashboardProps {
   readonly data: CandidatePage;
@@ -198,6 +199,49 @@ const filterStatuses: ReadonlyArray<{
 
 const displayName = (candidate: Candidate): string =>
   `${candidate.firstName} ${candidate.lastName}`.trim();
+
+const WhatsAppIcon = ({ className }: { readonly className?: string }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47a8.9 8.9 0 0 1-1.65-2.06c-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.62-.91-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.1 4.5.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35M12.04 21.5h-.01a9.47 9.47 0 0 1-4.83-1.32l-.35-.2-3.59.94.96-3.5-.23-.36A9.46 9.46 0 0 1 2.54 12c0-5.23 4.26-9.49 9.5-9.49a9.42 9.42 0 0 1 6.71 2.79A9.41 9.41 0 0 1 21.54 12c0 5.24-4.26 9.5-9.5 9.5m8.08-17.58A11.34 11.34 0 0 0 12.05.58C5.76.58.65 5.7.65 12c0 2 .52 3.96 1.51 5.68L.55 23.55l6-1.57a11.4 11.4 0 0 0 5.49 1.4h.01c6.29 0 11.41-5.12 11.41-11.4 0-3.05-1.19-5.92-3.34-8.07" />
+  </svg>
+);
+
+const WhatsAppLink = ({
+  candidate,
+  adminFirstName,
+}: {
+  readonly candidate: Candidate;
+  readonly adminFirstName?: string;
+}) => {
+  const phone = candidate.phone ?? candidate.applicationPhone;
+  const message = whatsappMessage({
+    participantFirstName: candidate.firstName,
+    adminFirstName,
+    funnelStatus: candidate.funnelStatus,
+    attendanceCompleted: Boolean(candidate.attendanceCompletedAt),
+  });
+  const href = whatsappUrl(phone, message);
+  if (!href) return null;
+
+  const label = `Message ${displayName(candidate)} on WhatsApp`;
+  return (
+    <a
+      className="relative z-20 inline-flex size-7 shrink-0 items-center justify-center text-[#1fa855] transition-colors hover:text-[#168a45] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      title={label}
+    >
+      <WhatsAppIcon className="size-4" />
+    </a>
+  );
+};
 
 const initials = (candidate: Candidate): string =>
   `${candidate.firstName.charAt(0)}${candidate.lastName.charAt(0)}`.toUpperCase();
@@ -454,6 +498,7 @@ const CopyEmailButton = ({ email }: { readonly email: string }) => {
 
 const CandidateDrawer = ({
   candidate,
+  adminFirstName,
   open,
   onOpenChange,
   onPrevious,
@@ -463,6 +508,7 @@ const CandidateDrawer = ({
   hasNext,
 }: {
   readonly candidate?: Candidate;
+  readonly adminFirstName?: string;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onPrevious: () => void;
@@ -624,8 +670,12 @@ const CandidateDrawer = ({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-xl font-semibold tracking-tight">
-                      {displayName(candidate)}
+                    <h2 className="flex items-center gap-1 text-xl font-semibold tracking-tight">
+                      <span>{displayName(candidate)}</span>
+                      <WhatsAppLink
+                        candidate={candidate}
+                        adminFirstName={adminFirstName}
+                      />
                     </h2>
                     <div className="mt-1 flex items-center gap-1">
                       <a
@@ -992,6 +1042,8 @@ export function CandidateDashboard({
   initialStatus,
   initialSelection,
 }: CandidateDashboardProps) {
+  const { user } = useUser();
+  const adminFirstName = user?.firstName ?? undefined;
   const queryClient = useQueryClient();
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<CandidateFilters>({
@@ -1266,6 +1318,7 @@ export function CandidateDashboard({
               {currentData.candidates.length > 0 && (
                 <CandidateRows
                   candidates={currentData.candidates}
+                  adminFirstName={adminFirstName}
                   onSelect={setSelectedId}
                 />
               )}
@@ -1342,6 +1395,7 @@ export function CandidateDashboard({
       <CandidateDrawer
         key={selectedCandidate?.id}
         candidate={selectedCandidate}
+        adminFirstName={adminFirstName}
         open={Boolean(selectedCandidate)}
         onOpenChange={(isOpen) => {
           if (isOpen) return;
@@ -1582,9 +1636,11 @@ const EmptyCandidates = () => (
 
 const CandidateRows = ({
   candidates,
+  adminFirstName,
   onSelect,
 }: {
   readonly candidates: ReadonlyArray<Candidate>;
+  readonly adminFirstName?: string;
   readonly onSelect: (candidateId: string) => void;
 }) => (
   <div className="divide-y">
@@ -1604,9 +1660,15 @@ const CandidateRows = ({
               className="grid size-9 shrink-0 place-items-center border border-border bg-muted text-[11px] font-semibold text-muted-foreground"
             />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">
-                {displayName(candidate)}
-                <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+              <span className="flex min-w-0 items-center">
+                <span className="truncate text-sm font-medium">
+                  {displayName(candidate)}
+                </span>
+                <WhatsAppLink
+                  candidate={candidate}
+                  adminFirstName={adminFirstName}
+                />
+                <span className="truncate text-[11px] font-normal text-muted-foreground">
                   Attempt {candidate.attemptNumber}
                   {challengeSummary && ` · ${challengeSummary}`}
                 </span>
