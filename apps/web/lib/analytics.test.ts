@@ -4,6 +4,7 @@ import {
   campaignPropertiesFromUrl,
   isExtensionNoiseException,
   isPostHogConfigured,
+  isSessionRecordingEvent,
   isTrackablePath,
   isTrackableUrl,
   postHogEventForPublicAnalytics,
@@ -71,6 +72,29 @@ test("fails closed on anything it cannot parse", () => {
   expect(isTrackableUrl("not a url")).toBe(false);
   expect(isTrackableUrl(undefined)).toBe(false);
   expect(isTrackableUrl(null)).toBe(false);
+});
+
+test("recognizes session recording snapshots so replay bypasses event shaping", () => {
+  expect(
+    isSessionRecordingEvent({
+      event: "$snapshot",
+      properties: { $snapshot_data: [{ type: 2 }] },
+    }),
+  ).toBe(true);
+  expect(isSessionRecordingEvent({ event: "$pageview" })).toBe(false);
+  expect(isSessionRecordingEvent(null)).toBe(false);
+});
+
+test("the public analytics filter alone would drop session snapshots", () => {
+  // A snapshot carries no trackable $current_url, so the public filter returns
+  // null. before_send must keep snapshots ahead of this filter, or replay
+  // records nothing.
+  expect(
+    postHogEventForPublicAnalytics({
+      event: "$snapshot",
+      properties: { $snapshot_data: [{ type: 2 }] },
+    }),
+  ).toBe(null);
 });
 
 test("drops the browser extension promise rejection, whatever its id", () => {
