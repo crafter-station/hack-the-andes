@@ -1,4 +1,7 @@
-import type { ParticipantChallengeProgress } from "@chofex/challenges-contract";
+import type {
+  ParticipantChallengeMilestone,
+  ParticipantChallengeProgress,
+} from "@chofex/challenges-contract";
 
 export const candidateStatuses = [
   "draft",
@@ -102,13 +105,7 @@ export interface Candidate {
   readonly checkedInAt?: string;
   readonly nationalIdProvided: boolean;
   readonly challenges: ReadonlyArray<ParticipantChallengeProgress>;
-  readonly challengeHistory: ReadonlyArray<{
-    readonly attemptId: string;
-    readonly slug: string;
-    readonly title: string;
-    readonly startedAt: string;
-    readonly completedAt?: string;
-  }>;
+  readonly challengeHistory: ReadonlyArray<ParticipantChallengeMilestone>;
 }
 
 export type CandidateCounts = Readonly<

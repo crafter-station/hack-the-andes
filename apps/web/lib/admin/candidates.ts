@@ -290,18 +290,18 @@ const addAttemptHistory = async <
   return records.map((record) => {
     const attempts =
       historyByParticipant.get(record.application.participantId) ?? [];
+    const applicationHistory = attempts.map((attempt, index) => ({
+      application: attempt,
+      attemptNumber: attempts.length - index,
+    }));
     return {
       ...record,
       attemptNumber: attempts.length,
-      applicationHistory: attempts.map((attempt, index) => ({
-        application: attempt,
-        attemptNumber: attempts.length - index,
-      })),
-      decisionHistory: attempts.flatMap((attempt, index) => {
-        if (!isDecidedApplication(attempt)) return [];
-        return [
-          { application: attempt, attemptNumber: attempts.length - index },
-        ];
+      applicationHistory,
+      decisionHistory: applicationHistory.flatMap((attemptRecord) => {
+        const application = attemptRecord.application;
+        if (!isDecidedApplication(application)) return [];
+        return [{ application, attemptNumber: attemptRecord.attemptNumber }];
       }),
     };
   });

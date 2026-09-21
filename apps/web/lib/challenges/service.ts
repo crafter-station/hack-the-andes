@@ -14,6 +14,7 @@ import {
   compareChallengeScores,
   isChallengeOpenAt,
   isChallengeRankingVisibleAt,
+  type ParticipantChallengeMilestone,
   type ParticipantChallengeProgress,
   type Shipment,
   ShipmentSchema,
@@ -352,14 +353,6 @@ const loadObservations = async (
     .orderBy(asc(challengeObservations.sequence));
   return rows.map(observationView);
 };
-
-export interface ParticipantChallengeMilestone {
-  readonly attemptId: string;
-  readonly slug: string;
-  readonly title: string;
-  readonly startedAt: string;
-  readonly completedAt?: string;
-}
 
 export interface ParticipantChallengeActivity {
   readonly progressByParticipant: ReadonlyMap<

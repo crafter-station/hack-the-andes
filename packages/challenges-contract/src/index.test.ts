@@ -8,6 +8,7 @@ import {
   formatChallengeOpeningInPeru,
   isChallengeOpenAt,
   isChallengeRankingVisibleAt,
+  ParticipantChallengeMilestoneSchema,
   ParticipantChallengeProgressSchema,
   ShipmentSchema,
   scoreFromPredictions,
@@ -80,6 +81,21 @@ describe("participant challenge progress", () => {
     });
 
     expect(progress.completionDurationMs).toBe(5_400_000);
+  });
+
+  test("carries historical challenge milestone timestamps", () => {
+    const milestone = Schema.decodeUnknownSync(
+      ParticipantChallengeMilestoneSchema,
+    )({
+      attemptId: "attempt-1",
+      slug: "retired-challenge",
+      title: "Retired challenge",
+      startedAt: "2026-09-03T09:00:00.000Z",
+      completedAt: "2026-09-03T10:00:00.000Z",
+    });
+
+    expect(milestone.slug).toBe("retired-challenge");
+    expect(milestone.completedAt).toBe("2026-09-03T10:00:00.000Z");
   });
 });
 

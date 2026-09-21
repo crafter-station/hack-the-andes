@@ -274,6 +274,17 @@ export const ParticipantChallengeProgressSchema = Schema.Struct({
 export type ParticipantChallengeProgress =
   typeof ParticipantChallengeProgressSchema.Type;
 
+export const ParticipantChallengeMilestoneSchema = Schema.Struct({
+  attemptId: Schema.String,
+  slug: Schema.String,
+  title: Schema.String,
+  startedAt: Schema.String,
+  completedAt: Schema.optional(Schema.String),
+});
+
+export type ParticipantChallengeMilestone =
+  typeof ParticipantChallengeMilestoneSchema.Type;
+
 export const ChallengeCatalogItemSchema = Schema.Struct({
   slug: ChallengeSlugSchema,
   number: Schema.Number,
