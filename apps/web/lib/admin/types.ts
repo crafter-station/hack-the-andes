@@ -38,6 +38,12 @@ export const reviewableCandidateStatuses: ReadonlyArray<CandidateStatus> = [
   "waitlisted",
 ];
 
+export interface CandidateChallengeProgress
+  extends ParticipantChallengeProgress {
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+}
+
 export interface Candidate {
   readonly id: string;
   readonly participantId: string;
@@ -66,12 +72,22 @@ export interface Candidate {
   readonly status: CandidateStatus;
   readonly funnelStatus: CandidateFunnelStatus;
   readonly mediaConsent: boolean;
+  readonly signedUpAt: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly submittedAt?: string;
   readonly decidedAt?: string;
   readonly approvedBy?: string;
   readonly attemptNumber: number;
+  readonly applicationHistory: ReadonlyArray<{
+    readonly applicationId: string;
+    readonly attemptNumber: number;
+    readonly status: CandidateStatus;
+    readonly startedAt: string;
+    readonly submittedAt?: string;
+    readonly decidedAt?: string;
+    readonly withdrawnAt?: string;
+  }>;
   readonly decisionHistory: ReadonlyArray<{
     readonly applicationId: string;
     readonly attemptNumber: number;
@@ -91,7 +107,7 @@ export interface Candidate {
   readonly attendanceCompletedAt?: string;
   readonly checkedInAt?: string;
   readonly nationalIdProvided: boolean;
-  readonly challenges: ReadonlyArray<ParticipantChallengeProgress>;
+  readonly challenges: ReadonlyArray<CandidateChallengeProgress>;
 }
 
 export type CandidateCounts = Readonly<

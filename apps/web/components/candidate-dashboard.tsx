@@ -72,6 +72,7 @@ import {
   candidateListOptions,
   submitCandidateDecision,
 } from "@/lib/admin/candidate-queries";
+import { candidateTimeline } from "@/lib/admin/candidate-timeline";
 import { candidateFunnelMilestones } from "@/lib/admin/funnel-metrics";
 import {
   applicationDataStatus,
@@ -496,6 +497,48 @@ const CopyEmailButton = ({ email }: { readonly email: string }) => {
   );
 };
 
+const CandidateActivityTimeline = ({
+  candidate,
+}: {
+  readonly candidate: Candidate;
+}) => {
+  const events = candidateTimeline(candidate);
+  return (
+    <div>
+      <h3 className="text-sm font-semibold">Activity timeline</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Recorded milestones from sign-up through participation.
+      </p>
+      <ol className="mt-4 ml-1.5 border-l border-border">
+        {events.map((event) => (
+          <li key={event.id} className="relative pb-5 pl-5 last:pb-0">
+            <span
+              aria-hidden="true"
+              className="absolute top-1 -left-1.5 size-3 border-2 border-background bg-primary"
+            />
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+              <div>
+                <p className="text-sm font-medium">{event.title}</p>
+                {event.description && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {event.description}
+                  </p>
+                )}
+              </div>
+              <time
+                dateTime={event.at}
+                className="text-xs text-muted-foreground"
+              >
+                {formatDateTime(event.at)}
+              </time>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+};
+
 const CandidateDrawer = ({
   candidate,
   adminFirstName,
@@ -810,7 +853,9 @@ const CandidateDrawer = ({
           )}
 
           <section className="space-y-5 px-5 py-6 sm:px-7">
-            <div>
+            <CandidateActivityTimeline candidate={candidate} />
+
+            <div className="border-t pt-5">
               <h3 className="text-sm font-semibold">Application</h3>
               <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5">
                 <Detail label="Application state">
