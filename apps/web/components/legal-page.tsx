@@ -10,8 +10,8 @@ import Link from "next/link";
 import {
   brandName,
   chromeCopy,
-  footerNavigation,
   legalCopy,
+  legalNavigation,
 } from "@/components/landing/content";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingSkipLinks } from "@/components/landing/skip-links";
@@ -20,13 +20,6 @@ import { LegalDocument } from "@/components/legal-document";
 interface LegalPageProps {
   readonly children: string;
 }
-
-const legalFooterLinks = footerNavigation
-  .flatMap((group) => group.links)
-  .filter(
-    (link) =>
-      link.href === legalCopy.termsHref || link.href === legalCopy.privacyHref,
-  );
 
 export function LegalPage({ children }: LegalPageProps) {
   return (
@@ -44,7 +37,7 @@ export function LegalPage({ children }: LegalPageProps) {
           >
             {legalCopy.home}
           </Link>
-          {legalFooterLinks.map((link) => (
+          {legalNavigation.map((link) => (
             <Link
               className="text-[var(--hud-muted)] underline-offset-4 hover:text-[var(--hud-ink)] hover:underline"
               href={link.href}

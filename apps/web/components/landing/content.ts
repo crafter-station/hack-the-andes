@@ -454,6 +454,11 @@ export const footerCopy = {
   organizer: "Organiza Crafter Station",
 } as const;
 
+export const legalNavigation = [
+  { href: "/terms", label: "Términos" },
+  { href: "/privacy", label: "Privacidad" },
+] as const;
+
 export const footerNavigation = [
   {
     label: "Evento",
@@ -483,8 +488,7 @@ export const footerNavigation = [
     links: [
       { href: "#sponsors", label: "Organizadores" },
       { href: "/credits", label: "Créditos" },
-      { href: "/terms", label: "Términos" },
-      { href: "/privacy", label: "Privacidad" },
+      ...legalNavigation,
     ],
   },
 ] as const;
@@ -500,10 +504,8 @@ export const legalCopy = {
   home: "Inicio",
   navigationLabel: "Páginas legales",
   eventKicker: "Lima presencial · 17–18 oct 2026",
-  termsHref: "/terms",
-  privacyHref: "/privacy",
-  termsLabel: "Términos",
-  privacyLabel: "Privacidad",
+  termsHref: legalNavigation[0].href,
+  privacyHref: legalNavigation[1].href,
   termsTitle: "Términos y Condiciones",
   privacyTitle: "Privacidad",
   termsDescription: `Términos y condiciones de participación para ${brandName}, evento presencial en Lima el 17 y 18 de octubre de 2026.`,
