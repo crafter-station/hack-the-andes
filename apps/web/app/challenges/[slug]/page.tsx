@@ -1,4 +1,4 @@
-import { challengeBySlug } from "@chofex/challenges-contract";
+import { challengeBySlug, challengeCatalog } from "@chofex/challenges-contract";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChallengesShell } from "@/components/challenges/challenges-shell";
@@ -7,7 +7,15 @@ import { currentChallengeTime } from "@/lib/challenges/clock";
 import { getChallengeRanking } from "@/lib/challenges/ranking";
 import { HttpError } from "@/lib/registration/http";
 
-export const dynamic = "force-dynamic";
+// Every public challenge comes from this catalog, so prerender each route and
+// reject unknown slugs instead of falling back to request-time rendering.
+export const dynamicParams = false;
+export const generateStaticParams = () =>
+  challengeCatalog.map((challenge) => ({ slug: challenge.slug }));
+
+// Serve the prerendered response while Next rebuilds it in the background, so
+// first paint does not wait on a fresh server render or ranking query.
+export const revalidate = 60;
 
 interface ChallengeRankingPageProps {
   readonly params: Promise<{ slug: string }>;
