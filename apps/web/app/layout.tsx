@@ -2,7 +2,10 @@ import { brandClerkAppearance } from "@chofex/ui/lib/clerk-appearance";
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/themes";
 import type { Metadata } from "next";
-import { ChunkLoadRecoverySuccess } from "@/components/chunk-load-recovery";
+import {
+  ChunkLoadRecoverySuccess,
+  UnhandledChunkErrorRecovery,
+} from "@/components/chunk-load-recovery";
 import { DocumentLang } from "@/components/document-lang";
 import { brandName, metadataCopy } from "@/components/landing/content";
 import {
@@ -86,6 +89,7 @@ export default function RootLayout({
           forcedTheme="dark"
         >
           {content}
+          <UnhandledChunkErrorRecovery />
           <ChunkLoadRecoverySuccess />
         </ThemeProvider>
         {posthogAnalytics}
