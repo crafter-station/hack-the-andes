@@ -81,3 +81,26 @@ export function clearChunkReloadGuard(getStorage: StorageProvider): void {
     // Storage is best-effort. A blocked store must not break the application.
   }
 }
+
+/**
+ * Runs the single guarded reload for a recoverable load failure. Global event
+ * listeners and React error boundaries share this policy so every failure
+ * counts against the same one-reload-per-session limit.
+ */
+export function recoverFromChunkError(
+  error: unknown,
+  getStorage: StorageProvider,
+  reload: () => void,
+): boolean {
+  if (!isChunkLoadError(error)) {
+    return false;
+  }
+  if (!shouldAutoReloadChunk()) {
+    return false;
+  }
+  if (!claimChunkReload(getStorage)) {
+    return false;
+  }
+  reload();
+  return true;
+}

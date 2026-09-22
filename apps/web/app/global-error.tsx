@@ -3,9 +3,8 @@
 import { brandColors } from "@chofex/ui/lib/brand-theme";
 import { useEffect } from "react";
 import {
-  claimChunkReload,
   isChunkLoadError,
-  shouldAutoReloadChunk,
+  recoverFromChunkError,
 } from "@/lib/chunk-load-recovery";
 
 /**
@@ -24,14 +23,12 @@ export default function GlobalError({
   useEffect(() => {
     console.error(error);
 
-    if (
-      chunkError &&
-      shouldAutoReloadChunk() &&
-      claimChunkReload(() => window.sessionStorage)
-    ) {
-      window.location.reload();
-    }
-  }, [chunkError, error]);
+    recoverFromChunkError(
+      error,
+      () => window.sessionStorage,
+      () => window.location.reload(),
+    );
+  }, [error]);
 
   const retry = () => {
     if (chunkError) {

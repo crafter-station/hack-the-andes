@@ -5,6 +5,7 @@ import {
   clearChunkReloadGuard,
   clerkUiComponentForPath,
   isChunkLoadError,
+  recoverFromChunkError,
   shouldAutoReloadChunk,
 } from "./chunk-load-recovery";
 
@@ -96,5 +97,46 @@ describe("chunk load recovery", () => {
 
   test("auto-reloads a chunk failure on every route, not only auth routes", () => {
     expect(shouldAutoReloadChunk()).toBe(true);
+  });
+
+  test("reloads once for a chunk failure that escapes React", () => {
+    const storage = createStorage();
+    let reloads = 0;
+    const reload = () => {
+      reloads += 1;
+    };
+    // The reported shape: a rejected dynamic import in the Turbopack runtime.
+    const chunkError = {
+      name: "ChunkLoadError",
+      message:
+        "Failed to load chunk /_next/static/chunks/1tlw.js from module 5",
+    };
+
+    expect(recoverFromChunkError(chunkError, () => storage, reload)).toBe(true);
+    expect(reloads).toBe(1);
+    expect(storage.value()).toBe("true");
+
+    // A second escaped failure in the same session must not reload again.
+    expect(recoverFromChunkError(chunkError, () => storage, reload)).toBe(
+      false,
+    );
+    expect(reloads).toBe(1);
+  });
+
+  test("ignores unrelated errors and missing reasons", () => {
+    const storage = createStorage();
+    let reloads = 0;
+    const reload = () => {
+      reloads += 1;
+    };
+
+    expect(
+      recoverFromChunkError(new Error("Request failed"), () => storage, reload),
+    ).toBe(false);
+    // A window error event for a resource load carries no `error` object.
+    expect(recoverFromChunkError(undefined, () => storage, reload)).toBe(false);
+
+    expect(reloads).toBe(0);
+    expect(storage.value()).toBeNull();
   });
 });
