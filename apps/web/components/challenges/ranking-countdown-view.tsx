@@ -9,6 +9,7 @@ import {
 } from "./ranking-countdown";
 
 const twoDigits = (value: number): string => String(value).padStart(2, "0");
+const rankingRefreshIntervalMs = 10_000;
 
 export function RankingCountdown({
   initialNow,
@@ -25,12 +26,14 @@ export function RankingCountdown({
   const visibilityLabel = formatRankingVisibleAtInPeru(visibleAt);
 
   useEffect(() => {
-    let refreshed = false;
+    let lastRefreshAt = 0;
     const update = () => {
       const currentTime = Date.now();
       setNow(currentTime);
-      if (currentTime >= targetTime && !refreshed) {
-        refreshed = true;
+      const refreshIsDue =
+        currentTime - lastRefreshAt >= rankingRefreshIntervalMs;
+      if (currentTime >= targetTime && refreshIsDue) {
+        lastRefreshAt = currentTime;
         router.refresh();
       }
     };
