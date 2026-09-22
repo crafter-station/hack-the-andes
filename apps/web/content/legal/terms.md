@@ -1,49 +1,49 @@
-# Terms and Code of Conduct
+# Términos y Condiciones
 
-**Last updated: September 9, 2026**
+**Última actualización: 21 de septiembre de 2026**
 
-These terms apply to participation in Hack the Andes in Lima, Peru. You must accept them to submit an application.
+Estos términos rigen la participación en Hack the Andes, el evento presencial de Chofex en Lima, Perú, el 17 y 18 de octubre de 2026. Debes aceptarlos para enviar tu postulación.
 
-## Participation terms
+## Condiciones de participación
 
-By registering, you agree that:
+Al registrarte, aceptas que:
 
-- The information you provide is accurate and belongs to you.
-- Submitting an application does not guarantee acceptance into the event.
-- You will follow organizer instructions related to safety, venue access, schedules, and event operations.
-- You are responsible for the equipment, accounts, travel documents, and permissions you need to participate.
-- Organizers may reject or remove a participant who breaks these terms, disrupts the event, or puts another person at risk.
+- La información que entregas es precisa y te pertenece.
+- Enviar una postulación no garantiza un cupo en el evento.
+- Seguirás las indicaciones del equipo organizador sobre seguridad, acceso al recinto, horarios y operación del evento.
+- Eres responsable del equipo, las cuentas, los documentos de viaje y los permisos que necesites para participar.
+- El equipo organizador puede rechazar o retirar a quien incumpla estos términos, altere el evento o ponga a otra persona en riesgo.
 
-## Code of Conduct
+## Código de conducta
 
-Chofex is committed to a welcoming, respectful, and harassment-free event for everyone, regardless of identity, background, experience, or ability.
+Chofex se compromete a un evento acogedor, respetuoso y libre de acoso para todas las personas, sin importar identidad, origen, experiencia o capacidad.
 
-### Expected behavior
+### Conducta esperada
 
-- Treat participants, organizers, mentors, judges, speakers, and venue staff with respect.
-- Communicate constructively and make room for different perspectives and levels of experience.
-- Ask before photographing, recording, touching, or sharing personal information about another person.
-- Respect personal boundaries, confidential information, project ownership, and venue rules.
-- Report unsafe or inappropriate behavior to an organizer promptly.
+- Trata con respeto a participantes, organización, mentores, jurado, speakers y personal del recinto.
+- Comunícate de forma constructiva y deja espacio a perspectivas y niveles de experiencia distintos.
+- Pide permiso antes de fotografiar, grabar, tocar o compartir información personal de otra persona.
+- Respeta los límites personales, la información confidencial, la autoría de los proyectos y las reglas del recinto.
+- Reporta de inmediato a la organización cualquier conducta insegura o inapropiada.
 
-### Unacceptable behavior
+### Conducta inaceptable
 
-Harassment, discrimination, threats, intimidation, stalking, unwanted sexual attention, deliberate disruption, and abusive or demeaning language are not permitted. Retaliation against someone who raises a concern is also prohibited.
+No se permiten el acoso, la discriminación, las amenazas, la intimidación, el acecho, la atención sexual no deseada, la interrupción deliberada ni el lenguaje abusivo o denigrante. También están prohibidas las represalias contra quien plantee una preocupación.
 
-### Enforcement
+### Aplicación
 
-Organizers may investigate reported behavior and take any action reasonably needed to protect participants. Actions may include a warning, removal from an activity or the event, rejection of an application, or referral to venue security or local authorities when appropriate.
+El equipo organizador puede investigar las denuncias y tomar las medidas razonables para proteger a las personas. Eso puede incluir una advertencia, el retiro de una actividad o del evento, el rechazo de una postulación o, cuando corresponda, el aviso a la seguridad del recinto o a las autoridades locales.
 
-## Projects and third-party services
+## Proyectos y servicios de terceros
 
-You keep ownership of work you create, subject to the rights of your teammates and any licenses attached to tools, datasets, or other materials you use. You are responsible for following applicable laws and third-party terms.
+Conservas la titularidad de lo que crees, sujeto a los derechos de tu equipo y a las licencias de las herramientas, conjuntos de datos u otros materiales que uses. Eres responsable de cumplir las leyes aplicables y los términos de terceros.
 
-## Event changes
+## Cambios en el evento
 
-Event details may change for operational, safety, or other reasonable causes. Organizers will communicate material changes through official Chofex channels when practical.
+Los detalles del evento pueden cambiar por operación, seguridad u otras causas razonables. Cuando sea posible, el equipo organizador comunicará los cambios relevantes por los canales oficiales de Chofex.
 
-## Questions or reports
+## Preguntas o reportes
 
-Contact a Chofex organizer through the event's official communication channel. If someone is in immediate danger, contact venue security or local emergency services first.
+Contacta a un organizador de Chofex por el canal oficial del evento. Si alguien está en peligro inmediato, primero avisa a la seguridad del recinto o a los servicios de emergencia locales.
 
-Read the [Privacy Policy](/privacy) to understand how registration data is handled.
+Lee la [Política de privacidad](/privacy) para saber cómo se trata la información de tu postulación.

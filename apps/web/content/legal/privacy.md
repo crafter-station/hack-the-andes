@@ -1,49 +1,49 @@
-# Privacy Policy
+# Privacidad
 
-**Last updated: September 9, 2026**
+**Última actualización: 21 de septiembre de 2026**
 
-This policy explains how Chofex handles personal information provided for Hack the Andes. You must accept this policy to submit an application.
+Esta política explica cómo Chofex trata la información personal que entregas para Hack the Andes, el evento presencial en Lima, Perú, el 17 y 18 de octubre de 2026. Debes aceptarla para enviar tu postulación.
 
-## Information collected
+## Información que se recopila
 
-During application and participation, Chofex may collect:
+Durante la postulación y la participación, Chofex puede recopilar:
 
-- Account information, including your name and primary email address.
-- Application details such as your phone number, city, shipped projects, hackathon project plans, biography, links, and team preference.
-- Your choices about the Code of Conduct, this Privacy Policy, and optional event-media consent.
-- If you are accepted, attendance details such as your confirmed phone number, date of birth, identification number, shirt size, dietary or accessibility needs, and emergency contact.
-- Technical information needed to authenticate requests, protect the service, diagnose errors, and prevent abuse.
+- Datos de cuenta, incluido tu nombre y correo principal.
+- Detalles de la postulación, como teléfono, ciudad, proyectos que hayas enviado, planes para la hackathon, biografía, enlaces y preferencia de equipo.
+- Tus decisiones sobre el Código de conducta, esta Política de privacidad y el consentimiento opcional para medios del evento.
+- Si eres aceptado, datos de asistencia como teléfono confirmado, fecha de nacimiento, número de identificación, talla de polo, necesidades alimentarias o de accesibilidad y contacto de emergencia.
+- Información técnica necesaria para autenticar solicitudes, proteger el servicio, diagnosticar errores y prevenir abusos.
 
-## How information is used
+## Cómo se usa la información
 
-Chofex uses this information to:
+Chofex usa esta información para:
 
-- Receive, review, and manage applications.
-- Communicate decisions, requirements, schedules, and event updates.
-- Confirm attendance and support event safety, accessibility, and logistics.
-- Operate, secure, troubleshoot, and improve the registration service.
-- Meet legal obligations and respond to safety or security incidents.
+- Recibir, revisar y gestionar postulaciones.
+- Comunicar decisiones, requisitos, horarios y novedades del evento.
+- Confirmar la asistencia y apoyar la seguridad, la accesibilidad y la logística.
+- Operar, proteger, diagnosticar y mejorar el servicio de registro.
+- Cumplir obligaciones legales y responder a incidentes de seguridad.
 
-## Media consent
+## Consentimiento para medios
 
-Consent to appear in event photography or recordings is optional. Declining media consent does not prevent you from applying. Organizers will use reasonable efforts to honor your choice, but cannot control incidental capture by other participants or people outside the event team.
+Aparecer en fotografías o grabaciones del evento es opcional. Rechazar ese consentimiento no impide postular. El equipo organizador hará esfuerzos razonables para respetar tu decisión, pero no puede controlar capturas incidentales de otras personas participantes o ajenas al equipo del evento.
 
-## Sharing
+## Compartir información
 
-Information is available only to organizers and service providers who need it for the purposes above. Chofex does not sell personal information. Information may also be disclosed when required by law or when reasonably necessary to protect a person's safety, rights, or security.
+La información solo está disponible para el equipo organizador y para proveedores que la necesiten para los fines anteriores. Chofex no vende información personal. También puede divulgarse cuando lo exija la ley o cuando sea razonablemente necesario para proteger la seguridad, los derechos o la integridad de una persona.
 
-## Storage and protection
+## Almacenamiento y protección
 
-Chofex uses reasonable technical and organizational safeguards. Sensitive identification information submitted after acceptance is encrypted. No storage or transmission method can be guaranteed completely secure.
+Chofex aplica salvaguardas técnicas y organizativas razonables. La información de identificación sensible enviada después de la aceptación se cifra. Ningún método de almacenamiento o transmisión es completamente seguro.
 
-Information is retained only as long as reasonably needed for event operations, safety, recordkeeping, dispute resolution, and legal obligations, then deleted or anonymized when practical.
+La información se conserva solo el tiempo razonablemente necesario para la operación del evento, la seguridad, el archivo, la resolución de disputas y las obligaciones legales; después se elimina o se anonimiza cuando sea práctico.
 
-## Your choices
+## Tus decisiones
 
-You may ask an organizer through an official Chofex communication channel to help you access, correct, or delete your information, subject to legal and operational requirements. You may decline optional fields and media consent where the registration flow identifies them as optional.
+Puedes pedir a un organizador, por un canal oficial de Chofex, que te ayude a acceder, corregir o eliminar tu información, sujeto a requisitos legales y operativos. Puedes omitir los campos opcionales y el consentimiento para medios cuando el flujo de registro los marque como opcionales.
 
-## Changes
+## Cambios
 
-This policy may be updated as event operations or legal requirements change. The current version and its update date will remain available on this page.
+Esta política puede actualizarse si cambian la operación del evento o los requisitos legales. La versión vigente y su fecha de actualización permanecerán en esta página.
 
-Read the [Terms and Code of Conduct](/terms) that apply to event participation.
+Lee los [Términos y Condiciones](/terms) que rigen la participación en el evento.

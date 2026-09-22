@@ -9,8 +9,6 @@ const englishPrefixes = [
   "/sign-up",
   "/welcome",
   "/auth",
-  "/terms",
-  "/privacy",
 ] as const;
 
 export function isEnglishPath(pathname: string): boolean {
@@ -22,7 +20,7 @@ export function isEnglishPath(pathname: string): boolean {
   });
 }
 
-/** Keeps admin/legal English routes from inheriting the Spanish marketing lang. */
+/** Keeps admin and auth English routes from inheriting the Spanish marketing lang. */
 export function DocumentLang() {
   const pathname = usePathname();
 
