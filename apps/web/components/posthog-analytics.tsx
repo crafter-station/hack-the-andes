@@ -8,6 +8,7 @@ import {
   type CampaignProperties,
   campaignPropertyNames,
   isPostHogConfigured,
+  isSessionRecordingEvent,
   isTrackableUrl,
   normalizeCampaignProperties,
   postHogEventForPublicAnalytics,
@@ -247,6 +248,7 @@ export function PostHogAnalytics({
       save_campaign_params: false,
       save_referrer: false,
       before_send: (event) => {
+        if (isSessionRecordingEvent(event)) return event;
         let pageviewUrl: string | undefined;
         if (event?.event === "$pageview") {
           initialPageviewObserved.current = true;

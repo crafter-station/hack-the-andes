@@ -114,6 +114,15 @@ type AnalyticsEvent = {
   properties?: Record<string, unknown>;
 };
 
+/**
+ * Session recording snapshots must reach PostHog unmodified. Rewriting or
+ * re-capturing them breaks replay, so they bypass the campaign and identity
+ * handling that shapes ordinary events.
+ */
+export function isSessionRecordingEvent(event: AnalyticsEvent | null): boolean {
+  return event?.event === "$snapshot";
+}
+
 /** Extension promise rejections are not our code, so they never belong in error tracking. */
 export function isExtensionNoiseException(event: AnalyticsEvent): boolean {
   if (event.event !== "$exception") return false;
