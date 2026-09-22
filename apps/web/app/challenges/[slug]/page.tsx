@@ -1,4 +1,4 @@
-import { challengeBySlug } from "@chofex/challenges-contract";
+import { challengeBySlug, challengeCatalog } from "@chofex/challenges-contract";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChallengesShell } from "@/components/challenges/challenges-shell";
@@ -7,10 +7,14 @@ import { currentChallengeTime } from "@/lib/challenges/clock";
 import { getChallengeRanking } from "@/lib/challenges/ranking";
 import { HttpError } from "@/lib/registration/http";
 
-// The page above the ranking table is static challenge copy from the contract,
-// and the ranking is a read-only leaderboard. Serve a cached response and
-// rebuild it in the background instead of rendering on every request, so first
-// paint never waits on a fresh server render or the ranking query.
+// Every public challenge comes from this catalog, so prerender each route and
+// reject unknown slugs instead of falling back to request-time rendering.
+export const dynamicParams = false;
+export const generateStaticParams = () =>
+  challengeCatalog.map((challenge) => ({ slug: challenge.slug }));
+
+// Serve the prerendered response while Next rebuilds it in the background, so
+// first paint does not wait on a fresh server render or ranking query.
 export const revalidate = 60;
 
 interface ChallengeRankingPageProps {
