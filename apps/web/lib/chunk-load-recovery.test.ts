@@ -31,14 +31,8 @@ describe("chunk load recovery", () => {
     ["TypeError", "Failed to fetch dynamically imported module"],
     ["TypeError", "error loading dynamically imported module"],
     ["TypeError", "Importing a module script failed"],
-    [
-      "e",
-      'Clerk: Failed to load Clerk JS, failed to load script: https://clerk.hacktheandes.com/npm/@clerk/clerk-js@6/dist/clerk.browser.js (code="failed_to_load_clerk_js")',
-    ],
-    [
-      "Error",
-      'Clerk: Failed to load Clerk JS (code="failed_to_load_clerk_js")',
-    ],
+    ["e", "Clerk: Failed to load Clerk JS"],
+    ["Error", 'Clerk loader failed (code="failed_to_load_clerk_js")'],
   ])("recognizes %s: %s", (name, message) => {
     expect(isChunkLoadError({ name, message })).toBe(true);
   });
