@@ -83,15 +83,11 @@ export function clearChunkReloadGuard(getStorage: StorageProvider): void {
 }
 
 /**
- * Runs the single guarded reload for a chunk failure that escapes React. A
- * dynamic import that rejects outside render — a rejected `Promise.all` in the
- * Turbopack runtime, for example — surfaces as an unhandled rejection or a
- * window error with `mechanism.handled` false, so no error boundary ever runs
- * the recovery. This is the same guard the boundaries use, so a reload from
- * here still counts against the one-per-session limit. Returns whether it
- * reloaded, which the caller can ignore.
+ * Runs the single guarded reload for a recoverable load failure. Global event
+ * listeners and React error boundaries share this policy so every failure
+ * counts against the same one-reload-per-session limit.
  */
-export function recoverFromUnhandledChunkError(
+export function recoverFromChunkError(
   error: unknown,
   getStorage: StorageProvider,
   reload: () => void,

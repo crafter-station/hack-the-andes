@@ -5,7 +5,7 @@ import {
   clearChunkReloadGuard,
   clerkUiComponentForPath,
   isChunkLoadError,
-  recoverFromUnhandledChunkError,
+  recoverFromChunkError,
   shouldAutoReloadChunk,
 } from "./chunk-load-recovery";
 
@@ -112,16 +112,14 @@ describe("chunk load recovery", () => {
         "Failed to load chunk /_next/static/chunks/1tlw.js from module 5",
     };
 
-    expect(
-      recoverFromUnhandledChunkError(chunkError, () => storage, reload),
-    ).toBe(true);
+    expect(recoverFromChunkError(chunkError, () => storage, reload)).toBe(true);
     expect(reloads).toBe(1);
     expect(storage.value()).toBe("true");
 
     // A second escaped failure in the same session must not reload again.
-    expect(
-      recoverFromUnhandledChunkError(chunkError, () => storage, reload),
-    ).toBe(false);
+    expect(recoverFromChunkError(chunkError, () => storage, reload)).toBe(
+      false,
+    );
     expect(reloads).toBe(1);
   });
 
@@ -133,16 +131,10 @@ describe("chunk load recovery", () => {
     };
 
     expect(
-      recoverFromUnhandledChunkError(
-        new Error("Request failed"),
-        () => storage,
-        reload,
-      ),
+      recoverFromChunkError(new Error("Request failed"), () => storage, reload),
     ).toBe(false);
     // A window error event for a resource load carries no `error` object.
-    expect(
-      recoverFromUnhandledChunkError(undefined, () => storage, reload),
-    ).toBe(false);
+    expect(recoverFromChunkError(undefined, () => storage, reload)).toBe(false);
 
     expect(reloads).toBe(0);
     expect(storage.value()).toBeNull();

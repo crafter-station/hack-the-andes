@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import {
   clearChunkReloadGuard,
   clerkUiComponentForPath,
-  recoverFromUnhandledChunkError,
 } from "@/lib/chunk-load-recovery";
 
 /**
@@ -58,39 +57,6 @@ export function ChunkLoadRecoverySuccess() {
 
     return () => observer.disconnect();
   }, [clerkComponent]);
-
-  return null;
-}
-
-/**
- * Recovers from a chunk failure that never reaches an error boundary. The
- * boundaries only run when React catches the error during render; a dynamic
- * import that rejects outside render arrives as an unhandled rejection or a
- * window error and stays unrecovered, leaving the page blank after a redeploy
- * swaps out the previous build's chunks. These listeners run the same single
- * guarded reload for that case. They never call `preventDefault`, so the
- * exception still reaches error tracking.
- */
-export function UnhandledChunkErrorRecovery() {
-  useEffect(() => {
-    const getStorage = () => window.sessionStorage;
-    const reload = () => window.location.reload();
-
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      recoverFromUnhandledChunkError(event.reason, getStorage, reload);
-    };
-    const onError = (event: ErrorEvent) => {
-      recoverFromUnhandledChunkError(event.error, getStorage, reload);
-    };
-
-    window.addEventListener("unhandledrejection", onUnhandledRejection);
-    window.addEventListener("error", onError);
-
-    return () => {
-      window.removeEventListener("unhandledrejection", onUnhandledRejection);
-      window.removeEventListener("error", onError);
-    };
-  }, []);
 
   return null;
 }
