@@ -7,7 +7,11 @@ import { currentChallengeTime } from "@/lib/challenges/clock";
 import { getChallengeRanking } from "@/lib/challenges/ranking";
 import { HttpError } from "@/lib/registration/http";
 
-export const dynamic = "force-dynamic";
+// The page above the ranking table is static challenge copy from the contract,
+// and the ranking is a read-only leaderboard. Serve a cached response and
+// rebuild it in the background instead of rendering on every request, so first
+// paint never waits on a fresh server render or the ranking query.
+export const revalidate = 60;
 
 interface ChallengeRankingPageProps {
   readonly params: Promise<{ slug: string }>;
