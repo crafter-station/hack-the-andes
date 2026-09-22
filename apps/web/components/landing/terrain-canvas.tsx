@@ -7,6 +7,7 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { ModelErrorBoundary } from "@/components/landing/model-error-boundary";
+import { heroModelExceptionGrouping } from "@/components/landing/model-load-report";
 import {
   SACRED_VALLEY_GLB,
   SCENE_FAR_PLANE,
@@ -295,11 +296,19 @@ function TurningCamera({
  * without this the fall-through is invisible: no exception reaches error
  * tracking, and there is no counterpart to the drawn event to measure a
  * fall-through rate against.
+ *
+ * The exception carries a fixed fingerprint keyed on the asset, so the same
+ * flaky network no longer opens a fresh error-tracking issue per browser
+ * family — see `heroModelExceptionGrouping`.
  */
 function reportModelLoadFailure(model: string) {
   return (error: unknown, attempt: number) => {
     posthog.capture("hero_terrain_load_failed", { model, attempt });
-    posthog.captureException(error, { hero_model: model, attempt });
+    posthog.captureException(error, {
+      hero_model: model,
+      attempt,
+      ...heroModelExceptionGrouping(model),
+    });
   };
 }
 
