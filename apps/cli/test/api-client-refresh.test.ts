@@ -1,16 +1,7 @@
-import { afterEach, expect, mock, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { Effect } from "effect";
 
-mock.module("../src/auth.js", () => ({
-  authentication: async (forceRefresh = false) => {
-    if (forceRefresh) {
-      throw new Error("Clerk OAuth token endpoint returned 401");
-    }
-    return { accessToken: "legacy-access" };
-  },
-}));
-
-const { getCurrentUser } = await import("../src/api-client.js");
+import { getCurrentUser } from "../src/api-client.js";
 
 const originalFetch = globalThis.fetch;
 const originalToken = process.env.CHOFEX_TOKEN;
@@ -43,7 +34,17 @@ test("keeps the original 401 when a legacy refresh against the current issuer fa
     );
 
   const error = await Effect.runPromise(
-    Effect.flip(getCurrentUser({ apiUrl: "https://hack.example" })),
+    Effect.flip(
+      getCurrentUser({
+        apiUrl: "https://hack.example",
+        authenticate: async (forceRefresh = false) => {
+          if (forceRefresh) {
+            throw new Error("Clerk OAuth token endpoint returned 401");
+          }
+          return { accessToken: "legacy-access" };
+        },
+      }),
+    ),
   );
 
   expect(error.code).toBe("AUTHENTICATION_REQUIRED");

@@ -47,6 +47,7 @@ export const authenticationRecoveryMessage = (
 
 export interface ApiClientOptions {
   readonly apiUrl: string;
+  readonly authenticate?: (forceRefresh?: boolean) => Promise<Credentials>;
   readonly campaignAttribution?: CampaignAttributionHandoff;
   readonly token?: string;
 }
@@ -57,13 +58,14 @@ const endpoint = (apiUrl: string, path: string): string =>
 const resolveAuthentication = (
   suppliedToken: string | undefined,
   campaignAttribution: CampaignAttributionHandoff | undefined,
+  authenticate: (forceRefresh?: boolean) => Promise<Credentials>,
   forceRefresh = false,
 ): Effect.Effect<Credentials, CliError> => {
   if (suppliedToken) {
     return Effect.succeed({ accessToken: suppliedToken, campaignAttribution });
   }
   return Effect.tryPromise({
-    try: () => authentication(forceRefresh),
+    try: () => authenticate(forceRefresh),
     catch: (error) => cliError("AUTHENTICATION_REQUIRED", String(error), false),
   });
 };
@@ -159,15 +161,18 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
   decodeResponse: (input: unknown) => Effect.Effect<ApiSuccess<A>, unknown, R>,
 ): Effect.fn.Return<ApiSuccess<A>, CliError, R> {
   const suppliedToken = options.token ?? process.env.CHOFEX_TOKEN;
+  const authenticate = options.authenticate ?? authentication;
   const credentials = yield* resolveAuthentication(
     suppliedToken,
     options.campaignAttribution,
+    authenticate,
   );
   let response = yield* sendRequest(options, path, init, credentials);
   if (response.status === 401 && !suppliedToken) {
     const refreshed = yield* resolveAuthentication(
       undefined,
       undefined,
+      authenticate,
       true,
     ).pipe(
       Effect.map((value) => ({ ok: true as const, value })),
