@@ -7,7 +7,10 @@ import { Suspense, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { ModelErrorBoundary } from "@/components/landing/model-error-boundary";
-import { heroModelExceptionGrouping } from "@/components/landing/model-load-report";
+import {
+  type HeroModelAsset,
+  heroModelExceptionGrouping,
+} from "@/components/landing/model-load-report";
 import {
   SACRED_VALLEY_GLB,
   SCENE_FAR_PLANE,
@@ -301,7 +304,7 @@ function TurningCamera({
  * flaky network no longer opens a fresh error-tracking issue per browser
  * family — see `heroModelExceptionGrouping`.
  */
-function reportModelLoadFailure(model: string) {
+function reportModelLoadFailure(model: HeroModelAsset) {
   return (error: unknown, attempt: number) => {
     posthog.capture("hero_terrain_load_failed", { model, attempt });
     posthog.captureException(error, {

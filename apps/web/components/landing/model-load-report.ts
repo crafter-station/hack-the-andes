@@ -14,7 +14,9 @@
  * `$issue_name` names that issue when it is first created; PostHog keeps the
  * name on later events with the same fingerprint.
  */
-export function heroModelExceptionGrouping(model: string) {
+export type HeroModelAsset = "sacred-valley" | "site-structures";
+
+export function heroModelExceptionGrouping(model: HeroModelAsset) {
   return {
     $exception_fingerprint: `hero-model-load-failed:${model}`,
     $issue_name: `Hero mesh failed to load: ${model}`,
