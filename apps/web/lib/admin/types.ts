@@ -71,7 +71,6 @@ export interface Candidate {
   readonly mediaConsent: boolean;
   readonly signedUpAt: string;
   readonly createdAt: string;
-  readonly updatedAt: string;
   readonly submittedAt?: string;
   readonly decidedAt?: string;
   readonly approvedBy?: string;

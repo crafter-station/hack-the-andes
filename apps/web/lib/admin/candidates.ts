@@ -170,7 +170,6 @@ const toCandidate = (
     mediaConsent: details?.mediaConsent ?? application.mediaConsent,
     signedUpAt: clerkCreatedAt ?? record.participantCreatedAt.toISOString(),
     createdAt: application.createdAt.toISOString(),
-    updatedAt: application.updatedAt.toISOString(),
     submittedAt,
     decidedAt: instantString(application.decidedAt),
     approvedBy,

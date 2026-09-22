@@ -98,3 +98,10 @@ export const candidateTimeline = (
   events.sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
   return events;
 };
+
+export const candidateLastUpdatedAt = (
+  candidate: CandidateTimelineSource,
+): string | undefined => {
+  const timeline = candidateTimeline(candidate);
+  return timeline[timeline.length - 1]?.at;
+};

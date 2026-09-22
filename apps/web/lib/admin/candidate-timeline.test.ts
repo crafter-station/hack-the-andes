@@ -1,9 +1,12 @@
 import { expect, test } from "bun:test";
 
-import { candidateTimeline } from "./candidate-timeline";
+import {
+  candidateLastUpdatedAt,
+  candidateTimeline,
+} from "./candidate-timeline";
 
 test("builds a chronological candidate timeline from persisted milestones", () => {
-  const timeline = candidateTimeline({
+  const candidate = {
     signedUpAt: "2026-09-01T10:00:00.000Z",
     applicationHistory: [
       {
@@ -26,7 +29,8 @@ test("builds a chronological candidate timeline from persisted milestones", () =
     ],
     attendanceCompletedAt: "2026-09-05T10:00:00.000Z",
     checkedInAt: "2026-09-20T14:00:00.000Z",
-  });
+  } as const;
+  const timeline = candidateTimeline(candidate);
 
   expect(timeline.map((event) => event.title)).toEqual([
     "Signed up",
@@ -39,6 +43,10 @@ test("builds a chronological candidate timeline from persisted milestones", () =
     "Checked in",
   ]);
   expect(timeline[3]?.description).toBe("The Shipping Machine");
+  expect(timeline[timeline.length - 1]?.at).toBe("2026-09-20T14:00:00.000Z");
+  expect(candidateLastUpdatedAt(candidate)).toBe(
+    timeline[timeline.length - 1]?.at,
+  );
 });
 
 test("omits milestones that have not happened", () => {

@@ -72,7 +72,10 @@ import {
   candidateListOptions,
   submitCandidateDecision,
 } from "@/lib/admin/candidate-queries";
-import { candidateTimeline } from "@/lib/admin/candidate-timeline";
+import {
+  candidateLastUpdatedAt,
+  candidateTimeline,
+} from "@/lib/admin/candidate-timeline";
 import { candidateFunnelMilestones } from "@/lib/admin/funnel-metrics";
 import {
   applicationDataStatus,
@@ -279,14 +282,6 @@ const CandidateAvatar = ({
     </span>
   );
 };
-
-const formatDate = (value: string): string =>
-  new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "America/Lima",
-  }).format(new Date(value));
 
 const formatDateTime = (value: string): string =>
   new Intl.DateTimeFormat("en-US", {
@@ -1353,7 +1348,7 @@ export function CandidateDashboard({
               className="mt-4 overflow-hidden border bg-card"
               aria-busy={candidateQuery.isFetching}
             >
-              <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_7rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
                 <span>Candidate</span>
                 <span>Background</span>
                 <span>Status</span>
@@ -1691,13 +1686,17 @@ const CandidateRows = ({
   <div className="divide-y">
     {candidates.map((candidate) => {
       const challengeSummary = completedChallengeSummary(candidate);
-      const updatedAt = formatDate(candidate.updatedAt);
+      const lastTimelineAt = candidateLastUpdatedAt(candidate);
+      let lastUpdatedAt = "—";
+      if (lastTimelineAt) {
+        lastUpdatedAt = formatDateTime(lastTimelineAt);
+      }
       return (
         <RowAction
           label={`Review ${displayName(candidate)}`}
           key={candidate.id}
           onClick={() => onSelect(candidate.id)}
-          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_7rem] sm:items-center sm:gap-4 sm:px-5"
+          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] sm:items-center sm:gap-4 sm:px-5"
         >
           <span className="flex min-w-0 items-center gap-3">
             <CandidateAvatar
@@ -1735,7 +1734,7 @@ const CandidateRows = ({
             <FunnelStatusBadge status={candidate.funnelStatus} />
           </span>
           <span className="hidden items-center justify-end gap-2 text-xs text-muted-foreground sm:flex">
-            {updatedAt}
+            {lastUpdatedAt}
             <ChevronRightIcon className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
           </span>
         </RowAction>
