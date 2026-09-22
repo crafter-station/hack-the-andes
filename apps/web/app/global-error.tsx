@@ -26,7 +26,7 @@ export default function GlobalError({
 
     if (
       chunkError &&
-      shouldAutoReloadChunk(window.location.pathname) &&
+      shouldAutoReloadChunk() &&
       claimChunkReload(() => window.sessionStorage)
     ) {
       window.location.reload();

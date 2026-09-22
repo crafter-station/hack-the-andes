@@ -29,7 +29,7 @@ export function BrandErrorFallback({
 
     if (
       chunkError &&
-      shouldAutoReloadChunk(window.location.pathname) &&
+      shouldAutoReloadChunk() &&
       claimChunkReload(() => window.sessionStorage)
     ) {
       window.location.reload();

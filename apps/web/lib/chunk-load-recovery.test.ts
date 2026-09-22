@@ -31,6 +31,8 @@ describe("chunk load recovery", () => {
     ["TypeError", "Failed to fetch dynamically imported module"],
     ["TypeError", "error loading dynamically imported module"],
     ["TypeError", "Importing a module script failed"],
+    ["e", "Clerk: Failed to load Clerk JS"],
+    ["Error", 'Clerk loader failed (code="failed_to_load_clerk_js")'],
   ])("recognizes %s: %s", (name, message) => {
     expect(isChunkLoadError({ name, message })).toBe(true);
   });
@@ -84,14 +86,15 @@ describe("chunk load recovery", () => {
     expect(CHUNK_RELOAD_GUARD_KEY).toBe("hta:chunk-reload-attempted");
   });
 
-  test("waits for Clerk auth UI on its catch-all routes", () => {
+  test("maps only the Clerk auth routes to a Clerk component", () => {
     expect(clerkUiComponentForPath("/sign-in")).toBe("SignIn");
     expect(clerkUiComponentForPath("/sign-in/factor-one")).toBe("SignIn");
     expect(clerkUiComponentForPath("/sign-up")).toBe("SignUp");
     expect(clerkUiComponentForPath("/sign-up/verify")).toBe("SignUp");
     expect(clerkUiComponentForPath("/challenges")).toBeNull();
-    expect(shouldAutoReloadChunk("/sign-in")).toBe(true);
-    expect(shouldAutoReloadChunk("/sign-up/verify")).toBe(true);
-    expect(shouldAutoReloadChunk("/challenges")).toBe(false);
+  });
+
+  test("auto-reloads a chunk failure on every route, not only auth routes", () => {
+    expect(shouldAutoReloadChunk()).toBe(true);
   });
 });

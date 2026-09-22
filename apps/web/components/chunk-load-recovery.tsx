@@ -7,7 +7,12 @@ import {
   clerkUiComponentForPath,
 } from "@/lib/chunk-load-recovery";
 
-/** Clears the guard only after the route's critical UI has rendered. */
+/**
+ * Clears the guard once the route has recovered. The guard is shared across the
+ * whole session, so any route that renders successfully must clear it, or a
+ * single reload elsewhere would block later recovery. Auth routes wait for the
+ * Clerk UI; every other route only needs the app shell back.
+ */
 export function ChunkLoadRecoverySuccess() {
   const pathname = usePathname();
   const clerkComponent = clerkUiComponentForPath(pathname);
@@ -17,15 +22,14 @@ export function ChunkLoadRecoverySuccess() {
       clearChunkReloadGuard(() => window.sessionStorage);
     };
 
-    if (!clerkComponent) {
-      return;
-    }
-
     const routeHasRecovered = () => {
       return !document.querySelector("[data-app-error-fallback]");
     };
 
     const criticalUiHasRendered = () => {
+      if (!clerkComponent) {
+        return true;
+      }
       const selector = `[data-clerk-component="${clerkComponent}"]`;
       const root = document.querySelector(selector);
       return Boolean(root?.childElementCount);
