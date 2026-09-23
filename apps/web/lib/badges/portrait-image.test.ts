@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import {
   halftonePortraitPng,
-  PORTRAIT_SIZE,
+  PORTRAIT_HEIGHT,
+  PORTRAIT_WIDTH,
 } from "@/lib/badges/portrait-image";
 
 const flat = async (
@@ -33,8 +34,8 @@ describe("halftonePortraitPng", () => {
     const png = await halftonePortraitPng(await flat(200, 1));
     const meta = await sharp(png).metadata();
 
-    expect(meta.width).toBe(PORTRAIT_SIZE);
-    expect(meta.height).toBe(PORTRAIT_SIZE);
+    expect(meta.width).toBe(PORTRAIT_WIDTH);
+    expect(meta.height).toBe(PORTRAIT_HEIGHT);
   });
 
   test("leaves a transparent background unlit", async () => {

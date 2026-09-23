@@ -15,25 +15,49 @@
 import sharp from "sharp";
 
 import { halftoneSvg } from "@/lib/portrait/halftone";
-import { lumaFromRgba, normalise } from "@/lib/portrait/luminance";
+import {
+  HALFTONE_CONTRAST,
+  lumaFromRgba,
+  normalise,
+} from "@/lib/portrait/luminance";
 
 /**
- * The square the badge frame reserves for a portrait.
+ * The window the shared badge reserves for a portrait.
  *
- * `badgeFrameSvg` lays out a 1024×1280 sheet with a 928×928 well inset
- * at 48, and the composite lands inside it.
+ * Not square any more, and not a size of its own: it is the credential's
+ * own window aspect at the size the shared image draws it, so the same
+ * face is cropped the same way on both. The square it replaced letterboxed
+ * a portrait that the card had already cropped to 0.863.
  */
-export const PORTRAIT_SIZE = 800;
+export const PORTRAIT_WIDTH = 630;
 
 /**
- * A coarser pitch than the card's five.
+ * How many dots the portrait is screened into.
  *
- * The card's window renders at 113px on screen; this one is looked at
- * full size, printed or saved, so the dots can be bigger without
- * dissolving — and at 800px a 5px pitch is 160 dots across, which reads
- * as a texture rather than as a portrait made of dots.
+ * What has to match the card is the size a dot appears to be, not how
+ * many there are. The card's window renders about 113px wide, so its 45
+ * dots land at 2.5px each; the same 45 across a 630px image are 14px
+ * each, five times coarser — and at that pitch a face loses its eyes and
+ * its outline goes ragged, which is what the first version of this
+ * shipped.
+ *
+ * Ninety is where the features come back and the screen is still a
+ * screen. Past about 130 the dots stop being visible at all and the
+ * portrait reads as flat grey, which is a photograph again rather than a
+ * printing of one.
  */
-const HALFTONE_CELL = 8;
+const HALFTONE_COLUMNS = 90;
+const HALFTONE_CELL = Math.round(PORTRAIT_WIDTH / HALFTONE_COLUMNS);
+
+/**
+ * Snapped to whole cells, so the screen ends where the window does.
+ *
+ * The card learned this the same way: an unsnapped height left the
+ * drawing a couple of pixels short of the box it was placed in, which
+ * the renderer then stretched.
+ */
+const PORTRAIT_ROWS = Math.round(PORTRAIT_WIDTH / 0.863 / HALFTONE_CELL);
+export const PORTRAIT_HEIGHT = PORTRAIT_ROWS * HALFTONE_CELL;
 
 /** Bone on the card's own near-black, so the two match. */
 const INK = "#f6f3ee";
@@ -41,8 +65,8 @@ const INK = "#f6f3ee";
 export const halftonePortraitPng = async (
   source: Uint8Array | Buffer,
 ): Promise<Buffer> => {
-  const columns = Math.floor(PORTRAIT_SIZE / HALFTONE_CELL);
-  const rows = columns;
+  const columns = HALFTONE_COLUMNS;
+  const rows = PORTRAIT_ROWS;
 
   /*
     `top`, not centred, for the same reason the card crops that way: a
@@ -57,7 +81,7 @@ export const halftonePortraitPng = async (
 
   const pixels = new Uint8ClampedArray(data);
   const grid = lumaFromRgba(pixels, info.width, info.height);
-  const values = normalise(grid.values);
+  const values = normalise(grid.values, HALFTONE_CONTRAST);
 
   // Alpha beats luminance: a transparent pixel reads as bright, so a
   // cut-out's erased background would otherwise return as a full field

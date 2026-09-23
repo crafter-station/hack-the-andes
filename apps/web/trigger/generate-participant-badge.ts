@@ -7,7 +7,10 @@ import {
 import { db } from "@chofex/db/worker";
 import { logger, task } from "@trigger.dev/sdk";
 
+import { credentialNumber } from "../components/credential/credential-model";
 import { sendBadgeReadyEmail } from "../lib/badges/email";
+import { fullNameOf } from "../lib/credential/accepted";
+import { roleFor } from "../lib/credential/printing";
 import { generateBadge } from "./generate-badge";
 import { generatePortrait } from "./generate-portrait";
 
@@ -18,7 +21,7 @@ export interface GenerateParticipantBadgePayload {
 export const generateParticipantBadge = task<
   "generate-participant-badge",
   GenerateParticipantBadgePayload,
-  { readonly badgeUrl: string; readonly pixelArtUrl: string }
+  { readonly badgeUrl: string; readonly portraitUrl: string }
 >({
   id: "generate-participant-badge",
   queue: { concurrencyLimit: 5 },
@@ -63,9 +66,17 @@ export const generateParticipantBadge = task<
     }
     const pictureUrl = record.application.pictureUrl;
     if (!pictureUrl) throw new Error("Participant has no confirmed picture");
-    const fullName =
-      record.details?.fullName?.trim() ||
-      `${record.application.firstName ?? ""} ${record.application.lastName ?? ""}`.trim();
+    /*
+      The name the credential prints, which is the application's and not
+      the attendance form's. The card seeds its number from the same
+      string, so taking a different one here would email somebody a badge
+      numbered differently from the one on their own page.
+    */
+    const credentialName = fullNameOf(
+      record.application.firstName,
+      record.application.lastName,
+    );
+    const fullName = credentialName || record.details?.fullName?.trim() || "";
     if (!fullName) throw new Error("Participant has no name");
     const email = record.application.email;
     if (!email) throw new Error("Participant has no email address");
@@ -90,18 +101,20 @@ export const generateParticipantBadge = task<
     logger.info("Starting participant badge workflow", {
       applicationId: payload.applicationId,
     });
-    const pixelArt = await generatePortrait
+    const portrait = await generatePortrait
       .triggerAndWait(
         { applicationId: payload.applicationId, pictureUrl },
-        { idempotencyKey: `pixel-art/${ctx.run.id}` },
+        { idempotencyKey: `portrait/${ctx.run.id}` },
       )
       .unwrap();
     const badge = await generateBadge
       .triggerAndWait(
         {
           applicationId: payload.applicationId,
-          fullName,
-          pixelArtUrl: pixelArt.url,
+          fullName: credentialName,
+          role: roleFor(record.application.role),
+          number: credentialNumber(credentialName),
+          portraitUrl: portrait.url,
         },
         { idempotencyKey: `badge/${ctx.run.id}` },
       )
@@ -122,6 +135,6 @@ export const generateParticipantBadge = task<
       .set({ notificationSentAt: new Date(), updatedAt: new Date() })
       .where(eq(participantBadges.applicationId, payload.applicationId));
 
-    return { badgeUrl: badge.url, pixelArtUrl: pixelArt.url };
+    return { badgeUrl: badge.url, portraitUrl: portrait.url };
   },
 });
