@@ -18,10 +18,13 @@ import {
   ApiSuccessSchema,
   type BadgeResult,
   BadgeResultSchema,
+  type CampaignAttributionHandoff,
   type CreatedRegistration,
   CreatedRegistrationSchema,
   type CurrentUser,
   CurrentUserSchema,
+  campaignAttributionHandoffHeader,
+  campaignAttributionHandoffValue,
   type PictureUpload,
   PictureUploadGrantSchema,
   PictureUploadSchema,
@@ -30,24 +33,39 @@ import {
 } from "@chofex/registration-contract";
 import { Effect, Result, Schema } from "effect";
 
-import { accessToken } from "./auth.js";
+import { authentication, type Credentials } from "./auth.js";
 import { type CliError, cliError } from "./errors.js";
+
+export const authenticationRecoveryMessage = (
+  code: string,
+  message: string,
+): string => {
+  if (code !== "AUTHENTICATION_REQUIRED") return message;
+  if (message !== "Authentication failed") return message;
+  return `${message}. If login just succeeded, update the CLI with \`chofex update\` or \`npm install --global chofex-cli@latest\`, then run \`chofex logout\` and \`chofex login\`.`;
+};
 
 export interface ApiClientOptions {
   readonly apiUrl: string;
+  readonly authenticate?: (forceRefresh?: boolean) => Promise<Credentials>;
+  readonly campaignAttribution?: CampaignAttributionHandoff;
   readonly token?: string;
 }
 
 const endpoint = (apiUrl: string, path: string): string =>
   `${apiUrl.replace(/\/$/, "")}${path}`;
 
-const resolveAccessToken = (
+const resolveAuthentication = (
   suppliedToken: string | undefined,
+  campaignAttribution: CampaignAttributionHandoff | undefined,
+  authenticate: (forceRefresh?: boolean) => Promise<Credentials>,
   forceRefresh = false,
-): Effect.Effect<string, CliError> => {
-  if (suppliedToken) return Effect.succeed(suppliedToken);
+): Effect.Effect<Credentials, CliError> => {
+  if (suppliedToken) {
+    return Effect.succeed({ accessToken: suppliedToken, campaignAttribution });
+  }
   return Effect.tryPromise({
-    try: () => accessToken(forceRefresh),
+    try: () => authenticate(forceRefresh),
     catch: (error) => cliError("AUTHENTICATION_REQUIRED", String(error), false),
   });
 };
@@ -56,13 +74,21 @@ const sendRequest = (
   options: ApiClientOptions,
   path: string,
   init: RequestInit,
-  token?: string,
+  credentials?: Credentials,
 ): Effect.Effect<Response, CliError> =>
   Effect.tryPromise({
     try: () => {
       const headers = new Headers(init.headers);
       headers.set("accept", "application/json");
-      if (token) headers.set("authorization", `Bearer ${token}`);
+      if (credentials) {
+        headers.set("authorization", `Bearer ${credentials.accessToken}`);
+        if (credentials.campaignAttribution) {
+          const handoff = campaignAttributionHandoffValue(
+            credentials.campaignAttribution,
+          );
+          if (handoff) headers.set(campaignAttributionHandoffHeader, handoff);
+        }
+      }
       headers.set("x-request-id", crypto.randomUUID());
       if (init.body !== undefined) {
         headers.set("content-type", "application/json");
@@ -100,7 +126,10 @@ const decodeHttpBody = Effect.fn("decodeHttpBody")(function* <A, R>(
     if (Result.isSuccess(failure)) {
       return yield* cliError(
         failure.success.error.code,
-        failure.success.error.message,
+        authenticationRecoveryMessage(
+          failure.success.error.code,
+          failure.success.error.message,
+        ),
         failure.success.error.retryable,
         failure.success.error.details,
         failure.success.requestId,
@@ -132,11 +161,26 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
   decodeResponse: (input: unknown) => Effect.Effect<ApiSuccess<A>, unknown, R>,
 ): Effect.fn.Return<ApiSuccess<A>, CliError, R> {
   const suppliedToken = options.token ?? process.env.CHOFEX_TOKEN;
-  let token = yield* resolveAccessToken(suppliedToken);
-  let response = yield* sendRequest(options, path, init, token);
+  const authenticate = options.authenticate ?? authentication;
+  const credentials = yield* resolveAuthentication(
+    suppliedToken,
+    options.campaignAttribution,
+    authenticate,
+  );
+  let response = yield* sendRequest(options, path, init, credentials);
   if (response.status === 401 && !suppliedToken) {
-    token = yield* resolveAccessToken(undefined, true);
-    response = yield* sendRequest(options, path, init, token);
+    const refreshed = yield* resolveAuthentication(
+      undefined,
+      undefined,
+      authenticate,
+      true,
+    ).pipe(
+      Effect.map((value) => ({ ok: true as const, value })),
+      Effect.catch(() => Effect.succeed({ ok: false as const })),
+    );
+    if (refreshed.ok) {
+      response = yield* sendRequest(options, path, init, refreshed.value);
+    }
   }
   return yield* decodeHttpBody(response, decodeResponse);
 });

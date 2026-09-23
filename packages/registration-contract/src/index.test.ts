@@ -11,7 +11,11 @@ import {
   applicationRequirementsFor,
   applicationSemanticRequirements,
   CurrentUserSchema,
+  campaignAttributionFromOAuthState,
+  campaignAttributionHandoffFromValue,
+  campaignAttributionHandoffValue,
   joinFullName,
+  oauthStateWithCampaignAttribution,
   type RegistrationView,
   splitFullName,
 } from "./index.js";
@@ -41,6 +45,42 @@ const registrationView = (
   updatedAt: "2026-09-01T12:00:00.000Z",
   challenges: [],
   ...overrides,
+});
+
+describe("campaign attribution OAuth handoff", () => {
+  const handoff = {
+    capturedAt: Date.UTC(2026, 8, 19, 12),
+    landingId: "018f47a2-89ab-7def-8123-456789abcdef",
+  };
+
+  test("round trips a bounded landing reference through OAuth state", () => {
+    const value = campaignAttributionHandoffValue(handoff);
+    expect(value).toBe("018f47a2-89ab-7def-8123-456789abcdef.1789819200000");
+    expect(campaignAttributionHandoffFromValue(value)).toEqual(handoff);
+
+    const state = oauthStateWithCampaignAttribution("csrf_nonce", handoff);
+    expect(campaignAttributionFromOAuthState("csrf_nonce", state)).toEqual({
+      valid: true,
+      handoff,
+    });
+  });
+
+  test("rejects altered state and malformed landing references", () => {
+    expect(
+      campaignAttributionFromOAuthState(
+        "csrf_nonce",
+        "different.018f47a2-89ab-7def-8123-456789abcdef.1789819200000",
+      ),
+    ).toEqual({ valid: false });
+    expect(
+      campaignAttributionHandoffFromValue("not-a-uuid.123"),
+    ).toBeUndefined();
+    expect(
+      campaignAttributionHandoffFromValue(
+        "018f47a2-89ab-7def-8123-456789abcdef.1.5",
+      ),
+    ).toBeUndefined();
+  });
 });
 
 describe("registration contract", () => {

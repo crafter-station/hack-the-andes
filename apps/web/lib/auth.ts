@@ -1,6 +1,84 @@
 import { clerkClient } from "@clerk/nextjs/server";
 
+import {
+  configuredAdminIdsFrom,
+  userGrantsApplicationReviewAccess,
+} from "./admin/roles";
 import { HttpError } from "./registration/http";
+
+export const retiredCliOAuthClientId = "1YfuXKgOXkdH094s";
+export const retiredClerkIssuer = "https://close-newt-8265.clerk.accounts.dev";
+
+export const legacyCliAuthenticationMessage =
+  "This CLI is signed in to a retired Clerk application. Update with `chofex update` or `npm install --global chofex-cli@latest`, then run `chofex logout` and `chofex login`.";
+
+const normalizeIssuer = (value: string): string => value.replace(/\/+$/, "");
+
+const decodeBase64UrlJson = (value: string): unknown => {
+  try {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+    const pad =
+      padded.length % 4 === 0 ? "" : "=".repeat(4 - (padded.length % 4));
+    return JSON.parse(atob(`${padded}${pad}`)) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+export const unverifiedBearerJwtClaims = (
+  authorization: string | null,
+): { readonly issuer?: string; readonly clientId?: string } | undefined => {
+  if (!authorization) return;
+  const match = /^Bearer\s+(\S+)$/i.exec(authorization.trim());
+  if (!match) return;
+  const token = match[1] ?? "";
+  const payloadSegment = token.split(".")[1];
+  if (!payloadSegment) return;
+  const payload = decodeBase64UrlJson(payloadSegment);
+  if (!payload || typeof payload !== "object") return;
+
+  const record = payload as Record<string, unknown>;
+  let issuer: string | undefined;
+  if (typeof record.iss === "string" && record.iss.length > 0) {
+    issuer = record.iss;
+  }
+  let clientId: string | undefined;
+  if (typeof record.azp === "string" && record.azp.length > 0) {
+    clientId = record.azp;
+  } else if (
+    typeof record.client_id === "string" &&
+    record.client_id.length > 0
+  ) {
+    clientId = record.client_id;
+  }
+  if (!issuer && !clientId) return;
+  return { issuer, clientId };
+};
+
+export const isLegacyCliCredential = (
+  authorization: string | null,
+): boolean => {
+  const claims = unverifiedBearerJwtClaims(authorization);
+  if (!claims) return false;
+  if (claims.clientId) {
+    if (
+      claims.clientId.startsWith("http://") ||
+      claims.clientId.startsWith("https://")
+    ) {
+      return false;
+    }
+    return claims.clientId === retiredCliOAuthClientId;
+  }
+  if (!claims.issuer) return false;
+  return normalizeIssuer(claims.issuer) === normalizeIssuer(retiredClerkIssuer);
+};
+
+export const authenticationFailureMessage = (request: Request): string => {
+  if (isLegacyCliCredential(request.headers.get("authorization"))) {
+    return legacyCliAuthenticationMessage;
+  }
+  return "Authentication failed";
+};
 
 export interface AuthenticatedParticipant {
   readonly clerkUserId: string;
@@ -10,6 +88,8 @@ export interface AuthenticatedParticipant {
 export interface AuthenticatedParticipantProfile
   extends AuthenticatedParticipant {
   readonly email: string;
+  readonly firstName: string;
+  readonly canReviewApplications: boolean;
   readonly clerkPictureUrl?: string;
 }
 
@@ -94,7 +174,7 @@ export const requireAuthenticatedParticipant = async (
     throw new HttpError(
       401,
       "AUTHENTICATION_REQUIRED",
-      "Authentication failed",
+      authenticationFailureMessage(request),
     );
   }
   return authentication;
@@ -119,6 +199,15 @@ export const requireAuthenticatedParticipantProfile = async (
   return {
     ...authentication,
     email: emailAddress.emailAddress.trim().toLowerCase(),
+    firstName: user.firstName ?? "",
+    canReviewApplications: userGrantsApplicationReviewAccess({
+      clerkUserId: authentication.clerkUserId,
+      configuredAdminIds: configuredAdminIdsFrom(
+        process.env.ADMIN_CLERK_USER_IDS,
+      ),
+      publicMetadata: user.publicMetadata,
+      privateMetadata: user.privateMetadata,
+    }),
     clerkPictureUrl: user.hasImage ? user.imageUrl : undefined,
   };
 };

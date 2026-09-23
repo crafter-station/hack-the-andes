@@ -5,14 +5,18 @@ import {
   applyCopy,
   brandName,
   chromeCopy,
+  cliInstallMethods,
+  cliNextCommands,
   discordCopy,
   eventCopy,
   eventItems,
   facts,
   faqItems,
   footerCopy,
+  footerNavigation,
   formatSoles,
   heroCopy,
+  legalCopy,
   metadataCopy,
   panelBrands,
   partners,
@@ -31,6 +35,30 @@ import {
   tracksCopy,
 } from "./content";
 
+test("offers curl and npm installation before the shared CLI flow", () => {
+  expect(cliInstallMethods).toEqual([
+    {
+      id: "curl",
+      label: "curl",
+      description: "Recomendado · no requiere Node.js",
+      hint: "Configura PATH y recarga tu terminal automáticamente.",
+      command:
+        "bash -o pipefail -c 'curl -fsSL https://hacktheandes.com/install | bash' && exec \"$SHELL\" -l",
+    },
+    {
+      id: "npm",
+      label: "npm",
+      description: "Requiere Node.js 20 o superior",
+      command: "npm install --global chofex-cli@latest",
+    },
+  ]);
+  expect(cliNextCommands).toEqual([
+    "chofex login",
+    "chofex register",
+    "chofex status",
+  ]);
+});
+
 test("publishes the 17–18 octubre 2026 weekend in participant-facing copy", () => {
   const cuando = facts.find((fact) => fact.label === "Fecha");
   expect(cuando?.value).toBe("17–18 oct 2026");
@@ -38,12 +66,22 @@ test("publishes the 17–18 octubre 2026 weekend in participant-facing copy", ()
   expect(heroCopy.metaDate).toBe("17–18 oct 2026");
   expect(heroCopy.metaLocation).toBe("Lima, Perú");
   expect(footerCopy.meta).toContain("17–18 oct 2026");
-  expect(footerCopy.credits).toBe("Créditos");
+  expect(legalCopy.eventKicker).toContain("17–18 oct 2026");
+  expect(legalCopy.eventKicker).toMatch(/Lima presencial/i);
+  expect(
+    footerNavigation.flatMap((group) => group.links.map((link) => link.label)),
+  ).toContain("Créditos");
+  expect(
+    footerNavigation.flatMap((group) => group.links.map((link) => link.href)),
+  ).toEqual(
+    expect.arrayContaining([legalCopy.termsHref, legalCopy.privacyHref]),
+  );
 
   const blob = JSON.stringify({
     facts,
     footerCopy,
     heroCopy,
+    legalCopy,
     metadataCopy,
   });
   expect(blob).not.toMatch(/10–11/);
@@ -88,6 +126,7 @@ test("keeps the public pitch in Spanish and names Chofex as principal sponsor", 
     chromeCopy,
     footerCopy,
     heroCopy,
+    legalCopy,
     peopleCopy,
     sectionNav,
     partners,
@@ -223,9 +262,16 @@ test("publishes a hundred-seat, three-track event", () => {
   expect(heroCopy.admission).toMatch(/challenge/i);
   expect(facts.find((fact) => fact.label === "Cupos")?.value).toBe("100");
   expect(metadataCopy.description).toContain("100 cupos");
-  expect(eventCopy.title).toBe("Crear soluciones reales para problemas reales");
-  expect(eventCopy.lede.toLowerCase()).toContain("status quo");
-  expect(eventCopy.support.toLowerCase()).toContain("presencial");
+  expect(eventCopy.title).toMatch(/grupo exclusivo de hackers/i);
+  expect(eventCopy.title).toMatch(/Perú necesita/i);
+  expect(eventCopy.lede).toMatch(/100/);
+  expect(eventCopy.lede).toMatch(/problemas reales/i);
+  expect(eventCopy.support).toMatch(/8,000/);
+  expect(eventCopy.support).toMatch(/comida/i);
+  expect(eventCopy.support).toMatch(/bebidas/i);
+  expect(eventCopy.support).toMatch(/energizantes/i);
+  expect(eventCopy.support).toMatch(/merch/i);
+  expect(eventCopy.support).toMatch(/experiencia/i);
   expect(eventItems.map((item) => item.title)).toEqual([
     "Ship mata cartón",
     "Equipos de 1–4",
@@ -300,17 +346,27 @@ test("invites participants to connect through Discord", async () => {
   expect(faq).toContain('href="/discord"');
 });
 
-test("encourages strong applicants outside Lima and promises flight support", () => {
-  expect(applyCopy.travelTitle).toMatch(/fuera de Lima/i);
+test("limits flight support to exceptional talent in other Peruvian cities", () => {
+  expect(applyCopy.travelTitle).toMatch(/otra ciudad del Perú/i);
   expect(applyCopy.travelSupport).toMatch(/postula igual/i);
-  expect(applyCopy.travelSupport).toMatch(/cubriremos tus vuelos a Lima/i);
-  expect(applyCopy.travelSupport).toMatch(/dinero no debería ser una barrera/i);
+  expect(applyCopy.travelSupport).toMatch(/presupuesto limitado/i);
+  expect(applyCopy.travelSupport).toMatch(/vuelos nacionales a Lima/i);
+  expect(applyCopy.travelSupport).toMatch(/talento excepcional/i);
+  expect(applyCopy.travelSupport).toMatch(/otras ciudades del Perú/i);
+  expect(applyCopy.travelSupport).toMatch(/caso por caso/i);
+  expect(applyCopy.travelSupport).toMatch(
+    /no cubrimos vuelos internacionales/i,
+  );
 
   const travelFaq = faqItems.find((item) =>
     /fuera de Lima/i.test(item.question),
   );
-  expect(travelFaq?.answer).toMatch(/estés donde estés/i);
-  expect(travelFaq?.answer).toMatch(/cubriremos tus vuelos a Lima/i);
+  expect(travelFaq?.answer).toMatch(/presupuesto limitado/i);
+  expect(travelFaq?.answer).toMatch(/vuelos nacionales a Lima/i);
+  expect(travelFaq?.answer).toMatch(/talento excepcional/i);
+  expect(travelFaq?.answer).toMatch(/otras ciudades del Perú/i);
+  expect(travelFaq?.answer).toMatch(/caso por caso/i);
+  expect(travelFaq?.answer).toMatch(/no cubre vuelos internacionales/i);
 });
 
 test("ships one social preview card for every public link", async () => {
@@ -399,7 +455,14 @@ test("exposes skip links and section jumps for keyboard users", async () => {
     new URL("./footer.tsx", import.meta.url),
   ).text();
   expect(hero).toContain('href="#why"');
-  expect(footer).toContain("sectionNav");
+  expect(footer).toContain("footerNavigation");
+  const footerSectionHrefs = footerNavigation
+    .flatMap((group) => group.links.map((link) => link.href))
+    .filter((href) => href.startsWith("#"))
+    .sort();
+  expect(footerSectionHrefs).toEqual(
+    sectionNav.map((item) => item.href).sort(),
+  );
   expect(sectionNav.map((item) => item.href)).toEqual([
     "#why",
     "#prizes",

@@ -30,13 +30,13 @@ URL. Una sola fuente de verdad, dos formatos de entrega.
 | Archivo | Rol |
 | --- | --- |
 | `apps/web/lib/decks/loader.ts` | Lee el filesystem: enumera decks, parsea slides y frontmatter. |
-| `apps/web/app/deck/[slug]/page.tsx` | Ruta estática: compila el MDX y arma el `<head>`. |
-| `apps/web/app/deck/[slug]/deck-pager.tsx` | El reproductor: teclado, swipe, wheel, índice. Client Component. |
+| `apps/web/app/deck/[...slug]/page.tsx` | Ruta estática: compila el MDX y arma el `<head>`. |
+| `apps/web/app/deck/[...slug]/deck-pager.tsx` | El reproductor: teclado, swipe, wheel, índice. Client Component. |
 | `apps/web/app/deck/layout.tsx` | Layout del deck: fuentes de la landing, stylesheet, fallback sin JS. |
 | `apps/web/app/deck/deck.css` | Chrome y vocabulario visual. |
 | `apps/web/components/decks/slide-components.tsx` | Los componentes de slide. |
 | `apps/web/components/decks/mdx-components.ts` | El mapa que se inyecta al MDX (vocabulario cerrado). |
-| `apps/web/content/decks/<slug>/` | El contenido de cada deck. |
+| `apps/web/content/decks/<slug>/` | El contenido de cada deck. El slug es la ruta, así que puede llevar barra (`main/en`). |
 | `scripts/export-deck-pdf.mjs` | Deck web → PDF. |
 
 ---
@@ -50,7 +50,10 @@ apps/web/content/decks/main/
 ├── deck.json          ← obligatorio: sin él, la carpeta no es un deck
 ├── 01-cover.mdx
 ├── 02-what.mdx
-└── …
+├── …
+└── en/                ← la traducción, si la hay
+    ├── deck.json
+    └── NN-*.mdx
 ```
 
 ### `deck.json`
@@ -64,8 +67,30 @@ apps/web/content/decks/main/
 ```
 
 Campos reconocidos: `title`, `description`, `image` (og), `icon`, `appleIcon`,
-`style`. El tipo lleva `& Record<string, unknown>`, así que un campo extra no
-rompe nada.
+`style`, `lang`. El tipo lleva `& Record<string, unknown>`, así que un campo
+extra no rompe nada.
+
+### Traducciones
+
+Una traducción **no es un deck aparte**: vive dentro del deck que traduce, en
+una carpeta con su código de idioma, con su propio `deck.json` y sus propios
+slides. La URL calca el filesystem.
+
+| Carpeta | URL |
+| --- | --- |
+| `content/decks/main/` | `/deck/main` |
+| `content/decks/main/en/` | `/deck/main/en` |
+
+`lang` (`es` por defecto, o `en`) no traduce nada —los slides están escritos en
+el idioma en que están escritos—. Elige el chrome que los rodea: el índice, las
+etiquetas del pager, el `lang` que lleva la página para un lector de pantalla.
+Está en `chrome-copy.ts`.
+
+El nombre de la carpeta y el `lang` de su `deck.json` tienen que coincidir, y el
+loader lo verifica: copiar `en/` a `pt/` y olvidar el campo serviría un deck
+inglés bajo una URL portuguesa, y nada más abajo podría notarlo.
+
+Solo un nivel: un deck tiene traducciones, una traducción no.
 
 ### Los slides
 
@@ -92,7 +117,7 @@ media librería.
 
 ```
 apps/web/content/decks/<slug>/
-   │  listDecks()  ── enumera carpetas con deck.json
+   │  listDecks()  ── enumera carpetas con deck.json, más sus traducciones
    │  loadDeck()   ── deck.json + glob NN-*.mdx + gray-matter
    ▼
 generateStaticParams()          [build time]
@@ -140,7 +165,10 @@ compileMDX({ components: mdxComponents })   next-mdx-remote/rsc
 | Wheel / trackpad | Anterior / siguiente |
 
 Todos los slides están en el DOM y se muestran con `data-active`; no hay
-montaje/desmontaje por slide.
+montaje/desmontaje por slide. Las láminas de fondo son la excepción en red: el
+CSS solo habilita la actual y la siguiente, así la navegación secuencial queda
+precargada sin descargar el deck entero al abrirlo. `Photos` usa el mismo
+límite; no emite el `src` de una foto hasta que su slide entra en ese par.
 
 **`canScrollWithinSlide()`** comprueba, antes de pasar de slide, si el cursor está
 sobre un `.deck-slide-inner` que todavía tiene scroll en esa dirección. Sin eso,
@@ -167,6 +195,8 @@ scripting: no hay estado que deshacer antes de hidratar ni flash de entrada.
 **Oferta comercial** — `SponsorTier` · `BenefitGrid` · `ContrastGrid` · `FlowMap` · `PersonaGrid`
 
 **Evento** — `TrackCard` · `Timeline` · `TimelineRow` · `PhaseTimeline`
+
+**Fotografías** — `Photos`
 
 **Logos** — `Logo` · `LogoRow` · `LogoWall`
 
@@ -245,11 +275,12 @@ tiene dos layouts divergentes.
 
 ## 10. Estado actual y límites conocidos
 
-- **Un solo deck hoy:** `main` (9 slides, ES). Falta la versión EN y los decks
-  por partner.
+- **Cuatro rutas estáticas:** `main` y `partners`, cada una en ES y EN. En total
+  son 44 slides.
 - **`deck.json` no tiene validación de schema.** Se hace `JSON.parse` y se envuelve
   el error nombrando el deck, pero un campo mal escrito no avisa cuál es.
-- **Sin assets todavía.** `public/deck/` no existe; `Logo` y `LogoWall` están
-  escritos pero no se usan en ningún slide.
-- **El contenido de `main` es un borrador** que depende de decisiones abiertas
-  (fechas, revelar tracks). Ver `sponsorship-deck-brief.md`.
+- **Assets locales:** las láminas y las fotografías viven en `public/deck/` en
+  AVIF. Las fotos entran con `Photos`, nunca como backdrop, y cargan de forma
+  diferida.
+- **Rutas estáticas:** un deck o idioma nuevo requiere build y redeploy; no
+  aparece durante la vida de un proceso ya arrancado.

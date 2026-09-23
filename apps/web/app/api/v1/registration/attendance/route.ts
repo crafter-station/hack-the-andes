@@ -21,6 +21,7 @@ export const PUT = (request: Request): Promise<Response> =>
     await captureProductEvent({
       distinctId: participant.clerkUserId,
       event: "attendance_confirmed",
+      request,
       properties: {
         auth_token_type: participant.tokenType,
         application_status: result.registration.status,

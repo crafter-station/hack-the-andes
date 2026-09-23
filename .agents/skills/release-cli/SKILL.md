@@ -26,32 +26,78 @@ released and that commit is the remote default branch tip.
 
 ## Run
 
-1. Resolve the default branch, verify its remote tip still equals the recorded
-   approved commit, and capture the URL of the newly dispatched run:
+1. Resolve the default branch and verify its remote tip still equals the
+   recorded approved commit:
 
    ```sh
    default_branch="$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
    approved_sha="<full SHA approved above>"
    remote_sha="$(git ls-remote origin "refs/heads/${default_branch}" | cut -f1)"
    test "$approved_sha" = "$remote_sha"
-   run_url="$(gh workflow run publish-cli.yml --ref "$default_branch" \
-     -f commit_sha="$approved_sha")"
-   run_id="${run_url##*/}"
+   ```
+
+2. Give the automatic push run 30 seconds to appear:
+
+   ```sh
+   automatic_run_id=""
+   for attempt in 1 2 3 4 5 6; do
+     if ! automatic_run_id="$(gh run list --workflow publish-cli.yml --event push \
+       --commit "$approved_sha" --limit 1 --json databaseId \
+       --jq '.[0].databaseId // empty')"; then
+       echo "Could not inspect automatic release runs; refusing to dispatch a duplicate." >&2
+       exit 1
+     fi
+     if [[ -n "$automatic_run_id" ]]; then break; fi
+     if [[ "$attempt" -lt 6 ]]; then sleep 5; fi
+   done
+   ```
+
+3. When an automatic run exists, verify its SHA and watch it through
+   completion. If it fails, follow the recovery rule below. A successful run
+   can still have skipped `Publish chofex-cli`; do not treat that as a release:
+
+   ```sh
+   run_id="$automatic_run_id"
+   if [[ -n "$run_id" ]]; then
+     gh run view "$run_id" --json databaseId,headSha,status,conclusion,url
+     test "$(gh run view "$run_id" --json headSha --jq '.headSha')" = "$approved_sha"
+     gh run watch "$run_id" --exit-status
+     publish_conclusion="$(gh run view "$run_id" --json jobs \
+       --jq '.jobs[] | select(.name == "Publish chofex-cli") | .conclusion // empty')"
+     if [[ "$publish_conclusion" == "skipped" ]]; then run_id=""; fi
+     if [[ -n "$run_id" ]]; then test "$publish_conclusion" = "success"; fi
+   fi
+   ```
+
+4. If no automatic run exists, or its publish job was skipped, dispatch the
+   exact approved commit. `workflow_dispatch` forces the publish job after
+   validating the commit against the remote default-branch tip:
+
+   ```sh
+   if [[ -z "$run_id" ]]; then
+     run_url="$(gh workflow run publish-cli.yml --ref "$default_branch" \
+       -f commit_sha="$approved_sha")"
+     run_id="${run_url##*/}"
+   fi
    test -n "$run_id"
    ```
 
-2. Read that run by its captured ID and verify it uses the approved commit.
-   GitHub may need a few seconds to expose a new run, so use bounded retries:
+5. Read the selected run by its captured ID and verify it uses the approved
+   commit:
 
    ```sh
    gh run view "$run_id" \
      --json databaseId,headSha,status,conclusion,url
    ```
 
-3. Watch the run through completion with `gh run watch <run-id> --exit-status`.
-   Verify `headSha` equals the approved SHA.
-   On failure, inspect it with `gh run view <run-id> --log-failed`, fix the
-   cause, and obtain fresh approval before dispatching another release.
+6. If the captured run already completed unsuccessfully, inspect it with
+   `gh run view <run-id> --log-failed`. Fix the cause and obtain fresh approval.
+   If the approved SHA remains the remote default-branch tip, rerun it with
+   `gh run rerun <run-id>`; if the fix changed code, restart at the Gate with
+   the new SHA.
+7. Watch the run through completion with `gh run watch <run-id> --exit-status`.
+   Verify `headSha` equals the approved SHA. Apply the same recovery rule to a
+   new failure; do not keep re-watching a terminal failed run.
 
 ## Verify
 
@@ -60,7 +106,8 @@ compare its tag with npm's `latest` version:
 
 ```sh
 npm_version="$(npm --prefix apps/cli --workspaces=false view chofex-cli version)"
-release_tag="$(gh release list --limit 1 --json tagName,isLatest --jq 'map(select(.isLatest))[0].tagName')"
+repository="$(gh repo view --json nameWithOwner --jq '.nameWithOwner')"
+release_tag="$(gh api "repos/${repository}/releases/latest" --jq '.tag_name')"
 release_target="$(gh release view "$release_tag" --json targetCommitish --jq '.targetCommitish')"
 gh release view "$release_tag" \
   --json tagName,isDraft,publishedAt,url,targetCommitish

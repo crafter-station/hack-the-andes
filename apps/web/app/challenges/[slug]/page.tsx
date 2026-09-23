@@ -7,7 +7,13 @@ import { currentChallengeTime } from "@/lib/challenges/clock";
 import { getChallengeRanking } from "@/lib/challenges/ranking";
 import { HttpError } from "@/lib/registration/http";
 
-export const dynamic = "force-dynamic";
+// Returning no build-time paths enables on-demand ISR without querying the
+// production database while the deployment image is being built.
+export const generateStaticParams = () => [];
+
+// Serve the prerendered response while Next rebuilds it in the background, so
+// first paint does not wait on a fresh server render or ranking query.
+export const revalidate = 60;
 
 interface ChallengeRankingPageProps {
   readonly params: Promise<{ slug: string }>;

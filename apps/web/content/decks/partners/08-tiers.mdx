@@ -1,0 +1,40 @@
+---
+title: Aliados
+backdrop: canyon
+veil: heavy
+layout: wide
+---
+
+<SlideTitle label="Aliados" size="sm">Cuatro formas de entrar</SlideTitle>
+
+<Lead>Tres niveles en efectivo y uno en especie.</Lead>
+
+<DataGrid columns={4}>
+  <SponsorTier
+    name="Principal"
+    price="$2.500"
+    slots="1"
+    feature
+    covers={["Tomado por Chofex", "Lockup junto a la marca", "Keynote"]}
+  />
+  <SponsorTier
+    name="Core"
+    price="$1.000"
+    slots="2"
+    available="2"
+    covers={["Logo en la landing", "Banner en sede", "Mención en kickoff", "Assets y LinkedIn"]}
+  />
+  <SponsorTier
+    name="Apoyo"
+    price="$500"
+    slots="6"
+    available="6"
+    covers={["Logo en la landing", "Mención en kickoff", "Assets"]}
+  />
+  <SponsorTier
+    name="En especie"
+    price="Producto"
+    slots="∞"
+    covers={["Sede, comida, swag", "Mentores o jurado", "Aporte operativo"]}
+  />
+</DataGrid>

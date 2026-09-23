@@ -7,8 +7,12 @@ import {
 } from "@chofex/ui/components/brand";
 import { TerminalIcon } from "lucide-react";
 import { CopyAgentPrompt } from "@/components/copy-agent-prompt";
-import { applyCopy, cliCommands } from "@/components/landing/content";
-import { ShellCommand } from "@/components/shell-command";
+import { CliInstallTabs } from "@/components/landing/cli-install-tabs";
+import {
+  applyCopy,
+  cliInstallMethods,
+  cliNextCommands,
+} from "@/components/landing/content";
 
 export function LandingApply() {
   return (
@@ -75,34 +79,10 @@ export function LandingApply() {
             <h3 className="font-display text-3xl leading-none uppercase">
               {applyCopy.cliTitle}
             </h3>
-            <ol className="brand-code mt-6 overflow-hidden border font-mono text-sm">
-              {cliCommands.map((command, index) => (
-                <li
-                  /*
-                   * `minmax(0, 1fr)`, not `1fr`. A grid track defaults to a
-                   * minimum of its own content, so the nowrap command pushed
-                   * the track — and the card, and the section — wider than the
-                   * screen instead of scrolling inside the `overflow-x` below.
-                   * On a phone the commands ran off the right edge, clipped out
-                   * of sight by the page's own horizontal clipping.
-                   */
-                  className="grid grid-cols-[2rem_minmax(0,1fr)] border-white/10 border-b p-4 last:border-b-0"
-                  key={command}
-                >
-                  <span className="text-[var(--code-muted)]">0{index + 1}</span>
-                  {/*
-                   * And it wraps on a phone rather than scrolling sideways: a
-                   * command hidden behind a horizontal scrollbar is a command
-                   * nobody reads, and these break cleanly at their spaces.
-                   */}
-                  <ShellCommand
-                    className="min-w-0 break-words whitespace-normal sm:overflow-x-auto sm:whitespace-nowrap"
-                    command={command}
-                    prompt
-                  />
-                </li>
-              ))}
-            </ol>
+            <CliInstallTabs
+              methods={cliInstallMethods}
+              nextCommands={cliNextCommands}
+            />
           </article>
 
           <article className={`p-6 ${brandFrameClassName}`}>

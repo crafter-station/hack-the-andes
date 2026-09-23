@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { availableLabel } from "@/lib/decks/chrome-copy";
 import type { DeckLang } from "@/lib/decks/loader";
+
+export { Photos } from "./photos";
 
 /*
  * The closed vocabulary available inside a slide. Slides cannot `import`, so
@@ -14,6 +16,61 @@ import type { DeckLang } from "@/lib/decks/loader";
 
 function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * The props every grid in this file shares.
+ *
+ * The track list travels as a custom property rather than as an inline
+ * `grid-template-columns`, because an inline declaration cannot be overridden
+ * from a stylesheet: a four-column row of tiers stayed four columns on a
+ * 412px phone, which is exactly what it looked like. Through `--deck-cols` the
+ * media queries in `deck.css` get to redefine it.
+ *
+ * `data-cols` rides along so those queries can tell a two-column fact sheet,
+ * which survives a tablet, from a four-column row, which does not.
+ */
+/**
+ * A value slot sometimes holds a word instead of a number — `Producto` where
+ * the other three tiers carry a price, `Créditos` where the other two places
+ * carry an amount.
+ *
+ * A word is not a number and does not want a number's size. `$500` is four
+ * glyphs half of which are narrow; `Créditos` is eight wide ones, and at the
+ * same size it ran past the edge of its own cell on every screen under about
+ * 1230px. The step down is a typographic rule, not a breakpoint, so it holds at
+ * every width at once.
+ */
+function valueKind(value: string) {
+  return /\d/.test(value) ? undefined : "word";
+}
+
+function tableProps(
+  template: string,
+  count: number,
+  /**
+   * `rows` marks a grid whose columns are a label and its value rather than
+   * two cells of copy. Those keep both columns on a phone: stacking a label
+   * over its value doubles the row count and reads worse than the pair.
+   */
+  shape?: "rows",
+) {
+  const props: {
+    className: string;
+    "data-cols": number;
+    "data-shape"?: "rows";
+    style: CSSProperties;
+  } = {
+    className: "deck-table",
+    "data-cols": count,
+    style: { "--deck-cols": template } as CSSProperties,
+  };
+
+  if (shape) {
+    props["data-shape"] = shape;
+  }
+
+  return props;
 }
 
 /* ---------- structure and text ---------- */
@@ -101,10 +158,10 @@ export function StatRow({
 }) {
   return (
     <div
-      className="deck-table"
-      style={{
-        gridTemplateColumns: `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))`,
-      }}
+      {...tableProps(
+        `repeat(${Math.min(items.length, 4)}, minmax(0, 1fr))`,
+        Math.min(items.length, 4),
+      )}
     >
       {items.map((item) => (
         <Stat
@@ -126,10 +183,7 @@ export function DataGrid({
   columns?: number;
 }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-    >
+    <div {...tableProps(`repeat(${columns}, minmax(0, 1fr))`, columns)}>
       {children}
     </div>
   );
@@ -159,10 +213,7 @@ export function MiniMatrix({
   rows: Array<{ label: string; value: string }>;
 }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr)" }}
-    >
+    <div {...tableProps("minmax(0, 1fr) minmax(0, 1.4fr)", 2, "rows")}>
       {rows.flatMap((row) => [
         <div className="deck-cell" key={`${row.label}-l`}>
           <span className="deck-label">{row.label}</span>
@@ -182,10 +233,7 @@ export function PrizePodium({
 }) {
   return (
     <div
-      className="deck-table"
-      style={{
-        gridTemplateColumns: `repeat(${places.length}, minmax(0, 1fr))`,
-      }}
+      {...tableProps(`repeat(${places.length}, minmax(0, 1fr))`, places.length)}
     >
       {places.map((place, index) => (
         <div
@@ -193,7 +241,12 @@ export function PrizePodium({
           key={place.place}
         >
           <span className="deck-label">{place.place}</span>
-          <span className="deck-stat-value mt-2">{place.amount}</span>
+          <span
+            className="deck-stat-value mt-2"
+            data-kind={valueKind(place.amount)}
+          >
+            {place.amount}
+          </span>
           {place.note ? <p className="deck-copy mt-2">{place.note}</p> : null}
         </div>
       ))}
@@ -226,7 +279,7 @@ export function SponsorTier({
   return (
     <div
       className={cx(
-        "deck-cell flex min-h-60 flex-col justify-between",
+        "deck-tier deck-cell flex min-h-60 flex-col justify-between",
         feature && "deck-cell-invert",
       )}
     >
@@ -240,7 +293,9 @@ export function SponsorTier({
         ) : null}
       </div>
       <div>
-        <p className="deck-tier-price">{price}</p>
+        <p className="deck-tier-price" data-kind={valueKind(price)}>
+          {price}
+        </p>
         <p className="deck-copy mt-3">{covers.join(" · ")}</p>
       </div>
     </div>
@@ -255,10 +310,7 @@ export function BenefitGrid({
   columns?: number;
 }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-    >
+    <div {...tableProps(`repeat(${columns}, minmax(0, 1fr))`, columns)}>
       {items.map((item) => (
         <div className="deck-cell" key={item.title}>
           <p className="deck-label">{item.title}</p>
@@ -281,10 +333,7 @@ export function ContrastGrid({
   right: { title: string; items: string[] };
 }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-    >
+    <div {...tableProps("repeat(2, minmax(0, 1fr))", 2)}>
       {[left, right].map((column, index) => (
         <div
           className={cx("deck-cell", index === 1 && "deck-cell-invert")}
@@ -312,10 +361,7 @@ export function FlowMap({
 }) {
   return (
     <div
-      className="deck-table"
-      style={{
-        gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`,
-      }}
+      {...tableProps(`repeat(${steps.length}, minmax(0, 1fr))`, steps.length)}
     >
       {steps.map((step, index) => (
         <div className="deck-cell" key={step.stage}>
@@ -337,10 +383,10 @@ export function PersonaGrid({
 }) {
   return (
     <div
-      className="deck-table"
-      style={{
-        gridTemplateColumns: `repeat(${Math.min(personas.length, 3)}, minmax(0, 1fr))`,
-      }}
+      {...tableProps(
+        `repeat(${Math.min(personas.length, 3)}, minmax(0, 1fr))`,
+        Math.min(personas.length, 3),
+      )}
     >
       {personas.map((persona) => (
         <div className="deck-cell" key={persona.name}>
@@ -384,10 +430,7 @@ export function TrackCard({
 
 export function Timeline({ children }: { children: ReactNode }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: "minmax(0, 0.4fr) minmax(0, 1.6fr)" }}
-    >
+    <div {...tableProps("minmax(0, 0.4fr) minmax(0, 1.6fr)", 2, "rows")}>
       {children}
     </div>
   );
@@ -419,10 +462,7 @@ export function PhaseTimeline({
 }) {
   return (
     <div
-      className="deck-table"
-      style={{
-        gridTemplateColumns: `repeat(${phases.length}, minmax(0, 1fr))`,
-      }}
+      {...tableProps(`repeat(${phases.length}, minmax(0, 1fr))`, phases.length)}
     >
       {phases.map((phase) => (
         <div className="deck-cell" key={phase.phase}>
@@ -504,10 +544,7 @@ export function LogoWall({
   columns?: number;
 }) {
   return (
-    <div
-      className="deck-table"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-    >
+    <div {...tableProps(`repeat(${columns}, minmax(0, 1fr))`, columns)}>
       {logos.map((logo) => (
         <div className="deck-cell grid h-28 place-items-center" key={logo.alt}>
           <Logo alt={logo.alt} src={logo.src} />

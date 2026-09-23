@@ -4,8 +4,8 @@ import { ShellCommand } from "@/components/shell-command";
 const workflow = [
   {
     title: "Instala la CLI",
-    command: "npm install --global chofex-cli@latest",
-    body: "Necesitas Node.js 24 o superior.",
+    command: "curl -fsSL https://hacktheandes.com/install | bash",
+    body: "No necesitas Node.js ni npm. Al terminar, abre otra terminal o ejecuta el export PATH que muestra el instalador.",
   },
   {
     title: "Inicia sesión y prepara tu archivo",

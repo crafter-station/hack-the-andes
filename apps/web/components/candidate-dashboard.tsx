@@ -32,7 +32,7 @@ import {
 } from "@chofex/ui/components/input-group";
 import { RowAction } from "@chofex/ui/components/row-action";
 import { Textarea } from "@chofex/ui/components/textarea";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import {
   keepPreviousData,
   useMutation,
@@ -72,6 +72,10 @@ import {
   candidateListOptions,
   submitCandidateDecision,
 } from "@/lib/admin/candidate-queries";
+import {
+  candidateLastUpdatedAt,
+  candidateTimeline,
+} from "@/lib/admin/candidate-timeline";
 import { candidateFunnelMilestones } from "@/lib/admin/funnel-metrics";
 import {
   applicationDataStatus,
@@ -92,6 +96,7 @@ import {
   parseCandidateFilter,
   reviewableCandidateStatuses,
 } from "@/lib/admin/types";
+import { whatsappMessage, whatsappUrl } from "@/lib/admin/whatsapp";
 
 interface CandidateDashboardProps {
   readonly data: CandidatePage;
@@ -199,6 +204,49 @@ const filterStatuses: ReadonlyArray<{
 const displayName = (candidate: Candidate): string =>
   `${candidate.firstName} ${candidate.lastName}`.trim();
 
+const WhatsAppIcon = ({ className }: { readonly className?: string }) => (
+  <svg
+    aria-hidden="true"
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47a8.9 8.9 0 0 1-1.65-2.06c-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.62-.91-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.1 4.5.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.58-.09 1.76-.72 2.01-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35M12.04 21.5h-.01a9.47 9.47 0 0 1-4.83-1.32l-.35-.2-3.59.94.96-3.5-.23-.36A9.46 9.46 0 0 1 2.54 12c0-5.23 4.26-9.49 9.5-9.49a9.42 9.42 0 0 1 6.71 2.79A9.41 9.41 0 0 1 21.54 12c0 5.24-4.26 9.5-9.5 9.5m8.08-17.58A11.34 11.34 0 0 0 12.05.58C5.76.58.65 5.7.65 12c0 2 .52 3.96 1.51 5.68L.55 23.55l6-1.57a11.4 11.4 0 0 0 5.49 1.4h.01c6.29 0 11.41-5.12 11.41-11.4 0-3.05-1.19-5.92-3.34-8.07" />
+  </svg>
+);
+
+const WhatsAppLink = ({
+  candidate,
+  adminFirstName,
+}: {
+  readonly candidate: Candidate;
+  readonly adminFirstName?: string;
+}) => {
+  const phone = candidate.phone ?? candidate.applicationPhone;
+  const message = whatsappMessage({
+    participantFirstName: candidate.firstName,
+    adminFirstName,
+    funnelStatus: candidate.funnelStatus,
+    attendanceCompleted: Boolean(candidate.attendanceCompletedAt),
+  });
+  const href = whatsappUrl(phone, message);
+  if (!href) return null;
+
+  const label = `Message ${displayName(candidate)} on WhatsApp`;
+  return (
+    <a
+      className="relative z-20 inline-flex size-7 shrink-0 items-center justify-center text-[#1fa855] transition-colors hover:text-[#168a45] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      title={label}
+    >
+      <WhatsAppIcon className="size-4" />
+    </a>
+  );
+};
+
 const initials = (candidate: Candidate): string =>
   `${candidate.firstName.charAt(0)}${candidate.lastName.charAt(0)}`.toUpperCase();
 
@@ -234,14 +282,6 @@ const CandidateAvatar = ({
     </span>
   );
 };
-
-const formatDate = (value: string): string =>
-  new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "America/Lima",
-  }).format(new Date(value));
 
 const formatDateTime = (value: string): string =>
   new Intl.DateTimeFormat("en-US", {
@@ -452,8 +492,51 @@ const CopyEmailButton = ({ email }: { readonly email: string }) => {
   );
 };
 
+const CandidateActivityTimeline = ({
+  candidate,
+}: {
+  readonly candidate: Candidate;
+}) => {
+  const events = candidateTimeline(candidate);
+  return (
+    <div>
+      <h3 className="text-sm font-semibold">Activity timeline</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Recorded milestones from sign-up through participation.
+      </p>
+      <ol className="mt-4 ml-1.5 border-l border-border">
+        {events.map((event) => (
+          <li key={event.id} className="relative pb-5 pl-5 last:pb-0">
+            <span
+              aria-hidden="true"
+              className="absolute top-1 -left-1.5 size-3 border-2 border-background bg-primary"
+            />
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+              <div>
+                <p className="text-sm font-medium">{event.title}</p>
+                {event.description && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {event.description}
+                  </p>
+                )}
+              </div>
+              <time
+                dateTime={event.at}
+                className="text-xs text-muted-foreground"
+              >
+                {formatDateTime(event.at)}
+              </time>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+};
+
 const CandidateDrawer = ({
   candidate,
+  adminFirstName,
   open,
   onOpenChange,
   onPrevious,
@@ -463,6 +546,7 @@ const CandidateDrawer = ({
   hasNext,
 }: {
   readonly candidate?: Candidate;
+  readonly adminFirstName?: string;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onPrevious: () => void;
@@ -624,8 +708,12 @@ const CandidateDrawer = ({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-xl font-semibold tracking-tight">
-                      {displayName(candidate)}
+                    <h2 className="flex items-center gap-1 text-xl font-semibold tracking-tight">
+                      <span>{displayName(candidate)}</span>
+                      <WhatsAppLink
+                        candidate={candidate}
+                        adminFirstName={adminFirstName}
+                      />
                     </h2>
                     <div className="mt-1 flex items-center gap-1">
                       <a
@@ -760,7 +848,9 @@ const CandidateDrawer = ({
           )}
 
           <section className="space-y-5 px-5 py-6 sm:px-7">
-            <div>
+            <CandidateActivityTimeline candidate={candidate} />
+
+            <div className="border-t pt-5">
               <h3 className="text-sm font-semibold">Application</h3>
               <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5">
                 <Detail label="Application state">
@@ -992,6 +1082,8 @@ export function CandidateDashboard({
   initialStatus,
   initialSelection,
 }: CandidateDashboardProps) {
+  const { user } = useUser();
+  const adminFirstName = user?.firstName ?? undefined;
   const queryClient = useQueryClient();
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<CandidateFilters>({
@@ -1256,16 +1348,17 @@ export function CandidateDashboard({
               className="mt-4 overflow-hidden border bg-card"
               aria-busy={candidateQuery.isFetching}
             >
-              <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_7rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
                 <span>Candidate</span>
                 <span>Background</span>
                 <span>Status</span>
-                <span className="text-right">Submitted</span>
+                <span className="text-right">Last updated at</span>
               </div>
               {currentData.candidates.length === 0 && <EmptyCandidates />}
               {currentData.candidates.length > 0 && (
                 <CandidateRows
                   candidates={currentData.candidates}
+                  adminFirstName={adminFirstName}
                   onSelect={setSelectedId}
                 />
               )}
@@ -1342,6 +1435,7 @@ export function CandidateDashboard({
       <CandidateDrawer
         key={selectedCandidate?.id}
         candidate={selectedCandidate}
+        adminFirstName={adminFirstName}
         open={Boolean(selectedCandidate)}
         onOpenChange={(isOpen) => {
           if (isOpen) return;
@@ -1582,22 +1676,27 @@ const EmptyCandidates = () => (
 
 const CandidateRows = ({
   candidates,
+  adminFirstName,
   onSelect,
 }: {
   readonly candidates: ReadonlyArray<Candidate>;
+  readonly adminFirstName?: string;
   readonly onSelect: (candidateId: string) => void;
 }) => (
   <div className="divide-y">
     {candidates.map((candidate) => {
       const challengeSummary = completedChallengeSummary(candidate);
-      let submitted = "Not submitted";
-      if (candidate.submittedAt) submitted = formatDate(candidate.submittedAt);
+      const lastTimelineAt = candidateLastUpdatedAt(candidate);
+      let lastUpdatedAt = "—";
+      if (lastTimelineAt) {
+        lastUpdatedAt = formatDateTime(lastTimelineAt);
+      }
       return (
         <RowAction
           label={`Review ${displayName(candidate)}`}
           key={candidate.id}
           onClick={() => onSelect(candidate.id)}
-          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_7rem] sm:items-center sm:gap-4 sm:px-5"
+          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] sm:items-center sm:gap-4 sm:px-5"
         >
           <span className="flex min-w-0 items-center gap-3">
             <CandidateAvatar
@@ -1605,9 +1704,15 @@ const CandidateRows = ({
               className="grid size-9 shrink-0 place-items-center border border-border bg-muted text-[11px] font-semibold text-muted-foreground"
             />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">
-                {displayName(candidate)}
-                <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+              <span className="flex min-w-0 items-center">
+                <span className="truncate text-sm font-medium">
+                  {displayName(candidate)}
+                </span>
+                <WhatsAppLink
+                  candidate={candidate}
+                  adminFirstName={adminFirstName}
+                />
+                <span className="truncate text-[11px] font-normal text-muted-foreground">
                   Attempt {candidate.attemptNumber}
                   {challengeSummary && ` · ${challengeSummary}`}
                 </span>
@@ -1629,7 +1734,7 @@ const CandidateRows = ({
             <FunnelStatusBadge status={candidate.funnelStatus} />
           </span>
           <span className="hidden items-center justify-end gap-2 text-xs text-muted-foreground sm:flex">
-            {submitted}
+            {lastUpdatedAt}
             <ChevronRightIcon className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
           </span>
         </RowAction>

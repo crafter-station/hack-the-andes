@@ -20,6 +20,7 @@ export const POST = (
     await captureProductEvent({
       distinctId: clerkUserId,
       event: "challenge_local_test_completed",
+      request,
       properties: {
         challenge_slug: slug,
         accuracy: result.accuracy,

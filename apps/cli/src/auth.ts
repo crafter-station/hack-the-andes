@@ -2,6 +2,11 @@ import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 
+import {
+  type CampaignAttributionHandoff,
+  campaignAttributionFromOAuthState,
+} from "@chofex/registration-contract";
+
 import { config } from "./config.js";
 
 const keychainService = "run.chofex.cli.oauth";
@@ -9,6 +14,7 @@ const keychainAccount = "credentials";
 
 export interface Credentials {
   readonly accessToken: string;
+  readonly campaignAttribution?: CampaignAttributionHandoff;
   readonly refreshToken?: string;
   readonly expiresAt?: number;
 }
@@ -19,6 +25,11 @@ interface TokenResponse {
   readonly expires_in?: unknown;
   readonly error?: unknown;
   readonly error_description?: unknown;
+}
+
+interface AuthorizationCallback {
+  readonly authorizationCode: string;
+  readonly campaignAttribution?: CampaignAttributionHandoff;
 }
 
 export const pkceChallenge = (verifier: string): string =>
@@ -217,6 +228,7 @@ export const tokenEndpointError = (
 const credentialsFromToken = (
   body: TokenResponse,
   previousRefreshToken?: string,
+  campaignAttribution?: CampaignAttributionHandoff,
 ): Credentials => {
   if (typeof body.access_token !== "string") {
     let detail = "";
@@ -238,6 +250,7 @@ const credentialsFromToken = (
 
   return {
     accessToken: body.access_token,
+    campaignAttribution,
     refreshToken,
     expiresAt,
   };
@@ -281,13 +294,21 @@ const refresh = async (credentials: Credentials): Promise<Credentials> => {
     refresh_token: credentials.refreshToken,
     client_id: config.oauthClientId,
   });
-  const updated = credentialsFromToken(body, credentials.refreshToken);
+  const updated = credentialsFromToken(
+    body,
+    credentials.refreshToken,
+    credentials.campaignAttribution,
+  );
   await saveCredentials(updated);
   return updated;
 };
 
-export const accessToken = async (forceRefresh = false): Promise<string> => {
-  if (process.env.CHOFEX_TOKEN) return process.env.CHOFEX_TOKEN;
+export const authentication = async (
+  forceRefresh = false,
+): Promise<Credentials> => {
+  if (process.env.CHOFEX_TOKEN) {
+    return { accessToken: process.env.CHOFEX_TOKEN };
+  }
   const credentials = await readCredentials();
   if (!credentials) throw new Error("Not logged in. Run `chofex login`.");
   if (
@@ -295,9 +316,21 @@ export const accessToken = async (forceRefresh = false): Promise<string> => {
     (credentials.expiresAt !== undefined &&
       credentials.expiresAt <= Date.now() + 30_000)
   ) {
-    return (await refresh(credentials)).accessToken;
+    return await refresh(credentials);
   }
-  return credentials.accessToken;
+  return credentials;
+};
+
+export const accessToken = async (forceRefresh = false): Promise<string> =>
+  (await authentication(forceRefresh)).accessToken;
+
+export const bridgedAuthorizationUrl = (
+  bridgeUrl: string,
+  authorizationUrl: string,
+): string => {
+  const bridge = new URL(bridgeUrl);
+  bridge.search = new URL(authorizationUrl).search;
+  return bridge.toString();
 };
 
 export const browserCommand = (
@@ -330,13 +363,13 @@ export const assertInteractiveLogin = (
   }
 };
 
-export const login = async (): Promise<void> => {
+export const login = async (): Promise<string> => {
   assertInteractiveLogin();
   const { verifier, challenge } = createPkce();
   const state = randomBytes(24).toString("base64url");
-  let finish!: (value: string) => void;
+  let finish!: (value: AuthorizationCallback) => void;
   let fail!: (reason: Error) => void;
-  const code = new Promise<string>((resolve, reject) => {
+  const code = new Promise<AuthorizationCallback>((resolve, reject) => {
     finish = resolve;
     fail = reject;
   });
@@ -348,11 +381,11 @@ export const login = async (): Promise<void> => {
     }
     const error = url.searchParams.get("error");
     const authorizationCode = url.searchParams.get("code");
-    if (
-      url.searchParams.get("state") !== state ||
-      error ||
-      !authorizationCode
-    ) {
+    const attributionState = campaignAttributionFromOAuthState(
+      state,
+      url.searchParams.get("state"),
+    );
+    if (!attributionState.valid || error || !authorizationCode) {
       response
         .writeHead(400, { "content-type": "text/plain" })
         .end("Chofex login failed. You can close this window.");
@@ -364,7 +397,10 @@ export const login = async (): Promise<void> => {
     response
       .writeHead(200, { "content-type": "text/plain" })
       .end("Chofex login complete. You can close this window.");
-    finish(authorizationCode);
+    finish({
+      authorizationCode,
+      campaignAttribution: attributionState.handoff,
+    });
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -393,24 +429,34 @@ export const login = async (): Promise<void> => {
     server.close();
     throw error;
   }
-  console.error(
-    `Sign in here (waiting up to five minutes):\n\n  ${authorizationUrl}\n\nIf the browser did not open automatically, open that URL yourself.`,
+  const browserUrl = bridgedAuthorizationUrl(
+    config.authorizationBridgeUrl,
+    authorizationUrl.toString(),
   );
-  openBrowser(authorizationUrl.toString());
+  console.error(
+    `Sign in here (waiting up to five minutes):\n\n  ${browserUrl}\n\nIf the browser did not open automatically, open that URL yourself.`,
+  );
+  openBrowser(browserUrl);
   const timeout = setTimeout(
     () => fail(new Error("Login timed out after five minutes")),
     300_000,
   );
   try {
-    const authorizationCode = await code;
+    const callback = await code;
     const body = await tokenRequest({
       grant_type: "authorization_code",
       client_id: config.oauthClientId,
-      code: authorizationCode,
+      code: callback.authorizationCode,
       redirect_uri: redirectUri,
       code_verifier: verifier,
     });
-    await saveCredentials(credentialsFromToken(body));
+    const credentials = credentialsFromToken(
+      body,
+      undefined,
+      callback.campaignAttribution,
+    );
+    await saveCredentials(credentials);
+    return credentials.accessToken;
   } finally {
     clearTimeout(timeout);
     server.close();

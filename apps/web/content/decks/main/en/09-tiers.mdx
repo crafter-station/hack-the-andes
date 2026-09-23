@@ -1,0 +1,29 @@
+---
+title: Sponsorship
+backdrop: canyon
+veil: heavy
+layout: wide
+---
+
+<SlideTitle label="Sponsorship" size="sm">Three ways to take part</SlideTitle>
+
+<Lead>You choose the credit amount. No tier asks for cash.</Lead>
+
+<DataGrid columns={3}>
+  <SponsorTier
+    name="Basic"
+    price="Your amount"
+    covers={["Credits for all 100", "Logo and assets", "Claims report"]}
+  />
+  <SponsorTier
+    name="Pro"
+    price="3 places"
+    covers={["Everything in Basic", "Credits for 1st, 2nd and 3rd", "Named at the ceremony"]}
+  />
+  <SponsorTier
+    name="Premium"
+    price="Credits + merch"
+    feature
+    covers={["Everything in Pro", "Merch for participants and/or winners", "Delivery report"]}
+  />
+</DataGrid>

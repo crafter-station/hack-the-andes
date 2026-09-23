@@ -19,7 +19,7 @@ import {
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { HttpError } from "@/lib/registration/http";
-import { challengeProgressForParticipants } from "../challenges/service";
+import { challengeActivityForParticipants } from "../challenges/service";
 import { candidateAvatarUrl } from "./avatars";
 import { type ApplicationDecision, buildDecisionEmail } from "./decision-email";
 import {
@@ -61,6 +61,10 @@ type DecisionRecord = {
   readonly application: DecidedApplication;
   readonly attemptNumber: number;
 };
+type ApplicationHistoryRecord = {
+  readonly application: ApplicationRecord;
+  readonly attemptNumber: number;
+};
 
 const isDecidedApplication = (
   application: ApplicationRecord,
@@ -72,16 +76,20 @@ type CandidateRecord = {
   readonly details: typeof acceptanceDetails.$inferSelect | null;
   readonly badge: typeof participantBadges.$inferSelect | null;
   readonly clerkUserId: string;
+  readonly participantCreatedAt: Date;
   readonly attemptNumber: number;
+  readonly applicationHistory: ReadonlyArray<ApplicationHistoryRecord>;
   readonly decisionHistory: ReadonlyArray<DecisionRecord>;
 };
 
 const toCandidate = (
   record: CandidateRecord,
   clerkPictureUrl: string | undefined,
+  clerkCreatedAt: string | undefined,
   approvedBy: string | undefined,
   clerkNames: ReadonlyMap<string, string>,
   challenges: Candidate["challenges"],
+  challengeHistory: Candidate["challengeHistory"],
 ): Candidate => {
   const { application, details } = record;
   const submittedAt = instantString(application.submittedAt);
@@ -102,6 +110,27 @@ const toCandidate = (
       message: optional(decision.rejectionReason),
     };
   });
+  const applicationHistory = record.applicationHistory.map(
+    ({ application: attempt, attemptNumber }) => {
+      let decidedAt: string | undefined;
+      if (isDecidedApplication(attempt)) {
+        decidedAt = (attempt.decidedAt ?? attempt.updatedAt).toISOString();
+      }
+      let withdrawnAt: string | undefined;
+      if (attempt.status === "withdrawn") {
+        withdrawnAt = attempt.updatedAt.toISOString();
+      }
+      return {
+        applicationId: attempt.id,
+        attemptNumber,
+        status: attempt.status,
+        startedAt: attempt.createdAt.toISOString(),
+        submittedAt: instantString(attempt.submittedAt),
+        decidedAt,
+        withdrawnAt,
+      };
+    },
+  );
 
   return {
     id: application.id,
@@ -139,11 +168,13 @@ const toCandidate = (
       challenges,
     ),
     mediaConsent: details?.mediaConsent ?? application.mediaConsent,
+    signedUpAt: clerkCreatedAt ?? record.participantCreatedAt.toISOString(),
     createdAt: application.createdAt.toISOString(),
     submittedAt,
     decidedAt: instantString(application.decidedAt),
     approvedBy,
     attemptNumber: record.attemptNumber,
+    applicationHistory,
     decisionHistory,
     documentFullName: optional(details?.fullName),
     phone: optional(details?.phone),
@@ -157,6 +188,7 @@ const toCandidate = (
     checkedInAt: instantString(details?.checkedInAt),
     nationalIdProvided: Boolean(details?.nationalIdNumber),
     challenges,
+    challengeHistory,
   };
 };
 
@@ -166,9 +198,9 @@ const toCandidates = async (
   const participantIds = [
     ...new Set(records.map((record) => record.application.participantId)),
   ];
-  const [clerk, challengeProgressByParticipant] = await Promise.all([
+  const [clerk, challengeActivity] = await Promise.all([
     clerkClient(),
-    challengeProgressForParticipants(participantIds),
+    challengeActivityForParticipants(participantIds),
   ]);
   const clerkUserIds = [
     ...new Set(records.map((record) => record.clerkUserId)),
@@ -190,6 +222,7 @@ const toCandidates = async (
     ...new Set([...clerkUserIds, ...reviewerIds, ...approverIds]),
   ];
   const clerkPictures = new Map<string, string>();
+  const clerkCreatedAt = new Map<string, string>();
   const clerkNames = new Map<string, string>();
 
   await Promise.all(
@@ -197,6 +230,7 @@ const toCandidates = async (
       try {
         const user = await clerk.users.getUser(clerkUserId);
         if (user.hasImage) clerkPictures.set(clerkUserId, user.imageUrl);
+        clerkCreatedAt.set(clerkUserId, new Date(user.createdAt).toISOString());
         const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
         const primaryEmail = user.emailAddresses.find(
           (email) => email.id === user.primaryEmailAddressId,
@@ -214,19 +248,24 @@ const toCandidates = async (
       const approverId = record.application.decidedByClerkUserId;
       if (approverId) approvedBy = clerkNames.get(approverId) ?? approverId;
     }
+    const participantId = record.application.participantId;
     return toCandidate(
       record,
       clerkPictures.get(record.clerkUserId),
+      clerkCreatedAt.get(record.clerkUserId),
       approvedBy,
       clerkNames,
-      challengeProgressByParticipant.get(record.application.participantId) ??
-        [],
+      challengeActivity.progressByParticipant.get(participantId) ?? [],
+      challengeActivity.milestonesByParticipant.get(participantId) ?? [],
     );
   });
 };
 
 const addAttemptHistory = async <
-  BaseRecord extends Omit<CandidateRecord, "attemptNumber" | "decisionHistory">,
+  BaseRecord extends Omit<
+    CandidateRecord,
+    "attemptNumber" | "applicationHistory" | "decisionHistory"
+  >,
 >(
   records: ReadonlyArray<BaseRecord>,
 ): Promise<ReadonlyArray<CandidateRecord>> => {
@@ -250,14 +289,18 @@ const addAttemptHistory = async <
   return records.map((record) => {
     const attempts =
       historyByParticipant.get(record.application.participantId) ?? [];
+    const applicationHistory = attempts.map((attempt, index) => ({
+      application: attempt,
+      attemptNumber: attempts.length - index,
+    }));
     return {
       ...record,
       attemptNumber: attempts.length,
-      decisionHistory: attempts.flatMap((attempt, index) => {
-        if (!isDecidedApplication(attempt)) return [];
-        return [
-          { application: attempt, attemptNumber: attempts.length - index },
-        ];
+      applicationHistory,
+      decisionHistory: applicationHistory.flatMap((attemptRecord) => {
+        const application = attemptRecord.application;
+        if (!isDecidedApplication(application)) return [];
+        return [{ application, attemptNumber: attemptRecord.attemptNumber }];
       }),
     };
   });
@@ -272,6 +315,7 @@ const candidateRecordById = async (
       details: acceptanceDetails,
       badge: participantBadges,
       clerkUserId: participants.clerkUserId,
+      participantCreatedAt: participants.createdAt,
     })
     .from(applications)
     .innerJoin(participants, eq(participants.id, applications.participantId))
@@ -367,6 +411,7 @@ export const listCandidates = async (
       details: acceptanceDetails,
       badge: participantBadges,
       clerkUserId: participants.clerkUserId,
+      participantCreatedAt: participants.createdAt,
     })
     .from(applications)
     .innerJoin(latestApplications, eq(latestApplications.id, applications.id))

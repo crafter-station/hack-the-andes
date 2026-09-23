@@ -4,8 +4,11 @@ import {
   campaignPropertiesFromUrl,
   isExtensionNoiseException,
   isPostHogConfigured,
+  isSessionRecordingEvent,
   isTrackablePath,
   isTrackableUrl,
+  postHogEventForPublicAnalytics,
+  replaceCampaignProperties,
 } from "./analytics";
 
 test("reads campaign dimensions for conversion events", () => {
@@ -71,6 +74,29 @@ test("fails closed on anything it cannot parse", () => {
   expect(isTrackableUrl(null)).toBe(false);
 });
 
+test("recognizes session recording snapshots so replay bypasses event shaping", () => {
+  expect(
+    isSessionRecordingEvent({
+      event: "$snapshot",
+      properties: { $snapshot_data: [{ type: 2 }] },
+    }),
+  ).toBe(true);
+  expect(isSessionRecordingEvent({ event: "$pageview" })).toBe(false);
+  expect(isSessionRecordingEvent(null)).toBe(false);
+});
+
+test("the public analytics filter alone would drop session snapshots", () => {
+  // A snapshot carries no trackable $current_url, so the public filter returns
+  // null. before_send must keep snapshots ahead of this filter, or replay
+  // records nothing.
+  expect(
+    postHogEventForPublicAnalytics({
+      event: "$snapshot",
+      properties: { $snapshot_data: [{ type: 2 }] },
+    }),
+  ).toBe(null);
+});
+
 test("drops the browser extension promise rejection, whatever its id", () => {
   const extensionEvent = (id: number) => ({
     event: "$exception",
@@ -100,4 +126,119 @@ test("keeps first-party exceptions and non-exception events", () => {
   expect(
     isExtensionNoiseException({ event: "$exception", properties: {} }),
   ).toBe(false);
+});
+
+test("allows identity linking without exposing an excluded URL", () => {
+  const identityEvent: {
+    $set_once?: Record<string, unknown>;
+    event?: string;
+    properties?: Record<string, unknown>;
+  } = {
+    $set_once: {
+      $initial_current_url:
+        "https://hacktheandes.com/auth/complete?token=private",
+      $initial_pathname: "/auth/complete",
+      $initial_referrer: "https://accounts.example.com/private",
+      acquisition_channel: "campaign",
+    },
+    event: "$identify",
+    properties: {
+      $anon_distinct_id: "anonymous-123",
+      $current_url:
+        "https://hacktheandes.com/admin/participants?q=private@example.com",
+      $pathname: "/admin/participants",
+      $referrer: "https://hacktheandes.com/auth/complete?token=private",
+      distinct_id: "user_test_123",
+    },
+  };
+  expect(postHogEventForPublicAnalytics(identityEvent)).toEqual({
+    $set_once: {
+      acquisition_channel: "campaign",
+    },
+    event: "$identify",
+    properties: {
+      $anon_distinct_id: "anonymous-123",
+      distinct_id: "user_test_123",
+    },
+  });
+});
+
+test("removes private initial URLs from identity events on public pages", () => {
+  const identityEvent: {
+    $set_once?: Record<string, unknown>;
+    event?: string;
+    properties?: Record<string, unknown>;
+  } = {
+    $set_once: {
+      $initial_current_url:
+        "https://hacktheandes.com/auth/complete?token=private",
+      $initial_referrer: "https://accounts.example.com/private",
+    },
+    event: "$identify",
+    properties: {
+      $current_url: "https://hacktheandes.com/",
+      distinct_id: "user_test_123",
+    },
+  };
+  expect(postHogEventForPublicAnalytics(identityEvent)).toEqual({
+    $set_once: {},
+    event: "$identify",
+    properties: {
+      distinct_id: "user_test_123",
+    },
+  });
+});
+
+test("removes excluded referrer and history URLs from public events", () => {
+  const pageview: {
+    $set_once?: Record<string, unknown>;
+    event?: string;
+    properties?: Record<string, unknown>;
+  } = {
+    $set_once: {
+      $initial_current_url: "https://hacktheandes.com/auth/complete",
+    },
+    event: "$pageview",
+    properties: {
+      $current_url:
+        "https://hacktheandes.com/challenges?email=private@example.com",
+      $prev_pageview_pathname: "/admin/participants",
+      $referrer: "https://hacktheandes.com/auth/complete?token=private",
+      challenge_count: 1,
+    },
+  };
+  expect(postHogEventForPublicAnalytics(pageview)).toEqual({
+    $set_once: {},
+    event: "$pageview",
+    properties: {
+      $current_url: "https://hacktheandes.com/challenges",
+      challenge_count: 1,
+    },
+  });
+});
+
+test("replaces stale campaign properties on browser events", () => {
+  expect(
+    replaceCampaignProperties(
+      {
+        $initial_utm_campaign: "unvalidated-initial-campaign",
+        $utm_campaign: "old-campaign",
+        $utm_content: "old-link",
+        challenge_count: 1,
+      },
+      { $utm_campaign: "new-campaign" },
+    ),
+  ).toEqual({
+    $utm_campaign: "new-campaign",
+    challenge_count: 1,
+  });
+  expect(
+    replaceCampaignProperties(
+      {
+        $initial_utm_campaign: "unvalidated-initial-campaign",
+        $utm_campaign: "expired",
+      },
+      {},
+    ),
+  ).toEqual({});
 });

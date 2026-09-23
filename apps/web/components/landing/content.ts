@@ -43,8 +43,24 @@ export const metadataCopy = {
   description: `100 cupos para AI, product y software engineers. Envía tu postulación y compite por un pase directo en los challenges. ${trackCount} tracks, 30 horas y una entrega funcionando.`,
 } as const;
 
-export const cliCommands = [
-  "npm install --global chofex-cli@latest",
+export const cliInstallMethods = [
+  {
+    id: "curl",
+    label: "curl",
+    description: "Recomendado · no requiere Node.js",
+    hint: "Configura PATH y recarga tu terminal automáticamente.",
+    command:
+      "bash -o pipefail -c 'curl -fsSL https://hacktheandes.com/install | bash' && exec \"$SHELL\" -l",
+  },
+  {
+    id: "npm",
+    label: "npm",
+    description: "Requiere Node.js 20 o superior",
+    command: "npm install --global chofex-cli@latest",
+  },
+] as const;
+
+export const cliNextCommands = [
   "chofex login",
   "chofex register",
   "chofex status",
@@ -98,10 +114,9 @@ export const discordCopy = {
 } as const;
 
 export const eventCopy = {
-  title: "Crear soluciones reales para problemas reales",
-  lede: "Los verdaderos retos no siempre son los más trending. Requieren tiempo, esfuerzo y creatividad para resolver lo que los demás aceptan como status quo.",
-  support:
-    "Un entorno presencial diseñado para sostener trabajo exigente, conversaciones útiles y una entrega de alto nivel.",
+  title: "Un grupo exclusivo de hackers construyendo lo que el Perú necesita",
+  lede: "Únete a 100 personas que construyen y shippean para resolver problemas reales del país, no solo lo que está trending.",
+  support: `Más de ${formatSoles(prizePoolHeadlinePen)} en premios, comida, bebidas, energizantes, merch y 30 horas de una experiencia diseñada para hacer tu mejor trabajo.`,
 } as const;
 
 export const eventItems = [
@@ -115,7 +130,7 @@ export const eventItems = [
   },
   {
     title: "Work hard, Play Hard",
-    body: "100 personas, 30 horas, un mismo espacio. Comida incluida, música y zonas de silencio.",
+    body: "100 personas, 30 horas, un mismo espacio. Comida, bebidas, energizantes, merch, música y zonas de silencio.",
   },
   {
     title: "HardCore Mode",
@@ -278,9 +293,9 @@ export const applyCopy = {
   lede: "Registrarte no reserva un cupo. Envía tu postulación hasta el 9 de octubre de 2026 y cuéntanos qué construiste y shippeaste. Luego compite en los challenges: los mejores resultados ganan pase directo.",
   deadlineLabel: "Cierre de postulaciones",
   deadline: "9 oct 2026",
-  travelTitle: "¿Fuera de Lima?",
+  travelTitle: "¿Vives en otra ciudad del Perú?",
   travelSupport:
-    "Postula igual. Si demuestras que tienes lo necesario para estar en la hackathon y el costo del viaje es lo que te frena, cubriremos tus vuelos a Lima. El dinero no debería ser una barrera; encontraremos la forma.",
+    "Postula igual. Tenemos un presupuesto limitado para cubrir vuelos nacionales a Lima de participantes con talento excepcional que viven en otras ciudades del Perú. Evaluamos el apoyo caso por caso; no cubrimos vuelos internacionales.",
   criteriaTitle: "Qué revisamos",
   criteria: [
     "Evidencia en tu GitHub, LinkedIn o productos publicados de que construyes y shippeas.",
@@ -411,7 +426,7 @@ export const faqItems = [
   {
     question: "¿Puedo postular si vivo fuera de Lima?",
     answer:
-      "Sí. Queremos que postules estés donde estés. Si demuestras que tienes lo necesario para estar en la hackathon y el costo del viaje es lo que te frena, cubriremos tus vuelos a Lima. El dinero no debería ser una barrera; encontraremos la forma.",
+      "Sí. Tenemos un presupuesto limitado para cubrir vuelos nacionales a Lima de participantes con talento excepcional que viven en otras ciudades del Perú. Este apoyo se evalúa caso por caso y no cubre vuelos internacionales.",
   },
   {
     question: "¿Cuándo se revelan los tracks?",
@@ -431,16 +446,68 @@ export const faqItems = [
 
 export const footerCopy = {
   meta: "Lima, 17–18 oct 2026",
-  legalLabel: "Legal",
-  credits: "Créditos",
-  terms: "Términos",
-  privacy: "Privacidad",
-  ranking: "Challenges",
+  tagline: "100 personas, 30 horas, una entrega funcionando.",
+  navigationLabel: "Pie de página",
+  applicationStatus: "Postulaciones abiertas",
+  applicationDeadline: "Hasta el 9 oct",
+  copyright: "© 2026 Hack the Andes",
+  organizer: "Organiza Crafter Station",
 } as const;
+
+export const legalNavigation = [
+  { href: "/terms", label: "Términos" },
+  { href: "/privacy", label: "Privacidad" },
+] as const;
+
+export const footerNavigation = [
+  {
+    label: "Evento",
+    links: [
+      { href: "#why", label: "El evento" },
+      { href: "#prizes", label: "Premios" },
+      { href: "#people", label: "Panel" },
+    ],
+  },
+  {
+    label: "Programa",
+    links: [
+      { href: "#tracks", label: "Tracks" },
+      { href: "#qualifier-challenges", label: "Challenges" },
+      { href: "#faq", label: "Preguntas frecuentes" },
+    ],
+  },
+  {
+    label: "Participa",
+    links: [
+      { href: "#apply", label: "Postular" },
+      { href: "/discord", label: "Discord" },
+    ],
+  },
+  {
+    label: "Información",
+    links: [
+      { href: "#sponsors", label: "Organizadores" },
+      { href: "/credits", label: "Créditos" },
+      ...legalNavigation,
+    ],
+  },
+] as const;
 
 export const chromeCopy = {
   menu: "Menú",
   close: "Cerrar",
   sections: "Secciones",
   apply: "Aplicar",
+} as const;
+
+export const legalCopy = {
+  home: "Inicio",
+  navigationLabel: "Páginas legales",
+  eventKicker: "Lima presencial · 17–18 oct 2026",
+  termsHref: legalNavigation[0].href,
+  privacyHref: legalNavigation[1].href,
+  termsTitle: "Términos y Condiciones",
+  privacyTitle: "Privacidad",
+  termsDescription: `Términos y condiciones de participación para ${brandName}, evento presencial en Lima el 17 y 18 de octubre de 2026.`,
+  privacyDescription: `Política de privacidad de ${brandName} para la postulación y el evento presencial en Lima, 17–18 de octubre de 2026.`,
 } as const;

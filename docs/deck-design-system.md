@@ -21,13 +21,13 @@ slides de un deck: son tres plantillas y una portada.
 
 | Plantilla | Qué es | Slides que cubre |
 | --- | --- | --- |
-| **T1** portada | Wordmark centrado abajo, fila de logos de sponsor | `01-cover`, `10-close` |
-| **T2** split | Media a la izquierda, columna de texto a la derecha | `02-what`, `08-why` |
-| **T3** split espejo | Texto a la izquierda, dos placeholders apilados a la derecha | `03-filter`, `06-stack` |
-| **T4** cards | Título arriba, cuatro tarjetas, wordmark al pie | `04-facts`, `05-prizes`, `07-tiers`, `09-metrics` |
+| **T1** portada | Wordmark centrado abajo, fila de logos de sponsor | Portadas y cierres |
+| **T2** split | Media a la izquierda, columna de texto a la derecha | Slides `split-right` |
+| **T3** split espejo | Texto a la izquierda, dos placeholders apilados a la derecha | Slides `split-left` |
+| **T4** cards | Título arriba, cuatro tarjetas, wordmark al pie | Slides `wide` |
 
-**Las plantillas son una piel, no un set de componentes nuevo.** Las diez slides
-ya existen en MDX y ya usan `Stat`, `SponsorTier`, `PrizePodium`, `DataGrid`. La
+**Las plantillas son una piel, no un set de componentes nuevo.** Las slides ya
+existen en MDX y usan `Stat`, `SponsorTier`, `PrizePodium`, `DataGrid`. La
 piel entra como un `style` en `deck.json` y el contenido no se toca. Inventar un
 `<CardRow variant="tier|stat|text">` sería duplicar lo que hay, y va contra la
 regla del propio sistema: ampliar el vocabulario de `mdx-components.ts` es
@@ -36,7 +36,7 @@ deliberado, y primero se compone con lo que existe.
 ### La correspondencia no es uno a uno
 
 El mapeo de arriba es de dónde sale cada plantilla, no qué slide la usa. El
-layout lo decide **la forma del contenido**, y ocho de las diez slides llevan una
+layout lo decide **la forma del contenido**, y muchas slides llevan una
 grilla donde la base lleva un párrafo. Partir el lienzo al medio las aplastaba.
 
 Por eso `split` no es media página sino una **columna al 64% corrida a un lado**:
@@ -45,10 +45,10 @@ un tercio del lienzo a la lámina. Lo que quedó:
 
 | Layout | Slides | Por qué |
 | --- | --- | --- |
-| `cover` | `01-cover`, `10-close` | Las dos que no llevan grilla |
-| `split-left` | `05-prizes`, `06-stack` | Podio de 2 y grilla de 3, entran al 64% |
-| `split-right` | `08-why` | `ContrastGrid` son 2 columnas |
-| `wide` | las otras cinco | `StatRow` y `FlowMap` de 4, `MiniMatrix`, los 3 tiers |
+| `cover` | `01-cover`, cierres | Las que no llevan grilla |
+| `split-left` | premios, adopción, equipo | Podio de 3 y grillas estrechas entran al 64% |
+| `split-right` | por qué patrocinar | `ContrastGrid` son 2 columnas |
+| `wide` | datos, filtro, tiers, métricas | Las grillas necesitan el ancho completo |
 
 Y bajo un split la lámina se corre al lado contrario del texto (`82%` / `18%`),
 porque si no la masa más brillante del dibujo —el pico, que es la razón por la
@@ -211,6 +211,101 @@ En CSS va como `clamp(1.25rem, 12.35vw, 4rem)`: el 12.35% de un teléfono no es
 un margen, es un canal, y el piso sostiene la slide legible mucho antes que la
 proporción.
 
+### El marco
+
+Todas las slides viven dentro de un margen negro, `--deck-frame`, que en CSS es
+`clamp(0px, 4.5vmin, 5rem)`. El `.deck-stage` lleva ese padding y adentro va
+`.deck-stage-frame`, que es el bloque contenedor de la slide — la lámina se
+enmarca junto con el tipo, porque un marco que solo encierra el texto deja el
+dibujo sangrando hasta el borde y no sirve de nada.
+
+`vmin` y no `vw`: en un teléfono el lado corto es justo el que no puede regalar
+margen, y 4.5vw de una tablet apaisada es un borde, no un marco. El piso en 0 es
+a propósito: por debajo de unos 300px ya no queda nada que enmarcar.
+
+Pasado 16:9 el marco deja de ensancharse y se lleva el sobrante como negro:
+
+```css
+@media (min-aspect-ratio: 16 / 9) {
+  .deck-stage-frame { width: auto; aspect-ratio: 16 / 9; }
+}
+```
+
+Ese es el caso que motiva todo. Una lámina son 2048px de dibujo; pedirle a
+`cover` que los estire sobre los 3440px de un ultrawide devuelve suavidad que no
+es del monitor, es de la lámina. El chrome se alinea al marco con
+`max(1rem, var(--deck-frame) * 0.45)`, así que en pantallas chicas queda donde
+siempre estuvo.
+
+### Cómo pliega, y contra qué
+
+El doblez mide **el ancho de la slide, no el de la ventana**, y esa distinción
+es toda la regla. El escenario va enmarcado: una ventana de 1024 le entrega 955
+a la slide, y una de 2560 le entrega 1747. Un media query mide la caja
+equivocada en las dos direcciones — un portátil de 1024×768 se quedaba con
+cuatro columnas que no tenía ancho para sostener, mientras que un ultrawide las
+habría conservado sobre una slide del mismo tamaño. `@container` mide la caja de
+la que salen las columnas.
+
+`.deck-stage-frame` es `container-type: size` con `container-name: deck-stage`.
+
+| Ancho de slide | 3 y 4 columnas | 2 columnas de copy | 2 de etiqueta/valor |
+| --- | --- | --- | --- |
+| > 1100px | como se escribió | 2 | 2 |
+| ≤ 1100px | 2 | 2 | 2 |
+| ≤ 620px | 1 | 1 | **2** |
+
+Dos pasos y no uno: una slide de 1000px tiene ancho para dos columnas y no para
+cuatro, y plegarla directo a una convertía el slide de tiers en 500px de scroll.
+Un paso solo es correcto cuando ya no queda una segunda columna que tener.
+
+La pareja etiqueta/valor nunca se apila: ninguna de sus mitades es una medida de
+lectura, y apilarlas duplica las filas para nada.
+
+Esto funciona porque la lista de tracks viaja como **custom property**. Antes era
+un `grid-template-columns` en línea, y un estilo en línea no lo puede pisar
+ninguna hoja de estilos: las cuatro columnas seguían siendo cuatro por angosta
+que fuera la pantalla. Son dos nombres, además, y el orden importa:
+`--deck-cols` lo escribe el componente en línea y `--deck-cols-narrow` solo lo
+escriben los container queries. Con un solo nombre el valor en línea gana igual.
+
+La slide partida usa el mismo criterio: colapsa cuando la slide baja de 900px,
+no cuando la ventana lo hace. Y el marco de la foto vive dentro de `@container
+deck-stage (min-width: 901px)` en vez de deshacerse en un bloque angosto más
+abajo: esas reglas van a cuatro y cinco selectores de profundidad, y un bloque
+de colapso tenía que igualar esa profundidad para ganar.
+
+### La escala tipográfica escala con la slide
+
+Todos los tamaños son `clamp(piso, N cqmin, techo)` contra `deck-stage`.
+
+`cqmin` es el 1% del lado corto de la slide. En cualquier escenario apaisado ese
+lado es el alto, que es la medida honesta de qué tan grande es una slide; en un
+teléfono, donde el escenario es vertical y es alto sin ser grande, es el ancho, y
+cada `clamp` cae en su piso y el deck conserva exactamente los tamaños con los
+que se afinó ahí.
+
+Los pisos son lo que el deck medía a 1600×900, así que nada encoge. Los techos
+son donde crecer deja de servir. Antes eran `vw` y píxeles fijos, y las dos
+mitades del problema estaban ahí a la vez: `vw` dimensiona para una ventana que
+en ultrawide es vez y media la slide, y un píxel fijo deja una etiqueta de 10px
+debajo de un título de 68px en un monitor de 27 pulgadas.
+
+| | 1600×900 | 1920×1080 | 2560×1440 | teléfono |
+| --- | --- | --- | --- | --- |
+| Título | 68 | 82 | 88 | 32 |
+| Lead | 19.2 | 23 | 27.2 | 16 |
+| Copy | 14.4 | 17.2 | 21.6 | 14.4 |
+| Etiqueta | 10 | 12 | 15.2 | 10 |
+
+**Un valor que es una palabra baja un escalón.** `Producto` donde los otros tres
+tiers llevan precio, `Créditos` donde los otros dos puestos llevan monto. `$500`
+son cuatro glifos y la mitad angostos; `Créditos` son ocho anchos, y al mismo
+tamaño se salía del borde de su propia celda en toda pantalla por debajo de unos
+1230px. `valueKind` en `slide-components.tsx` marca el que no lleva dígitos y el
+CSS lo pone en la escala de titular. Es una regla tipográfica, no un breakpoint,
+así que vale en todos los anchos a la vez.
+
 ### Las cards de T4
 
 | Medida | Valor | Como %ancho |
@@ -232,7 +327,7 @@ Blanco, `1px` en la portada y `2px` en el resto, a escala de 1440.
 
 ### Fondos
 
-Cuatro PNG, todos monocromos sobre negro: tres cordilleras wireframe y un
+Cuatro AVIF, todos monocromos sobre negro: tres cordilleras wireframe y un
 cañón. Cubren T1, T3 y T4.
 
 **El de T2 no se podía usar.** El de la base es un contorno topográfico de
@@ -241,7 +336,7 @@ izquierda. No es una marca de agua de preview: está en el arte. Un deck de
 patrocinio no sale con la firma de otro autor encima.
 
 Se reemplazó por una quinta lámina que el repo **dibuja**, no compra:
-`contour.webp`, el relieve real del Valle Sagrado cortado en curvas de nivel.
+`contour.avif`, el relieve real del Valle Sagrado cortado en curvas de nivel.
 No imita al shader del landing — corre su misma medida (`band = elevación /
 espaciado`, línea donde `fract(band)` cruza, normalizada por el gradiente)
 sobre el mismo DEM, visto desde arriba en vez de desde una cámara en el valle.
@@ -258,6 +353,37 @@ agrimensura del campo fluido que dibuja la base.
 El dato de elevación exige atribución, y ahora tiene un consumidor más: está en
 `content/legal/credits.md` y en `public/models/README.md`.
 
+### Fotografías
+
+Tres láminas en escala de grises de las hackathones anteriores del equipo:
+`organizadores`, `sala-bogota`, `equipos-lima`.
+
+**No son fondos.** Lo fueron un rato y estuvo mal por dos motivos. Una fotografía
+no tiene masa oscura propia, así que el velo direccional del que vive una slide
+partida no tiene de dónde morder: el tipo cae sobre caras. Y una fotografía
+debajo de todo reemplaza el terreno, que es la identidad — el dibujo es el mundo
+del deck y las fotos son evidencia puesta adentro de él.
+
+Entran por el componente `Photos`, como objeto al lado del tipo. En una slide
+partida el CSS lo saca del flujo hacia la mitad que el tipo deja libre, que es la
+misma hacia la que ya se corrió la parte brillante de la lámina; por debajo de
+901px vuelve a la columna como tira horizontal. El ancho es la mitad libre
+expresada contra la columna que la define: la columna es el 64% de la slide, así
+que lo que queda de ella es `100/64 - 1 = 56.25%` de su propio ancho.
+
+La escala de grises se fuerza en CSS (`filter: grayscale(1)`) además de venir en
+el archivo. Una sola foto a color sobre una slide monocroma deshace la piel
+entera, y eso no debería depender de quién exportó el archivo.
+
+### El velo del índice
+
+`--deck-scrim`, y es un rol propio, no una derivada de la tinta. Era la tinta al
+72%, que está bien en una piel de papel y es exactamente al revés en esta: la
+tinta de `terrain` es blanca, así que abrir el índice lavaba el deck entero de
+gris claro y dejaba el panel flotando encima. En `terrain` es negro al 82%, y el
+panel es `--deck-paper` (opaco) y no `--deck-card` (traslúcido), porque un
+diálogo de card dejaba leer el wordmark de la portada a través de la lista.
+
 ### Grano
 
 Un PNG de ruido en gris, presente en las cuatro slides como máscara. Es el asset
@@ -265,13 +391,14 @@ más reutilizable del paquete: es la textura de toda la identidad.
 
 ### Marcas
 
-La base lleva CHOFEX, CRAFTER STATION y PERÚ TECH WEEK como raster. En el repo
-ya están mejores, y son las que se usan:
+La base lleva CHOFEX, CRAFTER STATION y PERÚ TECH WEEK como raster. El repo
+conserva los originales del landing en `public/sponsors/`; el deck usa copias
+WebP lossless reducidas al tamaño máximo al que las pinta:
 
 ```
-apps/web/public/sponsors/chofex-white.png
-apps/web/public/sponsors/crafter-station-white.png
-apps/web/public/sponsors/peru-tech-week-white.png
+apps/web/public/deck/logos/chofex-white.webp
+apps/web/public/deck/logos/crafter-station-white.webp
+apps/web/public/deck/logos/peru-tech-week-white.webp
 ```
 
 ### La capa de sombra
@@ -279,10 +406,10 @@ apps/web/public/sponsors/peru-tech-week-white.png
 Sobre el velo va un degradé vertical que se profundiza hacia abajo: transparente
 arriba, `46%` de negro al pie. Es una **capa aparte**, no un cambio al velo, y
 eso importa por una propiedad: **solo suma**. Ninguna slide queda más clara de
-lo que estaba, que es lo que hace seguro aplicarlo a las diez de una.
+lo que estaba, que es lo que hizo seguro aplicarlo a las diez slides de la base.
 
-Aclara arriba porque ahí no hay nada que leer: medido sobre las diez slides, el
-texto va del 21% al 79% del alto y nunca sube de ahí.
+Aclara arriba porque ahí no hay nada que leer: medido sobre esas diez slides, el
+texto iba del 21% al 79% del alto y nunca subía de ahí.
 
 Medido antes y después, contraste del texto contra el fondo real que lo rodea
 (percentil 95, excluyendo el antialiasing de los glifos):
@@ -325,7 +452,7 @@ cobalto por levantado que esté.
 | --- | --- |
 | Las tarjetas claras con texto negro, si se quiere el efecto exacto de la base | Una variante de componente, no un token |
 
-El PDF está verificado: `bun deck:pdf` produce las diez slides a 16:9 retina.
+El exportador captura todas las slides de la ruta elegida a 16:9 retina.
 Playwright pasó a ser devDependency —el navegador se sigue bajando una vez por
 máquina— y las capturas van en JPEG 92 en vez de PNG, porque en PNG el deck
 pesaba 45 MB y no entraba en un mail. Ahora son 7.8.

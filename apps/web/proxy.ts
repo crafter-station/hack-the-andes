@@ -10,6 +10,8 @@ function isPublicMarketingPath(pathname: string) {
     pathname === "/privacy" ||
     pathname === "/challenges" ||
     pathname === "/credits" ||
+    pathname === "/api/webhooks/clerk" ||
+    pathname === "/api/v1/oauth/authorize" ||
     pathname === "/opengraph-image.jpg" ||
     pathname === "/twitter-image.jpg" ||
     pathname === "/api/v1/challenges"

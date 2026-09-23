@@ -30,6 +30,7 @@ export const PUT = (request: Request): Promise<Response> =>
     await captureProductEvent({
       distinctId: participant.clerkUserId,
       event: "application_draft_saved",
+      request,
       properties: {
         auth_token_type: participant.tokenType,
         missing_requirement_count: result.requirements.missing.length,

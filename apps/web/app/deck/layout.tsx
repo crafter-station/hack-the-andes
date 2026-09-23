@@ -33,6 +33,23 @@ const NO_JS_FALLBACK = `
     pointer-events: auto;
     transition: none;
   }
+  .deck-photo[data-interactive-only="true"] { display: none; }
+  .deck-photo-row > noscript { display: contents; }
+  .deck-backdrop[data-load-backdrop="false"][data-backdrop="summit"] {
+    --deck-plate: url("/deck/summit.avif");
+  }
+  .deck-backdrop[data-load-backdrop="false"][data-backdrop="range"] {
+    --deck-plate: url("/deck/range.avif");
+  }
+  .deck-backdrop[data-load-backdrop="false"][data-backdrop="peak"] {
+    --deck-plate: url("/deck/peak.avif");
+  }
+  .deck-backdrop[data-load-backdrop="false"][data-backdrop="contour"] {
+    --deck-plate: url("/deck/contour.avif");
+  }
+  .deck-backdrop[data-load-backdrop="false"][data-backdrop="canyon"] {
+    --deck-plate: url("/deck/canyon.avif");
+  }
   .deck-chrome, .deck-controls { display: none; }
 `;
 

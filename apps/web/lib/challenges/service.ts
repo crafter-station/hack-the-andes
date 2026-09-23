@@ -14,6 +14,7 @@ import {
   compareChallengeScores,
   isChallengeOpenAt,
   isChallengeRankingVisibleAt,
+  type ParticipantChallengeMilestone,
   type ParticipantChallengeProgress,
   type Shipment,
   ShipmentSchema,
@@ -353,26 +354,52 @@ const loadObservations = async (
   return rows.map(observationView);
 };
 
-export const challengeProgressForParticipants = async (
+export interface ParticipantChallengeActivity {
+  readonly progressByParticipant: ReadonlyMap<
+    string,
+    ReadonlyArray<ParticipantChallengeProgress>
+  >;
+  readonly milestonesByParticipant: ReadonlyMap<
+    string,
+    ReadonlyArray<ParticipantChallengeMilestone>
+  >;
+}
+
+const loadChallengeActivityForParticipants = async (
   participantIds: ReadonlyArray<string>,
-  now: Date = currentChallengeTime(),
-): Promise<
-  ReadonlyMap<string, ReadonlyArray<ParticipantChallengeProgress>>
-> => {
+  now: Date,
+  includeHistory: boolean,
+): Promise<ParticipantChallengeActivity> => {
   const uniqueParticipantIds = [...new Set(participantIds)];
-  if (uniqueParticipantIds.length === 0) return new Map();
+  if (uniqueParticipantIds.length === 0) {
+    return {
+      progressByParticipant: new Map(),
+      milestonesByParticipant: new Map(),
+    };
+  }
 
-  const attempts = await db
-    .select()
-    .from(challengeAttempts)
-    .where(
-      and(
-        inArray(challengeAttempts.participantId, uniqueParticipantIds),
-        eq(challengeAttempts.challengeVersion, currentChallengeVersion),
-      ),
-    );
+  let allAttempts: ReadonlyArray<AttemptRecord>;
+  if (includeHistory) {
+    allAttempts = await db
+      .select()
+      .from(challengeAttempts)
+      .where(inArray(challengeAttempts.participantId, uniqueParticipantIds));
+  } else {
+    allAttempts = await db
+      .select()
+      .from(challengeAttempts)
+      .where(
+        and(
+          inArray(challengeAttempts.participantId, uniqueParticipantIds),
+          eq(challengeAttempts.challengeVersion, currentChallengeVersion),
+        ),
+      );
+  }
+  const attempts = allAttempts.filter(
+    (attempt) => attempt.challengeVersion === currentChallengeVersion,
+  );
 
-  const attemptIds = attempts.map((attempt) => attempt.id);
+  const attemptIds = allAttempts.map((attempt) => attempt.id);
   let evaluations: ReadonlyArray<EvaluationRecord> = [];
   if (attemptIds.length > 0) {
     evaluations = await db
@@ -451,7 +478,47 @@ export const challengeProgressForParticipants = async (
     });
     progressByParticipant.set(participantId, progress);
   }
-  return progressByParticipant;
+  const milestonesByParticipant = new Map<
+    string,
+    ReadonlyArray<ParticipantChallengeMilestone>
+  >();
+  for (const participantId of uniqueParticipantIds) {
+    const milestones = allAttempts
+      .filter((attempt) => attempt.participantId === participantId)
+      .map((attempt) => {
+        const challenge = challengeBySlug(attempt.challengeSlug);
+        const completedAt = completedAtByAttemptId.get(attempt.id);
+        return {
+          attemptId: attempt.id,
+          slug: attempt.challengeSlug,
+          title: challenge?.title ?? attempt.challengeSlug,
+          startedAt: attempt.createdAt.toISOString(),
+          completedAt: completedAt?.toISOString(),
+        };
+      });
+    milestonesByParticipant.set(participantId, milestones);
+  }
+  return { progressByParticipant, milestonesByParticipant };
+};
+
+export const challengeActivityForParticipants = (
+  participantIds: ReadonlyArray<string>,
+  now: Date = currentChallengeTime(),
+): Promise<ParticipantChallengeActivity> =>
+  loadChallengeActivityForParticipants(participantIds, now, true);
+
+export const challengeProgressForParticipants = async (
+  participantIds: ReadonlyArray<string>,
+  now: Date = currentChallengeTime(),
+): Promise<
+  ReadonlyMap<string, ReadonlyArray<ParticipantChallengeProgress>>
+> => {
+  const activity = await loadChallengeActivityForParticipants(
+    participantIds,
+    now,
+    false,
+  );
+  return activity.progressByParticipant;
 };
 
 export const challengeProgressForParticipant = async (

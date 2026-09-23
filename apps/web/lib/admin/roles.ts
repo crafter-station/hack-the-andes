@@ -1,9 +1,26 @@
 export const APPLICATION_REVIEWER_ROLE = "application_reviewer";
 
-interface RoleMetadata {
+export interface RoleMetadata {
   readonly role?: unknown;
   readonly roles?: unknown;
 }
+
+interface ApplicationReviewerAccessInput {
+  readonly clerkUserId: string;
+  readonly configuredAdminIds: ReadonlySet<string>;
+  readonly publicMetadata: RoleMetadata;
+  readonly privateMetadata: RoleMetadata;
+}
+
+export const configuredAdminIdsFrom = (
+  value: string | undefined,
+): ReadonlySet<string> =>
+  new Set(
+    (value ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
 
 export const grantsApplicationReviewAccess = (
   metadata: RoleMetadata,
@@ -16,4 +33,12 @@ export const grantsApplicationReviewAccess = (
     metadata.roles.includes("admin") ||
     metadata.roles.includes(APPLICATION_REVIEWER_ROLE)
   );
+};
+
+export const userGrantsApplicationReviewAccess = (
+  input: ApplicationReviewerAccessInput,
+): boolean => {
+  if (input.configuredAdminIds.has(input.clerkUserId)) return true;
+  if (grantsApplicationReviewAccess(input.publicMetadata)) return true;
+  return grantsApplicationReviewAccess(input.privateMetadata);
 };

@@ -81,3 +81,16 @@ test("keeps meaningful landing metadata at a readable rem size", async () => {
   expect(prizes).toContain("landing-type-meta");
   expect(prizes).not.toMatch(/text-\[10px\]/);
 });
+
+test("exposes keyboard-operable installer tabs", async () => {
+  const tabs = await Bun.file(
+    new URL("./cli-install-tabs.tsx", import.meta.url),
+  ).text();
+
+  expect(tabs).toContain('role="tablist"');
+  expect(tabs).toContain('role="tab"');
+  expect(tabs).toContain('role="tabpanel"');
+  expect(tabs).toContain("aria-selected");
+  expect(tabs).toContain("ArrowRight");
+  expect(tabs).toContain("ArrowLeft");
+});

@@ -45,7 +45,7 @@ test("the live challenge page includes the brief and CLI instructions", async ()
   expect(guide).toContain("25 queries");
   expect(guide).toContain("3 evaluaciones oficiales");
   expect(guide).toContain("calculateShipping(input)");
-  expect(guide).toContain("npm install --global chofex-cli@latest");
+  expect(guide).toContain("curl -fsSL https://hacktheandes.com/install | bash");
   expect(guide).toContain("chofex challenge query");
   expect(guide).toContain("chofex challenge evaluate --source ./shipping.js");
   expect(ranking).toContain("BlackBoxChallengeGuide");

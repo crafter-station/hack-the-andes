@@ -57,7 +57,7 @@ from terrain_common import (  # noqa: E402
     mercator_xy,
 )
 
-OUT = Path(__file__).resolve().parents[1] / "public" / "deck" / "contour.webp"
+OUT = Path(__file__).resolve().parents[1] / "public" / "deck" / "contour.avif"
 
 # Metres between slices.
 #
@@ -184,7 +184,9 @@ def main() -> None:
     plate = plate.resize((OUT_WIDTH, height), Image.LANCZOS)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    plate.save(OUT, quality=90, method=6)
+    # AVIF preserves the one-pixel contour field at less than half the bytes of
+    # the previous WebP. Pillow's `speed` is inverse to encoder effort.
+    plate.save(OUT, quality=48, speed=4, subsampling="4:2:0")
     print(f"wrote {OUT.relative_to(Path.cwd())} — {OUT.stat().st_size / 1024:.0f} KB")
 
 

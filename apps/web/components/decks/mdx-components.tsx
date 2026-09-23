@@ -31,6 +31,7 @@ import {
   MiniMatrix,
   PersonaGrid,
   PhaseTimeline,
+  Photos,
   PrizePodium,
   Ready,
   Rule,
@@ -85,6 +86,8 @@ export function mdxComponentsFor(lang: DeckLang) {
     Timeline,
     TimelineRow,
     PhaseTimeline,
+    // photographs
+    Photos,
     // logos
     Logo,
     LogoRow,

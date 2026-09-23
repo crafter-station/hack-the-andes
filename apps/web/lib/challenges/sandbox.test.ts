@@ -37,4 +37,19 @@ describe("shipping solution sandbox", () => {
       ),
     ).rejects.toThrow(HttpError);
   });
+
+  test("rejects excess concurrent workers instead of exhausting the host", async () => {
+    const blockingSource = "function calculateShipping() { while (true) {} }";
+    const activeRuns = Array.from({ length: 4 }, () =>
+      runShippingSolution(blockingSource, [shipment]),
+    );
+
+    const excessRun = runShippingSolution(blockingSource, [shipment]);
+    await expect(excessRun).rejects.toMatchObject({
+      status: 503,
+      code: "SOLUTION_RUNNER_BUSY",
+      retryable: true,
+    });
+    await Promise.allSettled(activeRuns);
+  });
 });

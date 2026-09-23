@@ -171,7 +171,10 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
       "Uploaded picture URL is invalid",
     );
   }
-  const metadata = await head(completion.url);
+  // Resolve the reserved pathname with this app's Blob credentials instead of
+  // trusting a client-supplied store URL. A matching pathname can exist in a
+  // different Vercel Blob store controlled by an attacker.
+  const metadata = await head(completion.pathname);
   if (
     metadata.pathname !== completion.pathname ||
     metadata.url !== completion.url ||

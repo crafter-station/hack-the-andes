@@ -32,6 +32,14 @@
   --deck-line-strong: color-mix(in srgb, var(--deck-ink) 28%, transparent);
 
   /*
+   * What the index dialog dims the deck with. It is its own role and not
+   * derived from the ink: it used to be the ink at 72%, which is right on a
+   * paper skin and inverted on this one — `terrain`'s ink is white, so opening
+   * the index washed the whole deck pale and left the panel floating on it.
+   */
+  --deck-scrim: color-mix(in srgb, var(--deck-ink) 72%, transparent);
+
+  /*
    * The brand face carries the event's name and nothing else — that is the
    * rule `fonts.ts` states for the landing, and the design base follows it.
    * Everything else that is "a heading" stays on the condensed display face.
@@ -54,6 +62,22 @@
    */
   --deck-stage-padding-x: clamp(1.25rem, 12.35vw, 4rem);
   --deck-stage-padding-y: clamp(4.5rem, 9svh, 6rem);
+
+  /*
+   * The mat: black margin between the page and the slide.
+   *
+   * It does two things. It bounds the composition, so a deck on a 34-inch
+   * monitor reads as a designed object rather than a wall of stretched drawing.
+   * And it keeps the plate off the screen's edge, where `cover` was scaling a
+   * 2048px image well past its own resolution.
+   *
+   * vmin, not vw: on a phone the shorter side is the one that cannot spare the
+   * margin, and 4.5vw of a landscape tablet is a border, not a mat. The floor
+   * is 0 on purpose — under about 300px there is nothing left to frame.
+   */
+  --deck-frame: clamp(0px, 4.5vmin, 5rem);
+  /* The gutter between the type column and the photo that accompanies it. */
+  --deck-media-gap: clamp(1rem, 2.5vw, 2.25rem);
 
   position: relative;
   height: 100svh;
@@ -135,6 +159,7 @@
    * below, and they exist because the design base does the same: its three
    * full-bleed scrims sit at 0.37, 0.52 and 0.54.
    */
+  --deck-scrim: rgb(0 0 0 / 82%);
   --deck-veil: rgb(0 0 0 / 58%);
   /*
    * What the split layouts leave on the half the type does not take. The base
@@ -230,14 +255,14 @@
 }
 
 /* The plate a slide sits on, chosen in its frontmatter. */
-.deck-backdrop[data-backdrop="summit"] {
-  --deck-plate: url("/deck/summit.webp");
+.deck-backdrop[data-load-backdrop="true"][data-backdrop="summit"] {
+  --deck-plate: url("/deck/summit.avif");
 }
-.deck-backdrop[data-backdrop="range"] {
-  --deck-plate: url("/deck/range.webp");
+.deck-backdrop[data-load-backdrop="true"][data-backdrop="range"] {
+  --deck-plate: url("/deck/range.avif");
 }
-.deck-backdrop[data-backdrop="peak"] {
-  --deck-plate: url("/deck/peak.webp");
+.deck-backdrop[data-load-backdrop="true"][data-backdrop="peak"] {
+  --deck-plate: url("/deck/peak.avif");
 }
 /*
  * The contour map, and the only plate the repo draws rather than buys. It is
@@ -246,12 +271,20 @@
  * base's topographic plate, which carries another author's signature inside
  * the image.
  */
-.deck-backdrop[data-backdrop="contour"] {
-  --deck-plate: url("/deck/contour.webp");
+.deck-backdrop[data-load-backdrop="true"][data-backdrop="contour"] {
+  --deck-plate: url("/deck/contour.avif");
 }
 
-.deck-backdrop[data-backdrop="canyon"] {
-  --deck-plate: url("/deck/canyon.webp");
+/*
+ * The photographic plates: past editions run by the same team, in greyscale.
+ *
+ * They carry more mid-tone than the drawn ones — a room full of people has no
+ * black to fall back to — so they take a heavier far-veil than the mountains
+ * and want a split layout, where the type keeps its own half and the photograph
+ * keeps the other rather than sitting under it.
+ */
+.deck-backdrop[data-load-backdrop="true"][data-backdrop="canyon"] {
+  --deck-plate: url("/deck/canyon.avif");
   /* The canyon's subject is its lit seam, which sits above centre. */
   --deck-plate-position: center 35%;
   /*
@@ -282,12 +315,17 @@
   pointer-events: none;
 }
 
+/*
+ * The chrome sits in the mat, not on the page edge. `max()` keeps the small
+ * screens — where the mat is a few pixels — on the offsets they already had.
+ */
 .deck-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: max(0.75rem, calc(var(--deck-frame) * 0.45))
+    max(1rem, calc(var(--deck-frame) * 0.45));
 }
 
 .deck-topbar > * {
@@ -338,6 +376,53 @@
   position: absolute;
   inset: 0;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: var(--deck-frame);
+}
+
+/*
+ * The slide's containing block. `.deck-slide` is `inset: 0` against this, so
+ * the plate is framed with everything else — a mat that only held the type
+ * would leave the drawing bleeding off the page and defeat the point.
+ */
+.deck-stage-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /*
+   * The slide, not the window, is what the type scales against.
+   *
+   * Every size below was a `vw` clamp or a fixed pixel value, and both are
+   * wrong here for the same reason: the stage is letterboxed to 16:9, so on an
+   * ultrawide the window is half again as wide as the slide, and a `vw` scale
+   * sizes the body for a box the type never gets. Fixed pixels have the other
+   * half of the problem — a 10px label under a 68px title on a 27-inch monitor.
+   *
+   * `cqmin` is one per cent of this box's height, which is the honest measure of
+   * how big the slide actually is. The floors in each clamp are what the deck
+   * used to be at 1600×900, so nothing shrinks; the ceilings are where growth
+   * stops being useful.
+   */
+  container-type: size;
+  container-name: deck-stage;
+}
+
+/*
+ * Past 16:9 the frame stops widening and takes the extra as black.
+ *
+ * This is the case the mat exists for: an ultrawide asks `cover` to paint a
+ * 2048px plate across 3440px of screen, and the softness that comes back is
+ * the plate's own pixels, not the display's.
+ */
+@media (min-aspect-ratio: 16 / 9) {
+  .deck-stage-frame {
+    width: auto;
+    aspect-ratio: 16 / 9;
+  }
 }
 
 .deck-slide {
@@ -376,6 +461,8 @@
 }
 
 .deck-slide-content {
+  /* The containing block for a photograph placed in a split's free half. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -390,8 +477,11 @@
 
 .deck-controls {
   position: fixed;
-  right: calc(1rem + env(safe-area-inset-right));
-  bottom: calc(1rem + env(safe-area-inset-bottom));
+  right: calc(max(1rem, var(--deck-frame) * 0.45) + env(safe-area-inset-right));
+  bottom: calc(
+    max(1rem, var(--deck-frame) * 0.45) +
+    env(safe-area-inset-bottom)
+  );
   z-index: 50;
   display: flex;
   align-items: center;
@@ -426,7 +516,7 @@
 .deck-index-backdrop {
   position: absolute;
   inset: 0;
-  background-color: color-mix(in srgb, var(--deck-ink) 72%, transparent);
+  background-color: var(--deck-scrim);
 }
 
 .deck-index-panel {
@@ -438,7 +528,12 @@
   max-width: 520px;
   max-height: 80svh;
   border: 1px solid var(--deck-line-strong);
-  background-color: var(--deck-card);
+  /*
+   * The paper, not the card. `--deck-card` is translucent by design — it is the
+   * scrim a cell sits on, over a plate — and a dialog built out of it let the
+   * cover's own wordmark read straight through the list.
+   */
+  background-color: var(--deck-paper);
 }
 
 .deck-index-header {
@@ -487,13 +582,14 @@
 .deck-index-button:hover,
 .deck-index-button:focus-visible {
   border-color: var(--deck-line);
-  background-color: var(--deck-paper);
+  /* The panel is the paper now, so a row lifts with the card instead. */
+  background-color: var(--deck-card);
   color: var(--deck-ink);
 }
 
 .deck-index-button[aria-current="true"] {
   border-color: var(--deck-action);
-  background-color: var(--deck-paper);
+  background-color: var(--deck-card);
   color: var(--deck-action);
 }
 
@@ -507,7 +603,7 @@
 
 .deck-label {
   font-family: var(--deck-mono);
-  font-size: 10px;
+  font-size: clamp(10px, 1.22cqmin, 0.95rem);
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -516,7 +612,7 @@
 
 .deck-title {
   font-family: var(--deck-display);
-  font-size: clamp(2.25rem, 6vw, 4.25rem);
+  font-size: clamp(2.25rem, 8.3cqmin, 5.5rem);
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.02em;
@@ -525,12 +621,12 @@
 }
 
 .deck-title-sm {
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-size: clamp(1.75rem, 5.37cqmin, 3.5rem);
 }
 
 .deck-lead {
   max-width: 62ch;
-  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  font-size: clamp(1rem, 2.34cqmin, 1.7rem);
   line-height: 1.5;
   text-wrap: pretty;
   color: var(--deck-ink);
@@ -548,6 +644,18 @@
  */
 .deck-table {
   display: grid;
+  /*
+   * Two names, and the order matters. `--deck-cols` is what the component sets
+   * inline; `--deck-cols-narrow` is only ever set by the media queries at the
+   * foot of this file. It has to be a separate name: an inline custom property
+   * beats a stylesheet declaration of the same name no matter the specificity,
+   * so a query that redefined `--deck-cols` would lose to the four the
+   * component wrote, which is the bug this replaced.
+   */
+  grid-template-columns: var(
+      --deck-cols-narrow,
+      var(--deck-cols, minmax(0, 1fr))
+    );
   border-top: 1px solid var(--deck-line-strong);
   border-left: 1px solid var(--deck-line-strong);
   background-color: var(--deck-card);
@@ -571,18 +679,27 @@
 .deck-stat-value {
   display: block;
   font-family: var(--deck-display);
-  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-size: clamp(2rem, 6.35cqmin, 4.25rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * A value that is a word takes the heading scale, not the number scale. See
+ * `valueKind` in `slide-components.tsx` for why.
+ */
+.deck-stat-value[data-kind="word"],
+.deck-tier-price[data-kind="word"] {
+  font-size: clamp(1.6rem, 5.37cqmin, 3.5rem);
+}
+
 .deck-stat-label {
   display: block;
   margin-top: 0.5rem;
   font-family: var(--deck-mono);
-  font-size: 10px;
+  font-size: clamp(10px, 1.22cqmin, 0.95rem);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--deck-muted);
@@ -593,7 +710,7 @@
 }
 
 .deck-copy {
-  font-size: 0.9rem;
+  font-size: clamp(0.9rem, 1.75cqmin, 1.35rem);
   line-height: 1.5;
   color: var(--deck-muted);
 }
@@ -608,7 +725,7 @@
   border: 1px solid var(--deck-line-strong);
   background-color: var(--deck-card);
   font-family: var(--deck-mono);
-  font-size: 11px;
+  font-size: clamp(11px, 1.34cqmin, 1rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -616,7 +733,7 @@
 .deck-bullet {
   display: flex;
   gap: 0.6rem;
-  font-size: 0.95rem;
+  font-size: clamp(0.95rem, 1.86cqmin, 1.45rem);
   line-height: 1.5;
 }
 
@@ -627,16 +744,70 @@
 
 .deck-tier-price {
   font-family: var(--deck-display);
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-size: clamp(2.25rem, 6.84cqmin, 4.5rem);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Photographs, as an object on the slide rather than the ground under it.
+ *
+ * Default shape is a strip in the column: a row on a wide or cover slide, where
+ * the photographs are the subject. The split slides override this below and
+ * lift it into the half the type leaves.
+ */
+.deck-photos {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-width: 0;
+}
+
+/*
+ * The images get a box of their own so the caption is never one of them: as
+ * direct children of the figure they would share its axis, and in the strip
+ * shape that puts the caption beside a photograph instead of under it.
+ */
+.deck-photo-row {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  gap: 0.6rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.deck-photo {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--deck-line-strong);
+  /*
+   * The plates ship desaturated already. This is the guarantee, not the
+   * conversion: one colour photograph on a monochrome slide is the whole skin
+   * undone, and that should not depend on who exported the file.
+   */
+  filter: grayscale(1);
+}
+
+.deck-photo-caption {
+  margin-top: 0.55rem;
+  font-family: var(--deck-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--deck-muted);
+}
+
 .deck-wordmark {
   font-family: var(--deck-display);
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-size: clamp(1.5rem, 4.4cqmin, 3rem);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -800,11 +971,13 @@
 }
 
 /*
- * A split needs two halves to be a split. Below that the column takes the slide
+ * A split needs two halves to be a split, and it is the slide's own width that
+ * says whether it has them — the window's width is a different box. Below that
+ * the column takes the slide
  * and the veil goes back to covering all of it, or the type ends up over the
  * brightest part of the drawing with nothing between them.
  */
-@media (max-width: 800px) {
+@container deck-stage (max-width: 900px) {
   .deck-pager[data-deck-style="terrain"]
     .deck-slide[data-layout="split-left"]
     .deck-slide-content,
@@ -883,6 +1056,251 @@
 .deck-pager[data-deck-style="terrain"] .deck-cell-invert .deck-stat-label,
 .deck-pager[data-deck-style="terrain"] .deck-cell-invert .deck-copy {
   color: var(--deck-muted);
+}
+
+/*
+ * A photograph accompanying a split slide, placed only where a split exists.
+ *
+ * The whole section is inside the query rather than undone by a narrow one
+ * below it: these rules run four and five selectors deep, and a collapse block
+ * had to match that depth to win, which is how the mobile photograph ended up
+ * with `aspect-ratio: auto` and a height nothing had chosen. Above 800px the
+ * placement applies; below it the base strip at the top of this file is simply
+ * what is left, which is what it was written to be.
+ */
+@container deck-stage (min-width: 901px) {
+  /*
+   * Out of flow, into the half the type leaves — the same half the plate's bright
+   * mass was already shifted toward, so the drawing surrounds the photograph
+   * rather than being replaced by it.
+   *
+   * Out of flow and not a grid column because the content column's children are
+   * authored as a stack: turning it into a two-column grid would put each of
+   * them — label, title, lead — in a track of its own. The width is the free
+   * half expressed against the column that sets it: the column is 64% of the
+   * slide, so what is left of it is 100/64 - 1 = 56.25% of the column's own
+   * width, and the gutter comes off both edges. `.deck-slide-content` carries
+   * the `position: relative` this measures against.
+   */
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photos,
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photos {
+    position: absolute;
+    top: 50%;
+    width: calc(56.25% - var(--deck-media-gap) * 2);
+    /*
+     * A definite height is what lets two stacked photographs share it evenly.
+     * Without it each one takes its own aspect ratio and the pair runs past the
+     * bottom of the slide, which no amount of `max-height` recovers once the
+     * figure is out of flow.
+     */
+    height: 54svh;
+    transform: translateY(-50%);
+  }
+
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photos {
+    left: calc(100% + var(--deck-media-gap));
+  }
+
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photos {
+    right: calc(100% + var(--deck-media-gap));
+  }
+
+  /* Stacked, not side by side: the half is taller than it is wide. */
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photo-row,
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photo-row {
+    flex-direction: column;
+  }
+
+  /*
+   * One photograph keeps its own proportions instead of filling the half.
+   *
+   * The child has to drop `flex: 1 1 0` with it. A zero basis is a zero *height*
+   * once the column has no definite height of its own to distribute, and the
+   * aspect ratio never gets to set one — the photograph collapses to a hairline.
+   */
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photos[data-count="1"],
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photos[data-count="1"] {
+    height: auto;
+  }
+
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photos[data-count="1"]
+    .deck-photo,
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photos[data-count="1"]
+    .deck-photo {
+    flex: 0 0 auto;
+  }
+
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-left"]
+    .deck-photos:not([data-count="1"])
+    .deck-photo,
+  .deck-pager[data-deck-style="terrain"]
+    .deck-slide[data-layout="split-right"]
+    .deck-photos:not([data-count="1"])
+    .deck-photo {
+    aspect-ratio: auto;
+    height: auto;
+  }
+}
+
+/* ---------- small screens ---------- */
+
+/*
+ * The grids fold in two steps, and on the width of the **slide**, not of the
+ * window.
+ *
+ * That distinction is the whole rule. The stage is letterboxed, so a window can
+ * be 1024 wide and hand the slide 955; it can be 2560 wide and hand the slide
+ * 1747. A media query measures the wrong box in both directions, and a 1024×768
+ * laptop kept four columns it did not have the width for while an ultrawide
+ * would have kept them on a slide of the same size. `@container` measures the
+ * box the columns are actually cut from.
+ *
+ * Two steps and not one: a slide of 1000px has the width for two columns and
+ * not for four, and folding it straight to one turned a tiers slide into 500px
+ * of scroll. One step is only right once there is no second column left to
+ * have.
+ *
+ * It was two steps for a while — three and four-up to 2, then to 1 — and both
+ * intermediate states failed on width, not height. 2×2 leaves a cell 103px of
+ * content on a 412px phone, and `Producto` is 134px at the display size; a
+ * two-up podium on an 820px tablet leaves 230px, and `Créditos` is 258px. Both
+ * printed over the cell's own border. A column of copy needs a measure, and
+ * half of a small screen is not one.
+ *
+ * A label and its value is the exception: neither half of it is a measure of
+ * copy, and stacking a label over its value doubles the row count for nothing.
+ *
+ * This works at all because the track list is a custom property. It used to be
+ * an inline `grid-template-columns`, which no stylesheet can override — the
+ * four columns stayed four columns however narrow the screen got. Two names,
+ * and the order matters: `--deck-cols` is what the component writes inline and
+ * `--deck-cols-narrow` is only ever written here, because with one name the
+ * inline value wins again.
+ */
+@container deck-stage (max-width: 1100px) {
+  .deck-table[data-cols="3"],
+  .deck-table[data-cols="4"] {
+    --deck-cols-narrow: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container deck-stage (max-width: 620px) {
+  .deck-table[data-cols]:not([data-shape="rows"]) {
+    --deck-cols-narrow: minmax(0, 1fr);
+  }
+}
+
+/*
+ * What a phone changes beyond the fold above: measures, not columns.
+ */
+@media (max-width: 620px) {
+  /*
+   * A phone spends its height on the slide, not on clearing the chrome. 2.9rem
+   * is what the top bar and the controls actually occupy plus a hair; the
+   * desktop floor of 4.5rem was two clear lines of nothing at each end.
+   */
+  .deck-pager {
+    --deck-stage-padding-y: 2.9rem;
+  }
+
+  .deck-slide-content {
+    gap: 1.15rem;
+  }
+
+  /*
+   * A 4:3 photograph is the tallest thing on a slide that already stacks. The
+   * crop is the cheapest height on the page, and these are group shots — the
+   * subject is in the middle band.
+   */
+  .deck-photo {
+    aspect-ratio: 16 / 10;
+  }
+
+  /*
+   * Stacked, a tier's floor height is dead space repeated four times. It is
+   * there to keep a row of tiers on one baseline, and in one column there is no
+   * row to keep.
+   */
+  .deck-table .deck-cell {
+    min-height: 0;
+    padding: 0.9rem 1rem;
+  }
+
+  /*
+   * The display sizes are cut for a slide that is wider than it is tall. On a
+   * phone their floors are what set them, and a floor picked against a desktop
+   * measure is simply too big: `$2.500` at 36px ran past its own cell.
+   */
+  .deck-tier-price,
+  .deck-stat-value {
+    font-size: 2rem;
+  }
+
+  /*
+   * A stacked tier puts its price beside its name instead of under it.
+   *
+   * The price on its own line costs about 44px, and four tiers in a column is
+   * where a phone runs out of slide. `display: contents` on the wrapper is what
+   * lets the price and the benefits become items of the tier's own grid without
+   * the component knowing anything about it.
+   */
+  .deck-tier {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 0.75rem;
+  }
+
+  .deck-tier > div:last-child {
+    display: contents;
+  }
+
+  .deck-tier .deck-tier-price {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 1.75rem;
+  }
+
+  .deck-tier .deck-copy {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
+  }
+
+  /*
+   * 0.95 is set for a title that runs one or two lines across a slide. At phone
+   * width the same titles run three and four, and at that count the descenders
+   * of one line sit in the caps of the next.
+   */
+  .deck-title {
+    font-size: 2rem;
+    line-height: 1.02;
+  }
+
+  .deck-title-sm {
+    font-size: 1.5rem;
+  }
 }
 
 /* ---------- motion and print ---------- */

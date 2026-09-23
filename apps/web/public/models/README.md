@@ -87,7 +87,7 @@ crop or roof.
 ## Attribution
 
 Both sources require it, for both meshes — and the elevation line now covers a
-third consumer, `public/deck/contour.webp`, which slices the same corridor DEM
+third consumer, `public/deck/contour.avif`, which slices the same corridor DEM
 into the contour plate the sponsorship decks sit on. It is built by
 `scripts/build-deck-contour-plate.py` from this same cache.
 

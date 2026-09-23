@@ -16,6 +16,7 @@
         "CHALLENGE_ENGINE_URL",
         "CHALLENGE_ENGINE_API_SECRET",
         "CHALLENGES_FORCE_OPEN",
+        "TRIGGER_*",
         "RESEND_*"
       ]
     },

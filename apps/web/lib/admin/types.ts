@@ -1,4 +1,7 @@
-import type { ParticipantChallengeProgress } from "@chofex/challenges-contract";
+import type {
+  ParticipantChallengeMilestone,
+  ParticipantChallengeProgress,
+} from "@chofex/challenges-contract";
 
 export const candidateStatuses = [
   "draft",
@@ -66,11 +69,21 @@ export interface Candidate {
   readonly status: CandidateStatus;
   readonly funnelStatus: CandidateFunnelStatus;
   readonly mediaConsent: boolean;
+  readonly signedUpAt: string;
   readonly createdAt: string;
   readonly submittedAt?: string;
   readonly decidedAt?: string;
   readonly approvedBy?: string;
   readonly attemptNumber: number;
+  readonly applicationHistory: ReadonlyArray<{
+    readonly applicationId: string;
+    readonly attemptNumber: number;
+    readonly status: CandidateStatus;
+    readonly startedAt: string;
+    readonly submittedAt?: string;
+    readonly decidedAt?: string;
+    readonly withdrawnAt?: string;
+  }>;
   readonly decisionHistory: ReadonlyArray<{
     readonly applicationId: string;
     readonly attemptNumber: number;
@@ -91,6 +104,7 @@ export interface Candidate {
   readonly checkedInAt?: string;
   readonly nationalIdProvided: boolean;
   readonly challenges: ReadonlyArray<ParticipantChallengeProgress>;
+  readonly challengeHistory: ReadonlyArray<ParticipantChallengeMilestone>;
 }
 
 export type CandidateCounts = Readonly<

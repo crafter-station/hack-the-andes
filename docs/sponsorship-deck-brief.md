@@ -98,9 +98,10 @@ exactamente "logo en la grilla".
 
 > ⚠️ **Cambio de modelo, 17 sep 2026.** Lo que sigue describe la etapa en que se
 > vendía obligatoriedad de uso y se pedía efectivo. **Las dos cosas se cayeron.**
-> Ninguna herramienta es obligatoria y no se pide cash: el aporte es créditos
-> para el kit más un galardón propio, y lo que se entrega a cambio es presencia
-> más un reporte. La fuente vigente son `deck-best-practices.md` §1 y §9 y
+> Ninguna herramienta es obligatoria y no se pide cash. Basic aporta créditos
+> para los 100 en el monto que el sponsor elija; Pro suma créditos para 1º, 2º y
+> 3º; Premium suma merch sobre Basic. Pro y Premium son extensiones distintas.
+> La fuente vigente son `deck-best-practices.md` §1 y §9 y
 > `budget-sponsors.md` §5; las preguntas resueltas #4 y #5 de más abajo quedaron
 > sin efecto.
 

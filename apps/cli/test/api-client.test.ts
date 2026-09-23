@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { Effect } from "effect";
 
 import {
+  authenticationRecoveryMessage,
   beginPictureUpload,
   completePictureUpload,
   getBadge,
@@ -48,12 +49,15 @@ const registrationResult = {
 describe("registration API client", () => {
   test("verifies the supplied token without requiring a registration", async () => {
     let authorization: string | null = null;
+    let attribution: string | null = null;
     let method: string | undefined;
     let url = "";
     globalThis.fetch = async (input, init) => {
       url = String(input);
       method = init?.method;
-      authorization = new Headers(init?.headers).get("authorization");
+      const headers = new Headers(init?.headers);
+      authorization = headers.get("authorization");
+      attribution = headers.get("x-chofex-campaign-attribution");
       return Response.json({
         version: 1,
         ok: true,
@@ -70,11 +74,18 @@ describe("registration API client", () => {
     const response = await Effect.runPromise(
       getCurrentUser({
         apiUrl: "https://hack.example",
+        campaignAttribution: {
+          capturedAt: 1_789_819_200_000,
+          landingId: "018f47a2-89ab-7def-8123-456789abcdef",
+        },
         token: "oauth-token",
       }),
     );
 
     expect(authorization).toBe("Bearer oauth-token");
+    expect(attribution).toBe(
+      "018f47a2-89ab-7def-8123-456789abcdef.1789819200000",
+    );
     expect(method).toBe("GET");
     expect(url).toBe("https://hack.example/api/v1/me");
     expect(response.data).toEqual({
@@ -155,6 +166,43 @@ describe("registration API client", () => {
 
     expect(error.code).toBe("REGISTRATION_NOT_FOUND");
     expect(error.requestId).toBe("request-456");
+  });
+
+  test("explains how to recover from a post-login authentication rejection", async () => {
+    expect(
+      authenticationRecoveryMessage(
+        "AUTHENTICATION_REQUIRED",
+        "Authentication failed",
+      ),
+    ).toContain("chofex update");
+
+    globalThis.fetch = async () =>
+      Response.json(
+        {
+          version: 1,
+          ok: false,
+          requestId: "request-auth-failed",
+          error: {
+            code: "AUTHENTICATION_REQUIRED",
+            message: "Authentication failed",
+            retryable: false,
+          },
+        },
+        { status: 401 },
+      );
+
+    const error = await Effect.runPromise(
+      Effect.flip(
+        getCurrentUser({
+          apiUrl: "https://hack.example",
+          token: "oauth-token",
+        }),
+      ),
+    );
+
+    expect(error.code).toBe("AUTHENTICATION_REQUIRED");
+    expect(error.requestId).toBe("request-auth-failed");
+    expect(error.message).toContain("chofex logout");
   });
 
   test("ignores additive fields in a v1 response", async () => {

@@ -46,8 +46,8 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=production-image
+          cache-to: type=gha,mode=min,scope=production-image
           build-args: |
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
@@ -59,26 +59,71 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
       - name: Deploy the published image
         if: github.ref == 'refs/heads/main'
         env:
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
+          DOKPLOY_APPLICATION_NAME: Website
+          DOKPLOY_URL: https://vps.cueva.io
           DOKPLOY_IMAGE: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [[ -z "$DOKPLOY_API_KEY" || -z "$DOKPLOY_APPLICATION_ID" ]]; then
             echo "Dokploy deployment secrets are not configured yet; image publication is complete."
             exit 0
           fi
+          required_cli_assets=(
+            checksums.txt
+            chofex-darwin-arm64.tar.gz
+            chofex-darwin-x64.tar.gz
+            chofex-linux-arm64.tar.gz
+            chofex-linux-arm64-musl.tar.gz
+            chofex-linux-x64.tar.gz
+            chofex-linux-x64-musl.tar.gz
+            chofex-windows-arm64.tar.gz
+            chofex-windows-x64.tar.gz
+          )
+          cli_assets_ready=false
+          for attempt in {1..120}; do
+            release_assets="$(
+              gh release view \
+                --repo "$GITHUB_REPOSITORY" \
+                --json assets \
+                --jq '.assets[].name' \
+                2>/dev/null || true
+            )"
+            cli_assets_ready=true
+            for asset in "${required_cli_assets[@]}"; do
+              if ! grep -Fxq "$asset" <<<"$release_assets"; then
+                cli_assets_ready=false
+                break
+              fi
+            done
+            if [[ "$cli_assets_ready" == "true" ]]; then
+              break
+            fi
+            echo "Waiting for standalone CLI release assets (${attempt}/120)."
+            sleep 10
+          done
+          if [[ "$cli_assets_ready" != "true" ]]; then
+            echo "Standalone CLI release assets are unavailable; refusing to expose the installer."
+            exit 1
+          fi
+          bun scripts/reconcile-service-environment.ts
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Content-Type: application/json" \
             --header "x-api-key: $DOKPLOY_API_KEY" \
             --data "{\"applicationId\":\"$DOKPLOY_APPLICATION_ID\",\"dockerImage\":\"$DOKPLOY_IMAGE\"}" \
-            https://vps.cueva.io/api/application.update
+            "$DOKPLOY_URL/api/application.update"
           curl --fail-with-body --silent --show-error \
             --request POST \
             --header "Content-Type: application/json" \
             --header "x-api-key: $DOKPLOY_API_KEY" \
             --data "{\"applicationId\":\"$DOKPLOY_APPLICATION_ID\",\"title\":\"GitHub Actions $GITHUB_SHA\"}" \
-            https://vps.cueva.io/api/application.redeploy
+            "$DOKPLOY_URL/api/application.redeploy"

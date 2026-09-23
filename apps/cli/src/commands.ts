@@ -277,19 +277,32 @@ const loginCommand = Command.make(
   {},
   Effect.fn("loginCommand")(function* () {
     const options = yield* root;
-    const operation = Effect.tryPromise({
-      try: async () => {
-        await oauthLogin();
-        return {
-          version: 1 as const,
-          ok: true as const,
-          requestId: crypto.randomUUID(),
-          data: { authenticated: true as const },
-        };
-      },
-      catch: (error) => cliError("LOGIN_FAILED", String(error)),
+    const operation = Effect.gen(function* () {
+      const token = yield* Effect.tryPromise({
+        try: () => oauthLogin(),
+        catch: (error) => cliError("LOGIN_FAILED", String(error)),
+      });
+      const currentUser = yield* getCurrentUser({
+        apiUrl: options.apiUrl,
+        token,
+      });
+      const environmentTokenActive = Boolean(process.env.CHOFEX_TOKEN);
+      return {
+        version: 1 as const,
+        ok: true as const,
+        requestId: currentUser.requestId,
+        data: {
+          authenticated: true as const,
+          environmentTokenActive,
+        },
+      };
     });
-    yield* execute(options.output, operation, () => "Signed in successfully.");
+    yield* execute(options.output, operation, (result) => {
+      if (result.environmentTokenActive) {
+        return "Signed in successfully. CHOFEX_TOKEN is set and will override the stored session; unset it before running other commands.";
+      }
+      return "Signed in successfully.";
+    });
   }),
 ).pipe(Command.withDescription("Sign in through Clerk OAuth in your browser"));
 
@@ -361,7 +374,7 @@ const makeUpgradeCommand = (name: "update" | "upgrade") =>
         catch: (error) =>
           cliError(
             "UPGRADE_FAILED",
-            `npm could not update ${cliPackageName}`,
+            `Could not update ${cliPackageName}`,
             false,
             String(error),
           ),

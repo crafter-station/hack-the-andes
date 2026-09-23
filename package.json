@@ -24,6 +24,13 @@
   "engines": {
     "node": ">=24"
   },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "esbuild": "0.28.2",
+    "image-size": "2.0.4",
+    "tar": "7.5.22",
+    "ws": "8.21.3"
+  },
   "devEngines": {
     "packageManager": {
       "name": "bun",

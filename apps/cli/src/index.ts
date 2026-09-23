@@ -9,10 +9,18 @@ import { command } from "./commands.js";
 import { printJson } from "./output.js";
 import { welcomeFormatter } from "./welcome.js";
 
-const packageMetadata = JSON.parse(
-  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-) as { version: string };
-const cliVersion = packageMetadata.version;
+declare const CHOFEX_VERSION: string | undefined;
+
+const readCliVersion = (): string => {
+  if (typeof CHOFEX_VERSION !== "undefined") return CHOFEX_VERSION;
+
+  const packageMetadata = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ) as { version: string };
+  return packageMetadata.version;
+};
+
+const cliVersion = readCliVersion();
 const arguments_ = process.argv.slice(2);
 
 const jsonOutputRequested = (arguments_: ReadonlyArray<string>): boolean => {

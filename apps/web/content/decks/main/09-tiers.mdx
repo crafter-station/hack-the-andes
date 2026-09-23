@@ -1,0 +1,29 @@
+---
+title: Patrocinios
+backdrop: canyon
+veil: heavy
+layout: wide
+---
+
+<SlideTitle label="Patrocinios" size="sm">Tres formas de participar</SlideTitle>
+
+<Lead>Tú eliges el monto de créditos. Ningún tier pide efectivo.</Lead>
+
+<DataGrid columns={3}>
+  <SponsorTier
+    name="Basic"
+    price="Monto libre"
+    covers={["Créditos para los 100", "Logo y assets", "Reporte de claims"]}
+  />
+  <SponsorTier
+    name="Pro"
+    price="3 puestos"
+    covers={["Todo Basic", "Créditos para 1º, 2º y 3º", "Mención en premiación"]}
+  />
+  <SponsorTier
+    name="Premium"
+    price="Créditos + merch"
+    feature
+    covers={["Todo Basic", "Merch para participantes", "Reporte de entrega"]}
+  />
+</DataGrid>

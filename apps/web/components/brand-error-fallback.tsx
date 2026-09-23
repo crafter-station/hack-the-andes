@@ -4,9 +4,8 @@ import { BrandStatusPage } from "@chofex/ui/components/brand";
 import { Button } from "@chofex/ui/components/button";
 import { useEffect } from "react";
 import {
-  claimChunkReload,
   isChunkLoadError,
-  shouldAutoReloadChunk,
+  recoverFromChunkError,
 } from "@/lib/chunk-load-recovery";
 
 export interface BrandErrorFallbackProps {
@@ -27,14 +26,12 @@ export function BrandErrorFallback({
   useEffect(() => {
     console.error(error);
 
-    if (
-      chunkError &&
-      shouldAutoReloadChunk(window.location.pathname) &&
-      claimChunkReload(() => window.sessionStorage)
-    ) {
-      window.location.reload();
-    }
-  }, [chunkError, error]);
+    recoverFromChunkError(
+      error,
+      () => window.sessionStorage,
+      () => window.location.reload(),
+    );
+  }, [error]);
 
   const recover = () => {
     if (chunkError) {

@@ -7,6 +7,8 @@ import { HttpError } from "../registration/http";
 const evaluationTimeoutMs = 1_500;
 const workerExitGraceMs = 500;
 const maximumWorkerOutputBytes = 64 * 1_024;
+const maximumConcurrentWorkers = 4;
+let activeWorkers = 0;
 
 // Next's output tracer treats direct spawn(..., ["--eval", source]) calls as
 // asset references. Keep the process API indirect so the inline worker remains
@@ -110,22 +112,41 @@ const parseWorkerResponse = (output: string): Array<number> => {
 export const runShippingSolution = (
   source: string,
   shipments: ReadonlyArray<Shipment>,
-): Promise<Array<number>> =>
-  new Promise((resolve, reject) => {
-    const child = spawnIsolatedProcess(
-      "node",
-      [
-        "--permission",
-        "--max-old-space-size=32",
-        "--input-type=module",
-        "--eval",
-        workerSource,
-      ],
-      {
-        env: { NODE_ENV: "production", PATH: process.env.PATH ?? "" },
-        stdio: ["pipe", "pipe", "pipe"],
-      },
+): Promise<Array<number>> => {
+  if (activeWorkers >= maximumConcurrentWorkers) {
+    return Promise.reject(
+      new HttpError(
+        503,
+        "SOLUTION_RUNNER_BUSY",
+        "The solution runner is busy; try again shortly",
+        true,
+      ),
     );
+  }
+  activeWorkers += 1;
+
+  return new Promise((resolve, reject) => {
+    let child: childProcess.ChildProcessWithoutNullStreams;
+    try {
+      child = spawnIsolatedProcess(
+        "node",
+        [
+          "--permission",
+          "--max-old-space-size=32",
+          "--input-type=module",
+          "--eval",
+          workerSource,
+        ],
+        {
+          env: { NODE_ENV: "production", PATH: process.env.PATH ?? "" },
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
+    } catch (error) {
+      activeWorkers -= 1;
+      reject(executionError(String(error)));
+      return;
+    }
     let output = "";
     let diagnostics = "";
     let settled = false;
@@ -133,6 +154,7 @@ export const runShippingSolution = (
     const finish = (result: () => void): void => {
       if (settled) return;
       settled = true;
+      activeWorkers -= 1;
       clearTimeout(timeout);
       result();
     };
@@ -171,3 +193,4 @@ export const runShippingSolution = (
 
     child.stdin.end(JSON.stringify({ source, shipments }));
   });
+};

@@ -1,6 +1,70 @@
 import { ParticipantChallengeProgressSchema } from "@chofex/challenges-contract";
 import { DateTime, Option, Schema, SchemaGetter } from "effect";
 
+export const campaignAttributionHandoffHeader =
+  "x-chofex-campaign-attribution" as const;
+
+export interface CampaignAttributionHandoff {
+  readonly capturedAt: number;
+  readonly landingId: string;
+}
+
+const eventUuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function campaignAttributionHandoffValue(
+  handoff: CampaignAttributionHandoff,
+): string | undefined {
+  if (!eventUuidPattern.test(handoff.landingId)) return;
+  if (!Number.isSafeInteger(handoff.capturedAt) || handoff.capturedAt < 0)
+    return;
+  return `${handoff.landingId}.${handoff.capturedAt}`;
+}
+
+export function campaignAttributionHandoffFromValue(
+  value: string | null | undefined,
+): CampaignAttributionHandoff | undefined {
+  if (!value) return;
+  const separator = value.lastIndexOf(".");
+  if (separator < 0) return;
+  const landingId = value.slice(0, separator);
+  const capturedAt = Number(value.slice(separator + 1));
+  const handoff = { capturedAt, landingId };
+  if (campaignAttributionHandoffValue(handoff) !== value) return;
+  return handoff;
+}
+
+export type CampaignAttributionOAuthState =
+  | { readonly valid: false }
+  | {
+      readonly valid: true;
+      readonly handoff?: CampaignAttributionHandoff;
+    };
+
+export function oauthStateWithCampaignAttribution(
+  state: string,
+  handoff: CampaignAttributionHandoff | undefined,
+): string {
+  if (!handoff) return state;
+  const value = campaignAttributionHandoffValue(handoff);
+  if (!value) return state;
+  return `${state}.${value}`;
+}
+
+export function campaignAttributionFromOAuthState(
+  expectedState: string,
+  returnedState: string | null,
+): CampaignAttributionOAuthState {
+  if (returnedState === expectedState) return { valid: true };
+  const prefix = `${expectedState}.`;
+  if (!returnedState?.startsWith(prefix)) return { valid: false };
+  const handoff = campaignAttributionHandoffFromValue(
+    returnedState.slice(prefix.length),
+  );
+  if (!handoff) return { valid: false };
+  return { valid: true, handoff };
+}
+
 const nonBlank = (maximum: number) =>
   Schema.Trim.pipe(
     Schema.check(Schema.isMinLength(1), Schema.isMaxLength(maximum)),

@@ -10,10 +10,32 @@ const campaignParameters = [
   "utm_term",
 ] as const;
 
+export const campaignPropertyNames = campaignParameters.map(
+  (parameter) => `$${parameter}` as const,
+);
+
 type CampaignParameter = (typeof campaignParameters)[number];
 export type CampaignProperties = Partial<
   Record<`$${CampaignParameter}`, string>
 >;
+
+export function normalizeCampaignProperties(
+  value: unknown,
+): CampaignProperties {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  const candidate = value as Record<string, unknown>;
+  const properties: CampaignProperties = {};
+  for (const parameter of campaignParameters) {
+    const property = `$${parameter}` as const;
+    const rawValue = candidate[property];
+    if (typeof rawValue !== "string") continue;
+    const normalizedValue = rawValue.trim();
+    if (!normalizedValue) continue;
+    properties[property] = normalizedValue.slice(0, 200);
+  }
+  return properties;
+}
 
 export function isPostHogConfigured(key: string | undefined): key is string {
   return Boolean(key && !key.includes("replace_me"));
@@ -25,13 +47,26 @@ export function isPostHogConfigured(key: string | undefined): key is string {
  */
 export function campaignPropertiesFromUrl(url: string): CampaignProperties {
   const searchParams = new URL(url).searchParams;
-  const properties: CampaignProperties = {};
+  const properties: Record<string, string> = {};
   for (const parameter of campaignParameters) {
     const value = searchParams.get(parameter)?.trim();
     if (!value) continue;
-    properties[`$${parameter}`] = value.slice(0, 200);
+    properties[`$${parameter}`] = value;
   }
-  return properties;
+  return normalizeCampaignProperties(properties);
+}
+
+export function replaceCampaignProperties(
+  properties: Record<string, unknown> | undefined,
+  campaign: CampaignProperties,
+): Record<string, unknown> {
+  const currentProperties = { ...properties };
+  for (const property of Object.keys(currentProperties)) {
+    if (property.startsWith("$utm_") || property.startsWith("$initial_utm_")) {
+      delete currentProperties[property];
+    }
+  }
+  return { ...currentProperties, ...campaign };
 }
 
 const staffPrefixes = [
@@ -72,15 +107,24 @@ export function isTrackableUrl(url: unknown): boolean {
  */
 const extensionRejectionMarker = "Object Not Found Matching Id:";
 
-type ExceptionEvent = {
+type AnalyticsEvent = {
+  $set?: Record<string, unknown>;
+  $set_once?: Record<string, unknown>;
   event?: string;
-  properties?: {
-    $exception_list?: Array<{ value?: unknown }>;
-  };
+  properties?: Record<string, unknown>;
 };
 
+/**
+ * Session recording snapshots must reach PostHog unmodified. Rewriting or
+ * re-capturing them breaks replay, so they bypass the campaign and identity
+ * handling that shapes ordinary events.
+ */
+export function isSessionRecordingEvent(event: AnalyticsEvent | null): boolean {
+  return event?.event === "$snapshot";
+}
+
 /** Extension promise rejections are not our code, so they never belong in error tracking. */
-export function isExtensionNoiseException(event: ExceptionEvent): boolean {
+export function isExtensionNoiseException(event: AnalyticsEvent): boolean {
   if (event.event !== "$exception") return false;
   const exceptions = event.properties?.$exception_list;
   if (!Array.isArray(exceptions)) return false;
@@ -89,4 +133,92 @@ export function isExtensionNoiseException(event: ExceptionEvent): boolean {
       typeof exception?.value === "string" &&
       exception.value.includes(extensionRejectionMarker),
   );
+}
+
+function isLocationProperty(property: string): boolean {
+  const normalizedProperty = property.toLowerCase();
+  return (
+    normalizedProperty.includes("url") ||
+    normalizedProperty.includes("path") ||
+    normalizedProperty.includes("referr")
+  );
+}
+
+function withoutLocationProperties(
+  properties: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const sanitizedProperties = { ...properties };
+  for (const property of Object.keys(sanitizedProperties)) {
+    if (isLocationProperty(property)) delete sanitizedProperties[property];
+  }
+  return sanitizedProperties;
+}
+
+function withoutExcludedLocationProperties(
+  properties: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const sanitizedProperties = { ...properties };
+  for (const [property, value] of Object.entries(sanitizedProperties)) {
+    if (!isLocationProperty(property)) continue;
+    if (property.toLowerCase().includes("referr")) {
+      delete sanitizedProperties[property];
+      continue;
+    }
+    if (typeof value !== "string") {
+      delete sanitizedProperties[property];
+      continue;
+    }
+    try {
+      const url = new URL(value, "https://hacktheandes.com");
+      if (!isTrackablePath(url.pathname)) {
+        delete sanitizedProperties[property];
+        continue;
+      }
+      if (property.toLowerCase().includes("url")) {
+        sanitizedProperties[property] = `${url.origin}${url.pathname}`;
+      } else {
+        sanitizedProperties[property] = url.pathname;
+      }
+    } catch {
+      delete sanitizedProperties[property];
+    }
+  }
+  return sanitizedProperties;
+}
+
+/** Excluded screens may link identity, but their location data must never leave the app. */
+export function postHogEventForPublicAnalytics<T extends AnalyticsEvent>(
+  event: T | null,
+): T | null {
+  if (!event) return event;
+  if (isExtensionNoiseException(event)) return null;
+  if (event.event === "$identify") {
+    const sanitizedEvent: AnalyticsEvent = {
+      ...event,
+      properties: withoutLocationProperties(event.properties),
+    };
+    if (event.$set) {
+      sanitizedEvent.$set = withoutLocationProperties(event.$set);
+    }
+    if (event.$set_once) {
+      sanitizedEvent.$set_once = withoutLocationProperties(event.$set_once);
+    }
+    return sanitizedEvent as T;
+  }
+  if (isTrackableUrl(event.properties?.$current_url)) {
+    const sanitizedEvent: AnalyticsEvent = {
+      ...event,
+      properties: withoutExcludedLocationProperties(event.properties),
+    };
+    if (event.$set) {
+      sanitizedEvent.$set = withoutExcludedLocationProperties(event.$set);
+    }
+    if (event.$set_once) {
+      sanitizedEvent.$set_once = withoutExcludedLocationProperties(
+        event.$set_once,
+      );
+    }
+    return sanitizedEvent as T;
+  }
+  return null;
 }

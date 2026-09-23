@@ -1,7 +1,6 @@
 import { brandClerkAppearance } from "@chofex/ui/lib/clerk-appearance";
 import { ClerkProvider } from "@clerk/nextjs";
-import { shadcn } from "@clerk/ui/themes";
-import { Analytics } from "@vercel/analytics/next";
+import { shadcn } from "@clerk/themes";
 import type { Metadata } from "next";
 import { ChunkLoadRecoverySuccess } from "@/components/chunk-load-recovery";
 import { DocumentLang } from "@/components/document-lang";
@@ -12,11 +11,14 @@ import {
   landingMono,
   landingSans,
 } from "@/components/landing/fonts";
-import { PostHogAnalytics } from "@/components/posthog-analytics";
+import {
+  AuthenticatedPostHogAnalytics,
+  PostHogAnalytics,
+} from "@/components/posthog-analytics";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@chofex/ui/globals.css";
-import "@clerk/ui/themes/shadcn.css";
+import "@clerk/themes/shadcn.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://hacktheandes.com"),
@@ -50,6 +52,7 @@ export default function RootLayout({
 }>) {
   const queryProvider = <QueryProvider>{children}</QueryProvider>;
   let content = queryProvider;
+  let posthogAnalytics: React.ReactNode = <PostHogAnalytics />;
 
   if (clerkConfigured) {
     content = (
@@ -58,9 +61,11 @@ export default function RootLayout({
         signInFallbackRedirectUrl="/auth/complete"
         signUpFallbackRedirectUrl="/auth/complete"
       >
+        <AuthenticatedPostHogAnalytics />
         {queryProvider}
       </ClerkProvider>
     );
+    posthogAnalytics = null;
   }
 
   return (
@@ -83,8 +88,7 @@ export default function RootLayout({
           {content}
           <ChunkLoadRecoverySuccess />
         </ThemeProvider>
-        <Analytics />
-        <PostHogAnalytics />
+        {posthogAnalytics}
       </body>
     </html>
   );

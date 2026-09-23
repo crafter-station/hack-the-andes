@@ -2,6 +2,13 @@ import { resolve4 } from "node:dns/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 
+import {
+  environmentVariableNames,
+  parseEnvironment,
+  selectedEnvironment,
+  serializeEnvironment,
+} from "./deploy-environment";
+
 type Command = "apply" | "plan" | "status";
 
 interface ApplicationManifest {
@@ -17,6 +24,7 @@ interface ApplicationManifest {
   healthPath: string;
   environmentVariables: string[];
   optionalEnvironmentVariables: string[];
+  serviceEnvironmentVariables?: Record<string, string>;
 }
 
 interface Manifest {
@@ -68,29 +76,6 @@ const readJson = async <T>(filePath: string): Promise<T> =>
   (await Bun.file(filePath).json()) as T;
 
 const normalizeUrl = (value: string): string => value.replace(/\/+$/, "");
-
-const parseEnvironment = (source: string): Record<string, string> => {
-  const result: Record<string, string> = {};
-  for (const rawLine of source.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const delimiter = line.indexOf("=");
-    if (delimiter < 1) continue;
-    const name = line.slice(0, delimiter).trim();
-    let value = line.slice(delimiter + 1).trim();
-    if (value.startsWith('"') && value.endsWith('"')) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        throw new Error(`Invalid quoted value for ${name}`);
-      }
-    } else if (value.startsWith("'") && value.endsWith("'")) {
-      value = value.slice(1, -1);
-    }
-    result[name] = value;
-  }
-  return result;
-};
 
 const loadEnvironment = async (): Promise<Record<string, string>> => {
   const result: Record<string, string> = {};
@@ -176,33 +161,6 @@ const exactlyOne = <T>(values: T[], description: string): T | undefined => {
   return values[0];
 };
 
-const selectedEnvironment = (
-  values: Record<string, string>,
-  application: ApplicationManifest,
-): Record<string, string> => {
-  const selected: Record<string, string> = {};
-  const required = new Set(application.environmentVariables);
-  const names = [
-    ...application.environmentVariables,
-    ...application.optionalEnvironmentVariables,
-  ];
-  for (const name of names) {
-    const value = values[name];
-    if (value) selected[name] = value;
-    else if (required.has(name))
-      throw new Error(
-        `Missing required environment variable ${name} for ${application.name}.`,
-      );
-  }
-  return selected;
-};
-
-const serializeEnvironment = (values: Record<string, string>): string =>
-  Object.entries(values)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
-    .join("\n");
-
 const commandOutput = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 };
@@ -215,17 +173,15 @@ const domainPointsTo = async (domain: string, ip: string): Promise<boolean> => {
   }
 };
 
-const validateDevelopmentClerk = (
-  environment: Record<string, string>,
-): void => {
+const validateProductionClerk = (environment: Record<string, string>): void => {
   const publishableKey = environment.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const secretKey = environment.CLERK_SECRET_KEY;
   if (
-    !publishableKey?.startsWith("pk_test_") ||
-    !secretKey?.startsWith("sk_test_")
+    !publishableKey?.startsWith("pk_live_") ||
+    !secretKey?.startsWith("sk_live_")
   ) {
     throw new Error(
-      "This deployment is currently pinned to the Clerk development instance; both Clerk keys must be test keys.",
+      "Production requires matching Clerk production keys; both Clerk keys must be live keys.",
     );
   }
 };
@@ -237,7 +193,7 @@ const run = async (command: Command): Promise<void> => {
       `Unsupported deployment manifest version ${manifest.version}.`,
     );
   const environment = await loadEnvironment();
-  validateDevelopmentClerk(environment);
+  validateProductionClerk(environment);
   const auth = await loadAuth(environment);
   if (normalizeUrl(auth.domain) !== normalizeUrl(manifest.serverUrl)) {
     throw new Error(
@@ -328,7 +284,7 @@ const run = async (command: Command): Promise<void> => {
 
   const plannedChanges: string[] = [];
   for (const desired of manifest.applications) {
-    selectedEnvironment(environment, desired);
+    selectedEnvironment(environment, desired, manifest.applications);
     const project = exactlyOne(
       projects.filter((candidate) => candidate.name === desired.project),
       `project named ${desired.project}`,
@@ -383,7 +339,7 @@ const run = async (command: Command): Promise<void> => {
       }
     }
     plannedChanges.push(
-      `reconcile ${desired.name} environment (${[...desired.environmentVariables, ...desired.optionalEnvironmentVariables].join(", ")})`,
+      `reconcile ${desired.name} environment (${environmentVariableNames(desired).join(", ")})`,
     );
   }
 
@@ -493,7 +449,9 @@ const run = async (command: Command): Promise<void> => {
     });
     await client.post("application.saveEnvironment", {
       applicationId: app.applicationId,
-      env: serializeEnvironment(selectedEnvironment(environment, desired)),
+      env: serializeEnvironment(
+        selectedEnvironment(environment, desired, manifest.applications),
+      ),
       buildArgs: null,
       buildSecrets: null,
       createEnvFile: false,

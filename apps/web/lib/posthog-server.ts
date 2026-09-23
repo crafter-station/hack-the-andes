@@ -1,6 +1,11 @@
+import { campaignAttributionHandoffHeader } from "@chofex/registration-contract";
 import { PostHog } from "posthog-node";
 
 import { isPostHogConfigured, posthogHost, posthogKey } from "./analytics";
+import {
+  campaignAttributionProperties,
+  campaignAttributionPropertiesFromHandoff,
+} from "./campaign-attribution";
 
 type EventProperties = Record<
   string,
@@ -11,6 +16,10 @@ export interface ProductEvent {
   readonly distinctId: string;
   readonly event: string;
   readonly properties?: EventProperties;
+}
+
+interface RequestProductEvent extends ProductEvent {
+  readonly request: Request;
 }
 
 let client: PostHog | undefined;
@@ -45,19 +54,50 @@ export async function captureProductEvent({
   distinctId,
   event,
   properties,
-}: ProductEvent): Promise<void> {
+  request,
+}: RequestProductEvent): Promise<void> {
   const posthog = posthogClient();
   if (!posthog) return;
+
+  const attributedProperties = productEventWithCampaignAttribution(request, {
+    distinctId,
+    event,
+    properties,
+  }).properties;
 
   try {
     posthog.capture({
       distinctId,
       event,
-      properties,
+      properties: attributedProperties,
       disableGeoip: true,
     });
     await posthog.flush();
   } catch (error) {
     console.error("Could not send PostHog product event", { event, error });
   }
+}
+
+/** Keeps request-cookie parsing and validation out of individual route handlers. */
+export function productEventWithCampaignAttribution(
+  request: Request,
+  event: ProductEvent,
+  now = Date.now(),
+): ProductEvent {
+  const handoffProperties = campaignAttributionPropertiesFromHandoff(
+    request.headers.get(campaignAttributionHandoffHeader),
+    now,
+  );
+  const cookieProperties = campaignAttributionProperties(
+    request.headers.get("cookie"),
+    now,
+  );
+  return {
+    ...event,
+    properties: {
+      ...event.properties,
+      ...handoffProperties,
+      ...cookieProperties,
+    },
+  };
 }

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   assertAuthorizationClient,
   assertInteractiveLogin,
+  bridgedAuthorizationUrl,
   browserCommand,
   createPkce,
   macOSCredentialSaveArgs,
@@ -46,6 +47,19 @@ describe("CLI authentication", () => {
       "rundll32.exe",
       ["url.dll,FileProtocolHandler", url],
     ]);
+  });
+
+  test("starts browser authorization on the first-party attribution bridge", () => {
+    const clerk =
+      "https://clerk.example.com/oauth/authorize?response_type=code&client_id=cli&state=nonce";
+    expect(
+      bridgedAuthorizationUrl(
+        "https://hacktheandes.com/api/v1/oauth/authorize",
+        clerk,
+      ),
+    ).toBe(
+      "https://hacktheandes.com/api/v1/oauth/authorize?response_type=code&client_id=cli&state=nonce",
+    );
   });
 
   test("revokes a refresh token instead of only the access token", () => {
