@@ -17,9 +17,7 @@ import { downloadImage, uploadPng } from "./badge-assets";
  *
  * It keeps its own task rather than folding into the composition step so
  * the retry boundary, the queue and the stored intermediate stay where
- * they were. The columns still say `pixelArt`: renaming them is a
- * Drizzle migration that asks interactively whether it is a rename or a
- * drop, and answering that wrong loses data.
+ * they were.
  */
 export interface GeneratePortraitPayload {
   readonly applicationId: string;
@@ -50,8 +48,8 @@ export const generatePortrait = task({
     await db
       .update(participantBadges)
       .set({
-        pixelArtUrl: blob.url,
-        pixelArtPathname: blob.pathname,
+        portraitUrl: blob.url,
+        portraitPathname: blob.pathname,
         updatedAt: new Date(),
       })
       .where(eq(participantBadges.applicationId, payload.applicationId));
