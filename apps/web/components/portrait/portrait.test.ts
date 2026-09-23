@@ -3,59 +3,70 @@ import { describe, expect, test } from "bun:test";
 const read = async (name: string): Promise<string> =>
   await Bun.file(new URL(`./${name}`, import.meta.url)).text();
 
-describe("portrait-sweep", () => {
+describe("page-sweep", () => {
   test("honours a request for reduced motion", async () => {
-    // A diagonal wipe across the whole page is exactly the motion that
-    // setting exists for.
-    const sweep = await read("portrait-sweep.tsx");
+    // A curtain wiping across the whole viewport is exactly the motion
+    // that setting exists for.
+    const sweep = await read("page-sweep.tsx");
 
     expect(sweep).toContain("prefers-reduced-motion");
   });
 
   test("reports done on every path out", async () => {
-    // The scene underneath is revealed by `onDone`. Any path that skips
-    // it — no picture, no canvas, reduced motion, a picture that will
-    // not load — leaves the page stuck behind an overlay.
-    const sweep = await read("portrait-sweep.tsx");
-    const calls = sweep.match(/done\.current\(\)/g) ?? [];
+    /*
+      The page is underneath. Any path that skips the callback — no
+      canvas, no 2D context, reduced motion — leaves every control on the
+      page behind an opaque overlay for the rest of the session.
+    */
+    const sweep = await read("page-sweep.tsx");
+    const calls = sweep.match(/setDone\(true\)/g) ?? [];
 
-    expect(calls.length).toBeGreaterThanOrEqual(6);
+    expect(calls.length).toBeGreaterThanOrEqual(4);
   });
 
-  test("calls back through a ref, not a captured prop", async () => {
-    // The frame loop starts once and runs for the whole sweep. Closing
-    // over the prop would leave it calling whichever `onDone` existed
-    // when it started, which is stale the moment the parent re-renders.
-    const sweep = await read("portrait-sweep.tsx");
+  test("clears the canvas rather than painting one background", async () => {
+    /*
+      The whole effect is that the page shows through where the curtain
+      has gone. A single fill behind the characters would hide the thing
+      it is supposed to be revealing, and the sweep would end on a cut
+      from a full screen of noise to the page.
+    */
+    const sweep = await read("page-sweep.tsx");
 
-    expect(sweep).toContain("const done = useRef(onDone)");
-    expect(sweep).not.toMatch(/\bonDone\(\)/);
+    expect(sweep).toContain("clearRect");
+  });
+
+  test("never takes a pointer event", async () => {
+    // It covers every control on the page for a second and a half. A tap
+    // that lands on it is a tap the person has to repeat.
+    const sweep = await read("page-sweep.tsx");
+    const css = await Bun.file(
+      new URL("../credential/credential.css", import.meta.url),
+    ).text();
+    const rule = css.slice(css.indexOf(".page-sweep {"));
+
+    expect(rule).toContain("pointer-events: none");
+    expect(sweep).toContain('aria-hidden="true"');
+    expect(sweep).toContain("tabIndex={-1}");
   });
 
   test("cancels its frame loop on unmount", async () => {
     // Navigating away mid-sweep otherwise leaves a loop drawing into a
     // detached canvas for as long as the tab lives.
-    const sweep = await read("portrait-sweep.tsx");
+    const sweep = await read("page-sweep.tsx");
 
     expect(sweep).toContain("cancelAnimationFrame");
   });
 
-  test("reads the picture once, not once per frame", async () => {
-    // Sixty decodes a second for a result that never changes, on a page
-    // that is also compiling shaders.
-    const sweep = await read("portrait-sweep.tsx");
-    const reads = sweep.match(/getImageData/g) ?? [];
+  test("covers the viewport, not the card", async () => {
+    // Fixed, not absolute: the page can scroll under a sweep that
+    // started before anybody could scroll.
+    const css = await Bun.file(
+      new URL("../credential/credential.css", import.meta.url),
+    ).text();
+    const rule = css.slice(css.indexOf(".page-sweep {"));
 
-    expect(reads).toHaveLength(1);
-  });
-
-  test("lets alpha beat luminance, as the card does", async () => {
-    // A transparent pixel reads as bright, so without this the cut-out's
-    // erased background comes back as characters and the two surfaces
-    // disagree about the same photograph.
-    const sweep = await read("portrait-sweep.tsx");
-
-    expect(sweep).toMatch(/data\[index \* 4 \+ 3\]/);
+    expect(rule).toContain("position: fixed");
   });
 });
 
@@ -150,12 +161,20 @@ describe("credential-stage", () => {
   });
 
   test("mounts the scene under the sweep, not after it", async () => {
-    // WebGL should compile its shaders while somebody watches characters
-    // assemble, rather than in the silence afterwards.
-    const stage = await read("credential-stage.tsx");
-    const scene = stage.indexOf("CredentialScene");
-    const sweep = stage.indexOf("PortraitSweep onDone");
+    /*
+      WebGL should compile its shaders while somebody is watching
+      characters dissolve, rather than in the silence afterwards. The
+      sweep is a sibling of the stage on the page — not a gate in front
+      of it — so the scene starts mounting immediately and the curtain
+      spends its second and a half hiding the compile.
+    */
+    const page = await Bun.file(
+      new URL("../../app/badge/page.tsx", import.meta.url),
+    ).text();
 
-    expect(scene).toBeLessThan(sweep);
+    expect(page).toContain("<PageSweep />");
+    expect(page.indexOf("<PageSweep />")).toBeLessThan(
+      page.indexOf("<CredentialStage"),
+    );
   });
 });

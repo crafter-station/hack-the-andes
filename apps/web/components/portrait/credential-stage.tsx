@@ -1,22 +1,21 @@
 "use client";
 
 /**
- * The credential, its opening sweep, and the way to change the face on it.
+ * The credential, and the way to change the face on it.
  *
- * Owns the one piece of state the three share: whether the sweep is still
- * running. The scene is mounted underneath the whole time rather than
- * after — WebGL wants to compile its shaders while somebody is watching
- * characters assemble, not in the silence afterwards.
- *
- * The sweep plays on every visit, not once. It is what the page is.
+ * The opening sweep used to live here, over the card alone. It is now a
+ * curtain over the whole page — `PageSweep`, mounted by the page — which
+ * is the only scale at which a grid of characters reads: on the card the
+ * photo window renders at 113px, where a character lands at 1.38px and
+ * a halftone dot at 3.4, so the card keeps the dots and the characters
+ * got somewhere they can be seen.
  */
 
-import { type ReactNode, useCallback, useState } from "react";
+import type { ReactNode } from "react";
 
 import { CredentialScene } from "@/components/credential/credential-scene";
 
 import { PortraitPicker } from "./portrait-picker";
-import { PortraitSweep } from "./portrait-sweep";
 
 interface CredentialStageProps {
   readonly textureUrl: string;
@@ -36,9 +35,6 @@ export function CredentialStage({
   confirmed,
   children,
 }: CredentialStageProps) {
-  const [sweeping, setSweeping] = useState(true);
-  const finish = useCallback(() => setSweeping(false), []);
-
   /*
     `CONTEXT.md` forbids using an available image before its owner picks
     a source, so a card drawing a GitHub photo nobody confirmed has to
@@ -55,14 +51,8 @@ export function CredentialStage({
 
   return (
     <>
-      <div className="credential-stage" data-sweeping={sweeping}>
+      <div className="credential-stage">
         <CredentialScene faceUrl={textureUrl}>{children}</CredentialScene>
-        {/*
-          Kept mounted after it finishes so the css can fade it out. An
-          unmount here made the card arrive on a cut, which is the one
-          thing a reveal must not do.
-        */}
-        <PortraitSweep onDone={finish} src={portraitUrl} />
       </div>
       {proposal}
       <PortraitPicker
