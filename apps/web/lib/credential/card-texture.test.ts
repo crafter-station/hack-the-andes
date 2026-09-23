@@ -86,9 +86,11 @@ describe("halftonePortrait", () => {
       const bytes = Buffer.from((uri ?? "").split(",")[1] ?? "", "base64");
       const meta = await sharp(bytes).metadata();
 
-      // Sized by the window the model samples, not by the photograph.
-      expect(meta.width).toBe(490);
-      expect(meta.height).toBe(565);
+      // Sized by the window the model samples, not by the photograph —
+      // and by a whole number of cells, so the screen ends where the
+      // window does.
+      expect(meta.width).toBe(495);
+      expect(meta.height).toBe(572);
     } finally {
       server.stop(true);
     }

@@ -60,7 +60,7 @@ export interface AcceptedParticipant {
   readonly githubUrl: string | null;
 }
 
-const fullNameOf = (
+export const fullNameOf = (
   firstName: string | null,
   lastName: string | null,
 ): string => [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");

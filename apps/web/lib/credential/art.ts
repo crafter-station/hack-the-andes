@@ -23,12 +23,21 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
+/**
+ * Resolved against this module, not the working directory.
+ *
+ * The card is drawn from a Next route, where the working directory is the
+ * app. The emailed badge is drawn from a Trigger worker and the tests run
+ * from the repository root, and in both of those a path built from `cwd`
+ * points at nothing — which surfaces as a badge with no ridge on it, or
+ * as an ENOENT nobody sees until a participant is waiting for an email.
+ */
 const assetPath = (file: string): string =>
-  join(process.cwd(), "public/credential", file);
+  fileURLToPath(new URL(`../../public/credential/${file}`, import.meta.url));
 
 /**
  * Memoised by every argument that changes the bytes.
@@ -92,6 +101,22 @@ export const ridgeDataUri = ({
     const scaled = await sharp(source).resize({ width }).png().toBuffer();
     return dim(scaled, opacity);
   });
+
+/**
+ * The event's own mark, for the back's lockup and the lanyard's weave.
+ *
+ * The favicon, not the plain triangle that stood in for it: at the size
+ * the strap gives it the facets still read, and a smooth triangle reads
+ * as a generic arrow.
+ */
+export const mountainDataUri = (width: number): Promise<string> =>
+  memo(`mountain:${width}`, async () => {
+    const source = await readFile(assetPath("mountain.png"));
+    return sharp(source).resize({ width }).png().toBuffer();
+  });
+
+/** Its own aspect, so a caller can reserve the right box. */
+export const MOUNTAIN_ASPECT = 512 / 328;
 
 export const SPONSORS = [
   "peru-tech-week",

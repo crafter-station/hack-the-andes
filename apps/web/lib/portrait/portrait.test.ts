@@ -74,15 +74,67 @@ describe("normalise", () => {
 
 describe("halftoneSvg", () => {
   test("gives a brighter cell a bigger dot", () => {
-    // The whole encoding: a dot carries one value and it is its radius.
+    /*
+      The whole encoding: a dot carries one value and it is its radius.
+      Asserted on the square lattice, where a cell and a dot are the same
+      thing; the turned one samples between cells by design. Both values
+      sit above the threshold below which a dot is dropped as a rounding
+      artefact — 0.1 does not survive the transfer curve.
+    */
     const svg = halftoneSvg(
-      { width: 2, height: 1, values: Float32Array.from([0.1, 0.9]) },
-      { cell: 10, ink: "#f6f3ee" },
+      { width: 2, height: 1, values: Float32Array.from([0.4, 0.9]) },
+      { angle: 0, cell: 10, ink: "#f6f3ee" },
     );
     const radii = [...svg.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1]));
 
     expect(radii).toHaveLength(2);
     expect(radii[1]).toBeGreaterThan(radii[0] ?? 0);
+  });
+
+  test("turns the lattice off the square by default", () => {
+    /*
+      The difference between a halftone and a pixel grid. On a square
+      lattice the eye follows the rows and reads the raster; turned, the
+      same dots read as print. This is the property, not the angle: a
+      square screen puts every dot on a cell centre, so finding a dot off
+      one is what proves the lattice turned.
+    */
+    const values = new Float32Array(9).fill(1);
+    const svg = halftoneSvg(
+      { width: 3, height: 3, values },
+      { cell: 10, ink: "#f6f3ee" },
+    );
+    const xs = [...svg.matchAll(/cx="([\d.-]+)"/g)].map((m) => Number(m[1]));
+
+    expect(xs.length).toBeGreaterThan(0);
+    expect(xs.some((x) => Math.abs((x % 10) - 5) > 0.5)).toBe(true);
+  });
+
+  test("closes the highlight instead of leaving a grid that never meets", () => {
+    // A dot at full value has to overrun half its cell, or the brightest
+    // part of a face prints as separated dots and never reads as light.
+    const svg = halftoneSvg(
+      { width: 1, height: 1, values: Float32Array.from([1]) },
+      { angle: 0, cell: 10, ink: "#f6f3ee" },
+    );
+    const radius = Number(/r="([\d.]+)"/.exec(svg)?.[1]);
+
+    expect(radius).toBeGreaterThan(5);
+  });
+
+  test("keeps a middling grey off the top of the range", () => {
+    /*
+      The transfer curve. Mapped straight, a face lands above the radius
+      at which dots touch and prints as one solid mass with no eyes in
+      it — which is exactly what the first render of this showed.
+    */
+    const svg = halftoneSvg(
+      { width: 1, height: 1, values: Float32Array.from([0.5]) },
+      { angle: 0, cell: 10, ink: "#f6f3ee" },
+    );
+    const radius = Number(/r="([\d.]+)"/.exec(svg)?.[1]);
+
+    expect(radius).toBeLessThan(0.5 * 0.55 * 10);
   });
 
   test("draws nothing for a cell with no ink", () => {
@@ -104,6 +156,31 @@ describe("halftoneSvg", () => {
 
     expect(svg).toContain('width="15"');
     expect(svg).toContain('height="20"');
+  });
+
+  test("keeps every dot inside the drawing", () => {
+    /*
+      The turned lattice is generated over a square big enough to cover
+      the canvas at any angle and then clipped. Get the clip wrong and
+      the drawing carries thousands of circles nobody can see, which is
+      slow to rasterise and invisible in the result.
+    */
+    const svg = halftoneSvg(
+      { width: 4, height: 6, values: new Float32Array(24).fill(1) },
+      { cell: 10, ink: "#f6f3ee" },
+    );
+    const xs = [...svg.matchAll(/cx="([\d.-]+)"/g)].map((m) => Number(m[1]));
+    const ys = [...svg.matchAll(/cy="([\d.-]+)"/g)].map((m) => Number(m[1]));
+
+    expect(xs.length).toBeGreaterThan(10);
+    for (const x of xs) {
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(x).toBeLessThan(40);
+    }
+    for (const y of ys) {
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThan(60);
+    }
   });
 });
 

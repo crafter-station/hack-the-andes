@@ -16,9 +16,6 @@
  * lines of layout is how two cards for one event start to differ.
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { brandColors } from "@chofex/ui/lib/brand-theme";
 import { ImageResponse } from "next/og";
 import QRCode from "qrcode";
@@ -27,30 +24,29 @@ import {
   initialsFor,
 } from "@/components/credential/credential-model";
 import { halftoneSvg } from "@/lib/portrait/halftone";
-import { lumaFromRgba, normalise } from "@/lib/portrait/luminance";
 import {
+  HALFTONE_CONTRAST,
+  lumaFromRgba,
+  normalise,
+} from "@/lib/portrait/luminance";
+import {
+  MOUNTAIN_ASPECT,
+  mountainDataUri,
   ridgeDataUri,
   type Sponsor,
   sponsorDataUri,
   sponsorHeight,
 } from "./art";
-
-const fontFile = (name: string): Promise<Buffer> =>
-  readFile(join(process.cwd(), "app/fonts", name));
-
-/**
- * The faces, as files, because satori takes bytes and not a CSS variable.
- *
- * `next/font/google` is how the rest of the app loads Stack Sans Notch, and
- * it is no use here: it emits WOFF2, which satori does not read. These are
- * the same family fetched as TrueType and committed beside the condensed
- * face the card already used.
- */
-const [brandFont, notchBold, notchMedium] = await Promise.all([
-  fontFile("BarlowCondensed-SemiBold.ttf"),
-  fontFile("StackSansNotch-700.ttf"),
-  fontFile("StackSansNotch-500.ttf"),
-]);
+import {
+  HOLDER,
+  notchFonts,
+  RIDGE_BACK,
+  RIDGE_FRONT,
+  roleFor,
+  SEAM,
+  SHEET,
+  WINDOW_EDGE,
+} from "./printing";
 
 /**
  * The shape of the atlas, derived from the model rather than chosen.
@@ -84,44 +80,21 @@ const PICTURE_TIMEOUT_MS = 2_500;
 /**
  * The halftone's pitch, in texture pixels.
  *
- * Five, measured: the window renders at 113px on screen, where a 5px
- * cell lands at about 1.15px per dot and reads. The ASCII grid that was
- * considered for the same slot lands at 1.38px per character and does
- * not — a dot carries one value, its radius, while a character needs its
- * shape distinguished, and a shape needs several pixels to have one.
+ * Measured off the design file rather than chosen: its portrait window
+ * is about 33 dots across, and the window here is 490 output pixels, so
+ * a dot every fifteen. Five — what this was — put 98 dots in the same
+ * window, which at the 113px the window renders on screen is barely over
+ * a pixel each and reads as grain rather than as a screen. That is what
+ * "the halftone isn't noticeable" meant.
+ *
+ * The ASCII grid that was considered for the same slot lands at 1.38px
+ * per character and does not read at all — a dot carries one value, its
+ * radius, while a character needs its shape distinguished, and a shape
+ * needs several pixels to have one.
  */
-const HALFTONE_CELL = 5;
+const HALFTONE_CELL = 11;
 
 const colors = brandColors.dark;
-
-/**
- * The four tones the card is actually built from, sampled off the design.
- *
- * A horizontal sweep across its edge reads, from outside in: pure black
- * for the page, a band of #282828 for the plastic shell, a dark seam where
- * the printed sheet sits inside it, and #141510 for the sheet. None of
- * them are brand tokens because none of them are brand — they are an
- * object. The version they replace had the sheet at `paper`, which is far
- * blacker than the design's card and left the shell and the sheet reading
- * as one flat shape.
- */
-const HOLDER = "#282828";
-const SHEET = "#141510";
-/** The seam, which is darker than both — not the light hairline it was. */
-const SEAM = "#060604";
-/** The photo window carries no fill of its own, only this line. */
-const WINDOW_EDGE = "#2a2a26";
-
-/**
- * How far the ridge sits behind the type.
- *
- * The drawing is dense enough at full strength to turn the lower half of
- * the card into a grey field, and the name has to win. Read off the design
- * rather than picked: the printed card's contour lines measure around a
- * quarter of the ink's brightness.
- */
-const RIDGE_FRONT = 0.26;
-const RIDGE_BACK = 0.44;
 
 /**
  * Each mark at the width its own proportions want.
@@ -131,9 +104,9 @@ const RIDGE_BACK = 0.44;
  * leave the stacked one towering over the others.
  */
 const SPONSOR_WIDTHS: ReadonlyArray<readonly [Sponsor, number]> = [
-  ["peru-tech-week", 86],
-  ["crafter-station", 176],
-  ["chofex", 162],
+  ["peru-tech-week", 44],
+  ["chofex", 82],
+  ["crafter-station", 92],
 ];
 
 /**
@@ -153,28 +126,18 @@ const SHEET_PADDING_X = 54;
 const CONTENT_WIDTH = SHEET_WIDTH - SHEET_PADDING_X * 2;
 
 /**
- * The line under the name.
+ * How tall the drawing is placed, which is what sets where its summit
+ * lands.
  *
- * An accepted participant's own answer to what they are, which is the
- * field the design prints. Everyone else gets the event's word for them:
- * a GitHub bio in this slot is a sentence, not a role, and the card said
- * things like "WHO WOULD BELIEVE I'D END UP…" under people's names.
- *
- * Still truncated, because the column takes 120 characters and the card
- * holds about thirty.
+ * Square on the front, sitting on the sheet's floor: the mountain
+ * occupies the lower three fifths of the art, so a square this wide puts
+ * it in the lower third of the card, under the type. The back stretches
+ * it so the summit rises behind the wordmark, which is where the design
+ * has it — laid square there, the lockup floats above the mountain
+ * instead of over it.
  */
-const ROLE_LIMIT = 30;
-
-const roleFor = (role: string | null): string => {
-  const source = (role ?? "PARTICIPANTE").trim();
-  // Cut at a word so the line does not end mid-syllable.
-  if (source.length <= ROLE_LIMIT) {
-    return source;
-  }
-  const clipped = source.slice(0, ROLE_LIMIT);
-  const lastSpace = clipped.lastIndexOf(" ");
-  return `${lastSpace > 12 ? clipped.slice(0, lastSpace) : clipped}…`;
-};
+const RIDGE_HEIGHT_FRONT = SHEET_WIDTH;
+const RIDGE_HEIGHT_BACK = Math.round(SHEET_WIDTH * 1.42);
 
 /**
  * The photo window, as a fraction of the printed sheet.
@@ -183,9 +146,16 @@ const roleFor = (role: string | null): string => {
  * screenshot: the sheet is 319 × 462 there and the window takes 0.655 of
  * its width at a 0.863 aspect. The paced version had it too narrow and a
  * touch too tall.
+ *
+ * Snapped to whole cells, which costs a pixel or two of layout and buys
+ * a screen that ends where the window does. While the pitch was five the
+ * division happened to come out even; at eleven it does not, and the
+ * drawing arrived six pixels narrower than the box it was placed in.
  */
-const PORTRAIT_WIDTH = Math.round(SHEET_WIDTH * 0.655);
-const PORTRAIT_HEIGHT = Math.round(PORTRAIT_WIDTH / 0.863);
+const PORTRAIT_COLUMNS = Math.round((SHEET_WIDTH * 0.655) / HALFTONE_CELL);
+const PORTRAIT_WIDTH = PORTRAIT_COLUMNS * HALFTONE_CELL;
+const PORTRAIT_ROWS = Math.round(PORTRAIT_WIDTH / 0.863 / HALFTONE_CELL);
+const PORTRAIT_HEIGHT = PORTRAIT_ROWS * HALFTONE_CELL;
 
 /**
  * How long the pictures this fetches may be reused.
@@ -236,9 +206,6 @@ export const halftonePortrait = async (
       return null;
     }
 
-    const columns = Math.floor(PORTRAIT_WIDTH / HALFTONE_CELL);
-    const rows = Math.floor(PORTRAIT_HEIGHT / HALFTONE_CELL);
-
     const { default: sharp } = await import("sharp");
     const source = Buffer.from(await response.arrayBuffer());
     /*
@@ -248,14 +215,17 @@ export const halftonePortrait = async (
       the grid is the window's shape and not the photograph's.
     */
     const { data, info } = await sharp(source)
-      .resize(columns, rows, { fit: "cover", position: "top" })
+      .resize(PORTRAIT_COLUMNS, PORTRAIT_ROWS, {
+        fit: "cover",
+        position: "top",
+      })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
 
     const pixels = new Uint8ClampedArray(data);
     const grid = lumaFromRgba(pixels, info.width, info.height);
-    const values = normalise(grid.values);
+    const values = normalise(grid.values, HALFTONE_CONTRAST);
 
     /*
       Alpha wins over luminance.
@@ -313,20 +283,22 @@ export const renderCardTexture = async (
   credential: Credential,
   { origin }: CardTextureOptions,
 ): Promise<Response> => {
-  const [portrait, ridgeFront, ridgeBack, qr, sponsors] = await Promise.all([
-    halftonePortrait(credential.pictureUrl),
-    ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
-    ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_BACK }),
-    qrDataUri(new URL("/badge", origin).href),
-    Promise.all(
-      SPONSOR_WIDTHS.map(async ([sponsor, width]) => ({
-        sponsor,
-        width,
-        height: await sponsorHeight(sponsor, width),
-        src: await sponsorDataUri(sponsor, width),
-      })),
-    ),
-  ]);
+  const [portrait, ridgeFront, ridgeBack, mountain, qr, sponsors] =
+    await Promise.all([
+      halftonePortrait(credential.pictureUrl),
+      ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
+      ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_BACK }),
+      mountainDataUri(96),
+      qrDataUri(new URL("/badge", origin).href),
+      Promise.all(
+        SPONSOR_WIDTHS.map(async ([sponsor, width]) => ({
+          sponsor,
+          width,
+          height: await sponsorHeight(sponsor, width),
+          src: await sponsorDataUri(sponsor, width),
+        })),
+      ),
+    ]);
 
   const role = roleFor(credential.role);
 
@@ -368,7 +340,11 @@ export const renderCardTexture = async (
    * want the drawing at different strengths: on the front it is a trace
    * under the type, on the back it is the subject.
    */
-  const face = (ridge: string, children: React.ReactNode) => (
+  const face = (
+    ridge: string,
+    ridgeHeight: number,
+    children: React.ReactNode,
+  ) => (
     <div
       style={{
         display: "flex",
@@ -389,7 +365,8 @@ export const renderCardTexture = async (
           border: `2px solid ${SEAM}`,
           background: SHEET,
           color: colors.ink,
-          fontFamily: "Barlow Condensed",
+          fontFamily: "Stack Sans Notch",
+          fontWeight: 500,
           padding: `38px ${SHEET_PADDING_X}px 44px`,
         }}
       >
@@ -413,7 +390,7 @@ export const renderCardTexture = async (
         {/* biome-ignore lint/performance/noImgElement: next/image cannot run inside satori */}
         <img
           alt=""
-          height={SHEET_WIDTH}
+          height={ridgeHeight}
           src={ridge}
           style={{ position: "absolute", left: 0, bottom: 0 }}
           width={SHEET_WIDTH}
@@ -444,15 +421,18 @@ export const renderCardTexture = async (
   return new ImageResponse(
     <div style={{ width: "100%", height: "100%", display: "flex" }}>
       {/* Front: the left half of the atlas. */}
-      {face(ridgeFront, [
+      {face(ridgeFront, RIDGE_HEIGHT_FRONT, [
         <div
           key="number"
           style={{
             display: "flex",
-            width: CONTENT_WIDTH,
+            // Flush with the photo window's right edge, not the sheet's
+            // margin. Measured on the design: its number ends within six
+            // pixels of the window's rule, which is close enough that
+            // the two are meant to line up.
+            width: PORTRAIT_WIDTH,
             justifyContent: "flex-end",
             fontSize: 26,
-            letterSpacing: 3,
           }}
         >
           {`#${credential.number}`}
@@ -483,11 +463,32 @@ export const renderCardTexture = async (
             width: CONTENT_WIDTH,
           }}
         >
+          {/*
+            Sized from the design by cap height, not by eye: its name
+            stands 52px against a window 495 wide, and Notch's capitals
+            are 0.74 of the em, so 71. The tracking the condensed face
+            needed to fill the measure is gone — a grotesque at this size
+            already fills it.
+
+            The width is what lets a long name wrap instead of running
+            off the card. Yoga defaults `flexShrink` to 0, so without a
+            measure of its own this line grows past the sheet rather than
+            breaking, and the participants whose names do that are the
+            ones least able to shrug it off.
+
+            `justifyContent` and not `textAlign` alone: a div here is a
+            flex container, so the text is a flex item and `textAlign`
+            governs the lines inside it, not the box. With the width set
+            and only `textAlign`, the name rendered hard against the left
+            edge — centred to the eye that wrote it, and measurably not.
+          */}
           <div
             style={{
-              fontSize: 70,
-              lineHeight: 1,
-              letterSpacing: 2,
+              width: CONTENT_WIDTH,
+              justifyContent: "center",
+              fontSize: 71,
+              fontWeight: 700,
+              lineHeight: 1.05,
               textAlign: "center",
               textTransform: "uppercase",
             }}
@@ -496,9 +497,9 @@ export const renderCardTexture = async (
           </div>
           <div
             style={{
-              marginTop: 12,
-              fontSize: 28,
-              letterSpacing: 5,
+              marginTop: 18,
+              fontSize: 27,
+              fontWeight: 700,
               textAlign: "center",
               textTransform: "uppercase",
             }}
@@ -531,19 +532,28 @@ export const renderCardTexture = async (
         ),
       ])}
 
-      {/* Back: the right half. Not a second copy of the front — the ridge
-          is the subject here, with the event's name laid up its edge the
-          way it runs on a real badge. */}
+      {/*
+        Back: the right half.
+
+        The wordmark runs across it, not up its edge. An earlier version
+        rotated the whole lockup ninety degrees, which is a thing real
+        badges do and is not what this design does — and rotating it
+        took the sponsor marks with it, stacking three wordmarks down
+        the card where the design sets them in a row.
+
+        No date either. The front carries the event; repeating "17-18
+        OCT 2026" on the back is the kind of filler that arrives when a
+        face looks empty.
+      */}
       {face(
         ridgeBack,
+        RIDGE_HEIGHT_BACK,
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            // Against the right edge, the way the name runs up a real badge
-            // — centred, it reads as a poster rather than as the back of
-            // something.
-            justifyContent: "flex-end",
+            justifyContent: "center",
             width: CONTENT_WIDTH,
             height: SHEET_HEIGHT - 82,
           }}
@@ -551,50 +561,62 @@ export const renderCardTexture = async (
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
-              transform: "rotate(90deg)",
+              gap: 16,
             }}
           >
+            {/* biome-ignore lint/performance/noImgElement: next/image cannot run inside satori */}
+            <img
+              alt=""
+              height={Math.round(46 / MOUNTAIN_ASPECT)}
+              src={mountain}
+              width={46}
+            />
             <div
               style={{
                 fontFamily: "Stack Sans Notch",
                 fontWeight: 700,
-                fontSize: 58,
-                letterSpacing: 1,
+                fontSize: 62,
+                letterSpacing: -0.5,
               }}
             >
               HACK THE ANDES
             </div>
-            <div
-              style={{
-                marginTop: 10,
-                color: colors.muted,
-                fontSize: 22,
-                letterSpacing: 6,
-              }}
-            >
-              LIMA · 17–18 OCT 2026
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginTop: 26,
-              }}
-            >
-              {sponsors.map(({ sponsor, width, height, src }) => (
-                // biome-ignore lint/performance/noImgElement: next/image cannot run inside satori
+          </div>
+
+          {/*
+            The marks in a row, divided. Each keeps its own width because
+            one is a stacked lockup and the others are wordmarks four
+            times as wide as they are tall.
+          */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginTop: 26,
+            }}
+          >
+            {sponsors.map(({ sponsor, width, height, src }, index) => (
+              <div
+                key={sponsor}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginLeft: index === 0 ? 0 : 20,
+                  paddingLeft: index === 0 ? 0 : 20,
+                  borderLeft: index === 0 ? "none" : `1px solid ${WINDOW_EDGE}`,
+                }}
+              >
+                {/* biome-ignore lint/performance/noImgElement: next/image cannot run inside satori */}
                 <img
                   alt=""
                   height={height}
-                  key={sponsor}
                   src={src}
-                  style={{ marginLeft: 18, opacity: 0.72 }}
+                  style={{ opacity: 0.86 }}
                   width={width}
                 />
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>,
       )}
@@ -602,26 +624,7 @@ export const renderCardTexture = async (
     {
       width: FACE_WIDTH * 2,
       height: FACE_HEIGHT,
-      fonts: [
-        {
-          name: "Barlow Condensed",
-          data: brandFont,
-          style: "normal",
-          weight: 600,
-        },
-        {
-          name: "Stack Sans Notch",
-          data: notchMedium,
-          style: "normal",
-          weight: 500,
-        },
-        {
-          name: "Stack Sans Notch",
-          data: notchBold,
-          style: "normal",
-          weight: 700,
-        },
-      ],
+      fonts: notchFonts,
     },
   );
 };

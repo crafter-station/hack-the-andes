@@ -34,12 +34,27 @@ export const lumaFromRgba = (
 /**
  * How hard the contrast is pushed once the range is stretched.
  *
- * A stretch alone is not enough: a face lit from one side still spends
- * most of its pixels in the middle third, and ten ramp levels across that
- * third is four usable levels. 1.65 opens the shadows and the highlights
- * without flattening the cheek into the background.
+ * A stretch alone is not enough *for the ASCII ramp*: a face lit from one
+ * side still spends most of its pixels in the middle third, and ten ramp
+ * levels across that third is four usable levels. 1.65 opens the shadows
+ * and the highlights without flattening the cheek into the background.
+ *
+ * The push is quantisation's cure, not the picture's, which is why it is
+ * a default rather than a constant of the module. A halftone dot's radius
+ * is continuous — it has no ten levels to fight — and pushing it as well
+ * cost the portrait its whole middle: the face arrived as one blown
+ * highlight on black, with no eyes in it.
  */
-const CONTRAST = 1.65;
+const ASCII_CONTRAST = 1.65;
+
+/**
+ * What a halftone passes instead: the stretch alone, and no push.
+ *
+ * Named rather than written as a bare 1 at each call site, because the
+ * two screens have to agree — the card and the emailed badge are the
+ * same face, and a participant who sees both notices when one is hotter.
+ */
+export const HALFTONE_CONTRAST = 1;
 
 /** Below this there is no range to stretch, only rounding error. */
 const MIN_SPAN = 0.0001;
@@ -53,7 +68,10 @@ const MIN_SPAN = 0.0001;
  * divide by zero, and the clamp matters because the contrast push
  * overshoots by design while everything downstream assumes 0..1.
  */
-export const normalise = (values: Float32Array): Float32Array => {
+export const normalise = (
+  values: Float32Array,
+  contrast: number = ASCII_CONTRAST,
+): Float32Array => {
   let lo = Number.POSITIVE_INFINITY;
   let hi = Number.NEGATIVE_INFINITY;
   for (const value of values) {
@@ -74,7 +92,7 @@ export const normalise = (values: Float32Array): Float32Array => {
 
   for (let i = 0; i < values.length; i += 1) {
     const unit = ((values[i] ?? 0) - lo) / span;
-    out[i] = Math.min(1, Math.max(0, (unit - 0.5) * CONTRAST + 0.5));
+    out[i] = Math.min(1, Math.max(0, (unit - 0.5) * contrast + 0.5));
   }
   return out;
 };
