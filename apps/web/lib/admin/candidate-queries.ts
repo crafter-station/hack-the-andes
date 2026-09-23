@@ -73,6 +73,8 @@ export const candidateListOptions = (filters: CandidateFilters) =>
     queryKey: candidateKeys.list(filters),
     queryFn: () => fetchCandidates(filters),
     staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: "always",
   });
 
 export const submitCandidateDecision = async (
