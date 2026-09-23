@@ -1,16 +1,16 @@
 # Repository map
 
 - This is a Bun 1.3.14/Turbo monorepo; keep `bun.lock` as the only lockfile. Root tooling requires Node 24+, although the published CLI supports Node 20+.
-- `apps/web` is the Next.js participant site, admin UI, `/api/v1` API, and Trigger.dev task host. `apps/docs` is a separate Next.js app on port 3001. `apps/cli/src/index.ts` is the published `chofex` executable.
+- `apps/web` is the Next.js participant site, admin UI, `/api/v1` API, and Trigger.dev task host. `apps/cli/src/index.ts` is the published `chofex` executable.
 - `packages/registration-contract` and `packages/challenges-contract` are the shared schemas between the CLI and web API. Change wire formats there rather than duplicating types in an app. `packages/db/src/schema` owns the Drizzle schema; `packages/ui` owns shared UI primitives.
 - Read `CONTEXT.md` before changing participant/application lifecycle semantics. It defines distinctions such as participant vs. application and active vs. historical applications.
-- Before changing either Next.js app, read the relevant installed Next 16 guide under that app's `node_modules/next/dist/docs/`; training-memory APIs may be stale. Also follow the committed `apps/web/AGENTS.md` for web work; `agentRules: false` means Next will not regenerate it.
+- Before changing the Next.js app, read the relevant installed Next 16 guide under `apps/web/node_modules/next/dist/docs/`; training-memory APIs may be stale. Also follow the committed `apps/web/AGENTS.md`; `agentRules: false` means Next will not regenerate it.
 
 # Commands
 
 ```sh
 bun install --frozen-lockfile
-bun dev                                      # Turbo dev; web :3000, docs :3001
+bun dev                                      # Turbo dev; web :3000
 bun run --filter chofex-cli dev -- status    # run the source CLI with arguments
 bun --filter @chofex/web trigger:dev         # Trigger tasks; not started by bun dev
 

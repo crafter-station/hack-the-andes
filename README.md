@@ -154,8 +154,7 @@ bun dev
 ```
 
 Turbo starts the participant site and API at
-[localhost:3000](http://localhost:3000) and the separate docs app at
-[localhost:3001](http://localhost:3001).
+[localhost:3000](http://localhost:3000).
 
 Run the CLI directly from source with arguments after `--`:
 
@@ -210,7 +209,6 @@ For production infrastructure, see [`deploy/README.md`](deploy/README.md).
 | --- | --- |
 | `apps/web` | Next.js participant site, admin UI, API, and Trigger.dev task host |
 | `apps/cli` | Published `chofex` executable built with Effect |
-| `apps/docs` | Separate Next.js documentation app on port 3001 |
 | `packages/registration-contract` | Shared registration schemas and API envelopes |
 | `packages/challenges-contract` | Shared challenge catalog, schemas, and scoring types |
 | `packages/db` | Drizzle schema, migrations, and database clients |
