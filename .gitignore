@@ -41,3 +41,6 @@ yarn-error.log*
 # Claude Code keeps its git worktrees here. They are checkouts of this same
 # repository, so committing them would nest the repo inside itself.
 .claude/worktrees/
+
+# Subagent-driven development scratch (ledger, briefs, review packages)
+.superpowers/

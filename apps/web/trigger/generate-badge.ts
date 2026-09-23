@@ -2,15 +2,16 @@ import { eq } from "@chofex/db/orm";
 import { participantBadges } from "@chofex/db/schema";
 import { db } from "@chofex/db/worker";
 import { task } from "@trigger.dev/sdk";
-import sharp from "sharp";
 
-import { badgeFrameSvg } from "../lib/badges/image";
+import { renderShareBadge } from "../lib/badges/share-image";
 import { downloadImage, uploadPng } from "./badge-assets";
 
 export interface GenerateBadgePayload {
   readonly applicationId: string;
   readonly fullName: string;
-  readonly pixelArtUrl: string;
+  readonly role: string;
+  readonly number: string;
+  readonly portraitUrl: string;
 }
 
 export const generateBadge = task({
@@ -18,15 +19,23 @@ export const generateBadge = task({
   queue: { concurrencyLimit: 5 },
   maxDuration: 300,
   run: async (payload: GenerateBadgePayload) => {
-    const source = await downloadImage(payload.pixelArtUrl);
-    const portrait = await sharp(source)
-      .resize(896, 896, { fit: "cover", position: "attention" })
-      .png()
-      .toBuffer();
-    const badge = await sharp(badgeFrameSvg(payload.fullName))
-      .composite([{ input: portrait, left: 64, top: 64 }])
-      .png()
-      .toBuffer();
+    /*
+      Handed to the renderer as bytes rather than as a URL.
+
+      The portrait was uploaded moments ago by the task before this one,
+      and a renderer that fetched it would be reading a blob store that
+      has not necessarily made it visible yet — a race that fails as a
+      badge with an empty window, which nobody would think to look for.
+    */
+    const source = await downloadImage(payload.portraitUrl);
+    const portrait = `data:image/png;base64,${Buffer.from(source).toString("base64")}`;
+
+    const badge = await renderShareBadge({
+      fullName: payload.fullName,
+      role: payload.role,
+      number: payload.number,
+      portrait,
+    });
     const bytes = new Uint8Array(badge).buffer;
     const blob = await uploadPng(
       `participant-badges/${payload.applicationId}/badge.png`,

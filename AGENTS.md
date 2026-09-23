@@ -33,4 +33,10 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/db bun run build
 
 - Keep CLI JSON mode machine-safe: stdout is exactly one versioned envelope; prompts and diagnostics go to the terminal or stderr, and the welcome screen is omitted.
 - Reserve ternaries for short, obvious two-way value selection that fits on one line. Use named variables, `if`/`else`, or focused helpers for multiline conditions and conditional object or array construction.
+- Route slugs, directories and identifiers are in English and consistent
+  across the app; user-facing copy is in Spanish. The two are separate
+  decisions. A route named in one language with its component in the
+  other means neither search finds the whole feature. When renaming a
+  route, move every reference with it — a QR target or a redirect left
+  behind is a silent 404.
 - Buttons use one line of text. Put subtitles, status, or explanatory context beside the button rather than inside it.

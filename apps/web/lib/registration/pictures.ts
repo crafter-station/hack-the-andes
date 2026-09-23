@@ -1,7 +1,20 @@
 import { HttpError } from "./http";
 
+/**
+ * The size an avatar is fetched at, by what is going to look at it.
+ *
+ * A list of candidates wants a thumbnail. A credential does not: its
+ * photo window is 490px and the emailed badge screens an 800px portrait,
+ * and both were being fed a 112px image — 2.5 KB upscaled four times,
+ * which is why the halftone came out as mush. 460 is what GitHub
+ * actually serves; asking for more returns the same bytes.
+ */
+export const AVATAR_THUMBNAIL = 112;
+export const AVATAR_PORTRAIT = 460;
+
 export const githubAvatarUrl = (
   githubUrl: string | null | undefined,
+  size: number = AVATAR_THUMBNAIL,
 ): string | undefined => {
   if (!githubUrl) return undefined;
   try {
@@ -12,7 +25,7 @@ export const githubAvatarUrl = (
     if (!isGitHub) return undefined;
     const [username] = url.pathname.split("/").filter(Boolean);
     if (!username) return undefined;
-    return `https://github.com/${encodeURIComponent(username)}.png?size=112`;
+    return `https://github.com/${encodeURIComponent(username)}.png?size=${size}`;
   } catch {
     return undefined;
   }
@@ -28,7 +41,9 @@ export const confirmedPictureUrl = (
 ): string => {
   let url: string | undefined;
   if (source === "clerk") url = options.clerkPictureUrl;
-  if (source === "github") url = githubAvatarUrl(options.githubUrl);
+  if (source === "github") {
+    url = githubAvatarUrl(options.githubUrl, AVATAR_PORTRAIT);
+  }
   if (source === "upload") url = options.uploadedPictureUrl ?? undefined;
   if (url) return url;
   throw new HttpError(
