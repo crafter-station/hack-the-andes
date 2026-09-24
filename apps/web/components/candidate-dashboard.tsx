@@ -1,5 +1,6 @@
 "use client";
 
+import { playableChallenges } from "@chofex/challenges-contract";
 import { Badge } from "@chofex/ui/components/badge";
 import {
   BrandCenteredPage,
@@ -89,19 +90,23 @@ import type {
   CandidateFilter,
   CandidateFunnelStatus,
   CandidatePage,
+  CandidateRankingSort,
   CandidateStatus,
 } from "@/lib/admin/types";
 import {
   candidateFunnelStatuses,
   parseCandidateFilter,
+  parseCandidateRankingSort,
   reviewableCandidateStatuses,
 } from "@/lib/admin/types";
 import { whatsappMessage, whatsappUrl } from "@/lib/admin/whatsapp";
+import { formatChallengeScore } from "@/lib/challenges/score";
 
 interface CandidateDashboardProps {
   readonly data: CandidatePage;
   readonly initialQuery: string;
   readonly initialStatus?: CandidateFilter;
+  readonly initialRanking?: CandidateRankingSort;
   readonly initialSelection?: "first" | "last";
 }
 
@@ -374,8 +379,6 @@ const challengeAvailability = (challenge: ChallengeProgress): string => {
   return "Not open yet";
 };
 
-const formatPercent = (value: number): string => `${(value * 100).toFixed(2)}%`;
-
 const completedChallengeSummary = (
   candidate: Candidate,
 ): string | undefined => {
@@ -383,11 +386,11 @@ const completedChallengeSummary = (
   if (!metrics) return undefined;
   const details: Array<string> = [];
   if (metrics.accuracy !== undefined) {
-    details.push(`Score ${formatPercent(metrics.accuracy)}`);
+    details.push(`Puntaje ${formatChallengeScore(metrics.accuracy)}`);
   }
   if (metrics.durationMs !== undefined) {
     details.push(
-      `Time ${formatChallengeCompletionDuration(metrics.durationMs)}`,
+      `Tiempo ${formatChallengeCompletionDuration(metrics.durationMs)}`,
     );
   }
   if (details.length === 0) return undefined;
@@ -945,14 +948,14 @@ const CandidateDrawer = ({
                         {challenge.evaluationsUsed} /{" "}
                         {challenge.evaluationsLimit}
                       </Detail>
-                      <Detail label="Best accuracy">
+                      <Detail label="Puntaje">
                         {challenge.bestAccuracy !== undefined &&
-                          formatPercent(challenge.bestAccuracy)}
+                          formatChallengeScore(challenge.bestAccuracy)}
                       </Detail>
                       <Detail label="Exact matches">
                         {challenge.bestExactCount?.toString()}
                       </Detail>
-                      <Detail label="Public rank">
+                      <Detail label="Posición">
                         {challenge.rank !== undefined && `#${challenge.rank}`}
                       </Detail>
                     </dl>
@@ -1047,15 +1050,14 @@ const CandidateDrawer = ({
 };
 
 const pageHref = (
-  page: number,
-  query: string,
-  status: CandidateFilter | undefined,
+  filters: CandidateFilters,
   selection?: "first" | "last",
 ): string => {
   const parameters = new URLSearchParams();
-  if (page > 1) parameters.set("page", page.toString());
-  if (query) parameters.set("q", query);
-  if (status) parameters.set("status", status);
+  if (filters.page > 1) parameters.set("page", filters.page.toString());
+  if (filters.query) parameters.set("q", filters.query);
+  if (filters.status) parameters.set("status", filters.status);
+  if (filters.ranking) parameters.set("ranking", filters.ranking);
   if (selection) parameters.set("candidate", selection);
   const suffix = parameters.toString();
   if (suffix) return `/admin/participants?${suffix}`;
@@ -1078,13 +1080,17 @@ const filtersFromUrl = (url: string): CandidateFilters => {
   if (Number.isFinite(parsedPage)) page = Math.max(1, parsedPage);
   const query = parameters.get("q")?.trim().slice(0, 200) ?? "";
   const status = parseCandidateFilter(parameters.get("status") ?? undefined);
-  return { page, query, status };
+  const ranking = parseCandidateRankingSort(
+    parameters.get("ranking") ?? undefined,
+  );
+  return { page, query, status, ranking };
 };
 
 export function CandidateDashboard({
   data,
   initialQuery,
   initialStatus,
+  initialRanking,
   initialSelection,
 }: CandidateDashboardProps) {
   const { user } = useUser();
@@ -1095,6 +1101,7 @@ export function CandidateDashboard({
     page: data.page,
     query: initialQuery,
     status: initialStatus,
+    ranking: initialRanking,
   });
   let initiallySelectedId: string | undefined;
   if (initialSelection === "first") {
@@ -1113,9 +1120,10 @@ export function CandidateDashboard({
     filters.page === data.page &&
     filters.query === initialQuery &&
     filters.status === initialStatus;
+  const initialRankingMatches = filters.ranking === initialRanking;
   const candidateQuery = useQuery({
     ...candidateListOptions(filters),
-    initialData: isInitialList ? data : undefined,
+    initialData: isInitialList && initialRankingMatches ? data : undefined,
     placeholderData: keepPreviousData,
   });
   const currentData = candidateQuery.data ?? data;
@@ -1150,11 +1158,7 @@ export function CandidateDashboard({
     nextFilters: CandidateFilters,
     selection?: "first" | "last",
   ) => {
-    window.history.pushState(
-      null,
-      "",
-      pageHref(nextFilters.page, nextFilters.query, nextFilters.status),
-    );
+    window.history.pushState(null, "", pageHref(nextFilters));
     setFilters(nextFilters);
     setPendingPageSelection(selection);
     if (!selection) setSelectedId(undefined);
@@ -1204,7 +1208,12 @@ export function CandidateDashboard({
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigateTo({ page: 1, query: query.trim(), status: filters.status });
+    navigateTo({
+      page: 1,
+      query: query.trim(),
+      status: filters.status,
+      ranking: filters.ranking,
+    });
   };
 
   const handleCandidateUpdated = (
@@ -1312,6 +1321,28 @@ export function CandidateDashboard({
                   />
                 </InputGroup>
               </form>
+              <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+                Ordenar por
+                <select
+                  className="h-9 border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                  value={filters.ranking ?? ""}
+                  onChange={(event) => {
+                    const ranking = parseCandidateRankingSort(
+                      event.target.value || undefined,
+                    );
+                    navigateTo({ ...filters, page: 1, ranking });
+                  }}
+                >
+                  <option value="">Más recientes</option>
+                  {playableChallenges.map((challenge) => (
+                    <option key={challenge.slug} value={challenge.slug}>
+                      Reto {challenge.code}: {challenge.theme}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-3 flex justify-end">
               <div className="flex gap-1 overflow-x-auto border bg-background p-1">
                 {filterStatuses.map((filter) => {
                   const active = filter.value === filters.status;
@@ -1322,12 +1353,18 @@ export function CandidateDashboard({
                       variant={variant}
                       size="sm"
                       className="shrink-0"
-                      href={pageHref(1, filters.query, filter.value)}
+                      href={pageHref({
+                        page: 1,
+                        query: filters.query,
+                        status: filter.value,
+                        ranking: filters.ranking,
+                      })}
                       onClick={(event) =>
                         navigateFromClick(event, {
                           page: 1,
                           query: filters.query,
                           status: filter.value,
+                          ranking: filters.ranking,
                         })
                       }
                     >
@@ -1353,9 +1390,10 @@ export function CandidateDashboard({
               className="mt-4 overflow-hidden border bg-card"
               aria-busy={candidateQuery.isFetching}
             >
-              <div className="hidden grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
+              <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(8rem,.8fr)_minmax(9rem,1fr)_11rem_9rem] gap-4 border-b bg-muted/35 px-5 py-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase sm:grid">
                 <span>Candidate</span>
                 <span>Background</span>
+                <span>Ranking de retos</span>
                 <span>Status</span>
                 <span className="text-right">Last updated at</span>
               </div>
@@ -1364,6 +1402,7 @@ export function CandidateDashboard({
                 <CandidateRows
                   candidates={currentData.candidates}
                   adminFirstName={adminFirstName}
+                  ranking={filters.ranking}
                   onSelect={setSelectedId}
                 />
               )}
@@ -1378,11 +1417,10 @@ export function CandidateDashboard({
                 className="flex items-center gap-1"
               >
                 <PaginationArrow
-                  href={pageHref(
-                    Math.max(1, currentData.page - 1),
-                    filters.query,
-                    filters.status,
-                  )}
+                  href={pageHref({
+                    ...filters,
+                    page: Math.max(1, currentData.page - 1),
+                  })}
                   onClick={(event) =>
                     navigateFromClick(event, {
                       ...filters,
@@ -1402,7 +1440,7 @@ export function CandidateDashboard({
                       key={page}
                       variant={variant}
                       size="icon"
-                      href={pageHref(page, filters.query, filters.status)}
+                      href={pageHref({ ...filters, page })}
                       onClick={(event) =>
                         navigateFromClick(event, { ...filters, page })
                       }
@@ -1413,11 +1451,13 @@ export function CandidateDashboard({
                   );
                 })}
                 <PaginationArrow
-                  href={pageHref(
-                    Math.min(currentData.totalPages, currentData.page + 1),
-                    filters.query,
-                    filters.status,
-                  )}
+                  href={pageHref({
+                    ...filters,
+                    page: Math.min(
+                      currentData.totalPages,
+                      currentData.page + 1,
+                    ),
+                  })}
                   onClick={(event) =>
                     navigateFromClick(event, {
                       ...filters,
@@ -1446,11 +1486,7 @@ export function CandidateDashboard({
           if (isOpen) return;
           setSelectedId(undefined);
           if (initialSelection) {
-            window.history.replaceState(
-              null,
-              "",
-              pageHref(filters.page, filters.query, filters.status),
-            );
+            window.history.replaceState(null, "", pageHref(filters));
           }
           if (
             selectedCandidate &&
@@ -1679,18 +1715,64 @@ const EmptyCandidates = () => (
   </div>
 );
 
+const CandidateChallengeRanking = ({
+  candidate,
+  ranking,
+  className,
+}: {
+  readonly candidate: Candidate;
+  readonly ranking?: CandidateRankingSort;
+  readonly className?: string;
+}) => {
+  let challenges = candidate.challenges.filter(
+    (challenge) => challenge.playable && challenge.status === "evaluated",
+  );
+  if (ranking) {
+    challenges = candidate.challenges.filter(
+      (challenge) => challenge.slug === ranking,
+    );
+  }
+
+  if (challenges.length === 0) {
+    return (
+      <span className={`text-xs text-muted-foreground ${className ?? ""}`}>
+        Sin puntaje
+      </span>
+    );
+  }
+
+  return (
+    <span className={`space-y-1 ${className ?? ""}`}>
+      {challenges.map((challenge) => (
+        <span className="block" key={challenge.slug}>
+          <span className="block truncate text-xs font-medium">
+            {challenge.theme}
+            {challenge.rank !== undefined && ` · #${challenge.rank}`}
+          </span>
+          <span className="block text-[11px] text-muted-foreground tabular-nums">
+            {challenge.bestAccuracy === undefined
+              ? "Sin posición"
+              : `Puntaje ${formatChallengeScore(challenge.bestAccuracy)}`}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+};
+
 const CandidateRows = ({
   candidates,
   adminFirstName,
+  ranking,
   onSelect,
 }: {
   readonly candidates: ReadonlyArray<Candidate>;
   readonly adminFirstName?: string;
+  readonly ranking?: CandidateRankingSort;
   readonly onSelect: (candidateId: string) => void;
 }) => (
   <div className="divide-y">
     {candidates.map((candidate) => {
-      const challengeSummary = completedChallengeSummary(candidate);
       const lastTimelineAt = candidateLastUpdatedAt(candidate);
       let lastUpdatedAt = "—";
       if (lastTimelineAt) {
@@ -1701,7 +1783,7 @@ const CandidateRows = ({
           label={`Review ${displayName(candidate)}`}
           key={candidate.id}
           onClick={() => onSelect(candidate.id)}
-          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.7fr)_minmax(9rem,1fr)_12rem_10rem] sm:items-center sm:gap-4 sm:px-5"
+          contentClassName="grid w-full grid-cols-1 justify-start gap-3 px-4 py-4 text-left sm:grid-cols-[minmax(0,1.5fr)_minmax(8rem,.8fr)_minmax(9rem,1fr)_11rem_9rem] sm:items-center sm:gap-4 sm:px-5"
         >
           <span className="flex min-w-0 items-center gap-3">
             <CandidateAvatar
@@ -1719,12 +1801,16 @@ const CandidateRows = ({
                 />
                 <span className="truncate text-[11px] font-normal text-muted-foreground">
                   Attempt {candidate.attemptNumber}
-                  {challengeSummary && ` · ${challengeSummary}`}
                 </span>
               </span>
               <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                 {candidate.email || "No email provided"}
               </span>
+              <CandidateChallengeRanking
+                candidate={candidate}
+                ranking={ranking}
+                className="mt-2 sm:hidden"
+              />
             </span>
           </span>
           <span className="hidden min-w-0 sm:block">
@@ -1735,6 +1821,11 @@ const CandidateRows = ({
               {candidate.organization || candidate.city || "No organization"}
             </span>
           </span>
+          <CandidateChallengeRanking
+            candidate={candidate}
+            ranking={ranking}
+            className="hidden sm:block"
+          />
           <span className="ml-12 sm:ml-0">
             <FunnelStatusBadge status={candidate.funnelStatus} />
           </span>

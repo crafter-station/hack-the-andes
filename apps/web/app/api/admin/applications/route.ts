@@ -1,6 +1,9 @@
 import { requireAdminIdentity } from "@/lib/admin/auth";
 import { listCandidates } from "@/lib/admin/candidates";
-import { parseCandidateFilter } from "@/lib/admin/types";
+import {
+  parseCandidateFilter,
+  parseCandidateRankingSort,
+} from "@/lib/admin/types";
 import { jsonSuccess, withApiHandler } from "@/lib/registration/http";
 
 export const runtime = "nodejs";
@@ -14,7 +17,10 @@ export const GET = async (request: Request): Promise<Response> =>
     const page = Number.isFinite(parsedPage) ? parsedPage : 1;
     const query = parameters.get("q")?.trim().slice(0, 200) ?? "";
     const status = parseCandidateFilter(parameters.get("status") ?? undefined);
-    const candidates = await listCandidates({ page, query, status });
+    const ranking = parseCandidateRankingSort(
+      parameters.get("ranking") ?? undefined,
+    );
+    const candidates = await listCandidates({ page, query, status, ranking });
 
     return jsonSuccess(requestId, candidates);
   });

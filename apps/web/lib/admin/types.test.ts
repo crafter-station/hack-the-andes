@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
 
 import { candidateFunnelStatusFor } from "./funnel-status";
-import { candidateFunnelStatuses, parseCandidateFilter } from "./types";
+import {
+  candidateFunnelStatuses,
+  parseCandidateFilter,
+  parseCandidateRankingSort,
+} from "./types";
 
 test("publishes the candidate funnel in operating order", () => {
   expect(candidateFunnelStatuses).toEqual([
@@ -20,6 +24,14 @@ test("publishes the candidate funnel in operating order", () => {
 test("rejects an unknown participant filter", () => {
   expect(parseCandidateFilter("completed")).toBeUndefined();
   expect(parseCandidateFilter("submitted")).toBeUndefined();
+});
+
+test("accepts only playable challenges as ranking sorts", () => {
+  expect(parseCandidateRankingSort("black-box")).toBe("black-box");
+  expect(parseCandidateRankingSort("broken-agent")).toBe("broken-agent");
+  expect(parseCandidateRankingSort("make-it-fast")).toBeUndefined();
+  expect(parseCandidateRankingSort("unknown")).toBeUndefined();
+  expect(parseCandidateRankingSort(undefined)).toBeUndefined();
 });
 
 const challenge = (

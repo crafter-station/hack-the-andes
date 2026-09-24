@@ -4,12 +4,14 @@ import type {
   Candidate,
   CandidateFilter,
   CandidatePage,
+  CandidateRankingSort,
 } from "@/lib/admin/types";
 
 export interface CandidateFilters {
   readonly page: number;
   readonly query: string;
   readonly status?: CandidateFilter;
+  readonly ranking?: CandidateRankingSort;
 }
 
 interface ApiResponse<A> {
@@ -40,6 +42,7 @@ export const candidateKeys = {
       filters.page,
       filters.query,
       filters.status ?? "all",
+      filters.ranking ?? "newest",
     ] as const,
 };
 
@@ -61,6 +64,7 @@ const fetchCandidates = async (
   const parameters = new URLSearchParams({ page: filters.page.toString() });
   if (filters.query) parameters.set("q", filters.query);
   if (filters.status) parameters.set("status", filters.status);
+  if (filters.ranking) parameters.set("ranking", filters.ranking);
 
   const response = await fetch(`/api/admin/applications?${parameters}`, {
     headers: { accept: "application/json" },

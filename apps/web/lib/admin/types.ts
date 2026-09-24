@@ -2,6 +2,7 @@ import type {
   ParticipantChallengeMilestone,
   ParticipantChallengeProgress,
 } from "@chofex/challenges-contract";
+import { playableChallenges } from "@chofex/challenges-contract";
 
 export const candidateStatuses = [
   "draft",
@@ -34,6 +35,17 @@ export const parseCandidateFilter = (
   value: string | undefined,
 ): CandidateFilter | undefined =>
   candidateFilters.find((candidate) => candidate === value);
+
+export const candidateRankingSorts = playableChallenges.map(
+  (challenge) => challenge.slug,
+);
+
+export type CandidateRankingSort = (typeof candidateRankingSorts)[number];
+
+export const parseCandidateRankingSort = (
+  value: string | undefined,
+): CandidateRankingSort | undefined =>
+  candidateRankingSorts.find((challenge) => challenge === value);
 
 export const reviewableCandidateStatuses: ReadonlyArray<CandidateStatus> = [
   "submitted",

@@ -12,11 +12,10 @@ import {
   brandSectionClassName,
 } from "@chofex/ui/components/brand";
 import Link from "next/link";
+import { formatChallengeScore } from "@/lib/challenges/score";
 import { BrokenAgentChallengeGuide } from "./broken-agent-guide";
 import { BlackBoxChallengeGuide } from "./challenge-guide";
 import { RankingCountdown } from "./ranking-countdown-view";
-
-const percent = (value: number): string => `${(value * 100).toFixed(2)}%`;
 
 const RankingResults = ({
   brokenAgent,
@@ -64,7 +63,9 @@ const RankingResults = ({
                   #{entry.shareCode}
                 </div>
               </td>
-              <td className="px-4 py-3 font-mono">{percent(entry.accuracy)}</td>
+              <td className="px-4 py-3 font-mono">
+                {formatChallengeScore(entry.accuracy)}
+              </td>
               <td className="px-4 py-3 font-mono">
                 {entry.exactCount}/{entry.sampleSize}
               </td>

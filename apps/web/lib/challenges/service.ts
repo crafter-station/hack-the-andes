@@ -256,26 +256,30 @@ const progressFrom = (
   item: ChallengeCatalogItem,
   attempt: AttemptRecord | undefined,
   evaluation: EvaluationRecord | undefined,
+  rankedScore: ChallengeScore | undefined,
   rank?: number,
   completedAt?: Date,
-): ParticipantChallengeProgress => ({
-  slug: challenge.slug,
-  title: challenge.title,
-  theme: challenge.theme,
-  status: progressStatus(attempt, evaluation),
-  open: item.open,
-  closed: item.closed,
-  playable: challenge.playable,
-  queriesUsed: attempt?.queriesUsed ?? 0,
-  queriesLimit: attempt?.queriesLimit ?? challenge.queryLimit,
-  evaluationsUsed: attempt?.evaluationsUsed ?? 0,
-  evaluationsLimit: attempt?.evaluationsLimit ?? challenge.evaluationLimit,
-  bestAccuracy: evaluation?.accuracy,
-  bestExactCount: evaluation?.exactCount,
-  completionDurationMs: completionDurationFor(attempt, completedAt),
-  shareCode: attempt?.shareCode,
-  rank,
-});
+): ParticipantChallengeProgress => {
+  const bestScore = rankedScore ?? (evaluation && scoreFromStored(evaluation));
+  return {
+    slug: challenge.slug,
+    title: challenge.title,
+    theme: challenge.theme,
+    status: progressStatus(attempt, evaluation),
+    open: item.open,
+    closed: item.closed,
+    playable: challenge.playable,
+    queriesUsed: attempt?.queriesUsed ?? 0,
+    queriesLimit: attempt?.queriesLimit ?? challenge.queryLimit,
+    evaluationsUsed: attempt?.evaluationsUsed ?? 0,
+    evaluationsLimit: attempt?.evaluationsLimit ?? challenge.evaluationLimit,
+    bestAccuracy: bestScore?.accuracy,
+    bestExactCount: bestScore?.exactCount,
+    completionDurationMs: completionDurationFor(attempt, completedAt),
+    shareCode: attempt?.shareCode,
+    rank,
+  };
+};
 
 const observationView = (row: {
   sequence: number;
@@ -455,10 +459,12 @@ const loadChallengeActivityForParticipants = async (
     ),
   );
   const rankByAttemptId = new Map<string, number>();
+  const rankedScoreByAttemptId = new Map<string, ChallengeScore>();
   for (const [, ranked] of rankings) {
     const ranks = competitionRanksForEvaluations(ranked);
     for (const [index, entry] of ranked.entries()) {
       rankByAttemptId.set(entry.attemptId, ranks[index] ?? 1);
+      rankedScoreByAttemptId.set(entry.attemptId, entry.score);
     }
   }
 
@@ -478,6 +484,9 @@ const loadChallengeActivityForParticipants = async (
       let evaluation: EvaluationRecord | undefined;
       if (attempt) evaluation = evaluationByAttemptId.get(attempt.id);
       const rank = attempt ? rankByAttemptId.get(attempt.id) : undefined;
+      const rankedScore = attempt
+        ? rankedScoreByAttemptId.get(attempt.id)
+        : undefined;
       let completedAt: Date | undefined;
       if (attempt) completedAt = completedAtByAttemptId.get(attempt.id);
       return progressFrom(
@@ -485,6 +494,7 @@ const loadChallengeActivityForParticipants = async (
         item,
         attempt,
         evaluation,
+        rankedScore,
         rank,
         completedAt,
       );
@@ -587,6 +597,7 @@ export const getChallengeAttempt = async (
     item,
     existing,
     evaluation,
+    evaluation && scoreFromStored(evaluation),
     rank,
     firstEvaluation?.createdAt,
   );

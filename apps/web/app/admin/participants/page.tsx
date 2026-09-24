@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { CandidateDashboard } from "@/components/candidate-dashboard";
 import { getAdminIdentity } from "@/lib/admin/auth";
 import { listCandidates } from "@/lib/admin/candidates";
-import { parseCandidateFilter } from "@/lib/admin/types";
+import {
+  parseCandidateFilter,
+  parseCandidateRankingSort,
+} from "@/lib/admin/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +16,7 @@ interface HomeProps {
     readonly page?: string;
     readonly q?: string;
     readonly status?: string;
+    readonly ranking?: string;
     readonly candidate?: string;
   }>;
 }
@@ -33,7 +37,8 @@ export default async function ParticipantsAdminPage({
   const page = Number.isFinite(parsedPage) ? parsedPage : 1;
   const query = parameters.q?.trim().slice(0, 200) ?? "";
   const status = parseCandidateFilter(parameters.status);
-  const data = await listCandidates({ page, query, status });
+  const ranking = parseCandidateRankingSort(parameters.ranking);
+  const data = await listCandidates({ page, query, status, ranking });
   let selection: "first" | "last" | undefined;
   if (parameters.candidate === "first" || parameters.candidate === "last") {
     selection = parameters.candidate;
@@ -41,10 +46,11 @@ export default async function ParticipantsAdminPage({
 
   return (
     <CandidateDashboard
-      key={`${data.page}:${selection ?? "none"}`}
+      key={`${data.page}:${ranking ?? "newest"}:${selection ?? "none"}`}
       data={data}
       initialQuery={query}
       initialStatus={status}
+      initialRanking={ranking}
       initialSelection={selection}
     />
   );

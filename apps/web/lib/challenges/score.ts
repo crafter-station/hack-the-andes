@@ -41,3 +41,6 @@ export const scoreFromStored = (
   if (breakdown) return { ...stored, breakdown };
   return stored;
 };
+
+export const formatChallengeScore = (accuracy: number): string =>
+  `${(accuracy * 100).toFixed(2)}%`;

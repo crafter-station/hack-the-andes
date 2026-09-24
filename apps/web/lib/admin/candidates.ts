@@ -19,8 +19,10 @@ import {
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { HttpError } from "@/lib/registration/http";
+import { rankedEvaluationsFor } from "../challenges/ranking";
 import { challengeActivityForParticipants } from "../challenges/service";
 import { candidateAvatarUrl } from "./avatars";
+import { sortCandidatesByChallengeRanking } from "./candidate-ranking";
 import { type ApplicationDecision, buildDecisionEmail } from "./decision-email";
 import {
   candidateFunnelApplicationCondition,
@@ -32,6 +34,7 @@ import {
   type CandidateCounts,
   type CandidateFilter,
   type CandidatePage,
+  type CandidateRankingSort,
   candidateFunnelStatuses,
   reviewableCandidateStatuses,
 } from "./types";
@@ -348,6 +351,7 @@ export interface CandidateListInput {
   readonly page?: number;
   readonly query?: string;
   readonly status?: CandidateFilter;
+  readonly ranking?: CandidateRankingSort;
 }
 
 export const listCandidates = async (
@@ -405,29 +409,71 @@ export const listCandidates = async (
   const total = totalResult[0]?.value ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(requestedPage, totalPages);
-  const records = await db
-    .select({
-      application: applications,
-      details: acceptanceDetails,
-      badge: participantBadges,
-      clerkUserId: participants.clerkUserId,
-      participantCreatedAt: participants.createdAt,
-    })
-    .from(applications)
-    .innerJoin(latestApplications, eq(latestApplications.id, applications.id))
-    .innerJoin(participants, eq(participants.id, applications.participantId))
-    .leftJoin(
-      acceptanceDetails,
-      eq(acceptanceDetails.applicationId, applications.id),
-    )
-    .leftJoin(
-      participantBadges,
-      eq(participantBadges.applicationId, applications.id),
-    )
-    .where(whereCondition)
-    .orderBy(desc(applications.createdAt))
-    .limit(pageSize)
-    .offset((currentPage - 1) * pageSize);
+  const candidateRecordsQuery = (condition: SQL | undefined) =>
+    db
+      .select({
+        application: applications,
+        details: acceptanceDetails,
+        badge: participantBadges,
+        clerkUserId: participants.clerkUserId,
+        participantCreatedAt: participants.createdAt,
+      })
+      .from(applications)
+      .innerJoin(latestApplications, eq(latestApplications.id, applications.id))
+      .innerJoin(participants, eq(participants.id, applications.participantId))
+      .leftJoin(
+        acceptanceDetails,
+        eq(acceptanceDetails.applicationId, applications.id),
+      )
+      .leftJoin(
+        participantBadges,
+        eq(participantBadges.applicationId, applications.id),
+      )
+      .where(condition);
+
+  const offset = (currentPage - 1) * pageSize;
+  let records: ReadonlyArray<
+    Awaited<ReturnType<typeof candidateRecordsQuery>>[number]
+  >;
+  if (input.ranking) {
+    const [candidateReferences, ranked] = await Promise.all([
+      db
+        .select({
+          id: applications.id,
+          participantId: applications.participantId,
+          createdAt: applications.createdAt,
+        })
+        .from(applications)
+        .innerJoin(
+          latestApplications,
+          eq(latestApplications.id, applications.id),
+        )
+        .where(whereCondition)
+        .orderBy(desc(applications.createdAt)),
+      rankedEvaluationsFor(input.ranking),
+    ]);
+    const pageReferences = sortCandidatesByChallengeRanking(
+      candidateReferences,
+      ranked.map((entry) => entry.participantId),
+    ).slice(offset, offset + pageSize);
+    const pageApplicationIds = pageReferences.map((record) => record.id);
+    const pageRecords = await candidateRecordsQuery(
+      and(whereCondition, inArray(applications.id, pageApplicationIds)),
+    );
+    const recordByApplicationId = new Map(
+      pageRecords.map((record) => [record.application.id, record]),
+    );
+    records = pageApplicationIds.flatMap((applicationId) => {
+      const record = recordByApplicationId.get(applicationId);
+      if (record) return [record];
+      return [];
+    });
+  } else {
+    records = await candidateRecordsQuery(whereCondition)
+      .orderBy(desc(applications.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+  }
 
   const counts = emptyCounts();
   for (const result of statusResults) {
