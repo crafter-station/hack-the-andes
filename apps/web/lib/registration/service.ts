@@ -4,6 +4,7 @@ import { and, desc, eq, sql } from "@chofex/db/orm";
 import {
   acceptanceDetails,
   applications,
+  participantBadges,
   participants,
 } from "@chofex/db/schema";
 import {
@@ -531,13 +532,12 @@ export const submitAcceptedDetails = async (
  * Narrow on purpose. Confirming attendance is a one-time submission of
  * private details — a date of birth, a national id, an emergency contact
  * — and re-sending all of it to swap a photograph would re-validate and
- * rewrite data the change does not touch. This moves the two columns the
- * badge reads and nothing else.
+ * rewrite data the change does not touch. The selection is therefore
+ * stored on the badge profile rather than on the historical application.
  *
  * It is the step the web picker was missing: uploading a picture writes
- * `customPictureUrl`, and only a confirmation turns that into the
- * `pictureUrl` the card draws. Without this the picker stored a
- * cut-out, reported success and changed nothing on the badge.
+ * `customPictureUrl` on the badge profile, and only a selection turns
+ * that into the `pictureUrl` the card draws.
  *
  * Refuses anybody who has not confirmed attendance yet, because for them
  * `chofex confirm` is the flow and it sets this as part of a larger
@@ -559,7 +559,7 @@ export const changePictureSource = async (
       "Only an accepted participant can change their badge picture",
     );
   }
-  if (!current.application.pictureSource) {
+  if (!current.details?.completedAt) {
     throw new HttpError(
       409,
       "ATTENDANCE_NOT_CONFIRMED",
@@ -567,16 +567,34 @@ export const changePictureSource = async (
     );
   }
 
+  const [badge] = await db
+    .select({ customPictureUrl: participantBadges.customPictureUrl })
+    .from(participantBadges)
+    .where(eq(participantBadges.applicationId, current.application.id))
+    .limit(1);
   const pictureUrl = confirmedPictureUrl(pictureSource, {
     clerkPictureUrl: identity.clerkPictureUrl,
     githubUrl: current.application.githubUrl,
-    uploadedPictureUrl: current.application.customPictureUrl,
+    uploadedPictureUrl: badge?.customPictureUrl,
   });
 
   await db
-    .update(applications)
-    .set({ pictureSource, pictureUrl, updatedAt: new Date() })
-    .where(eq(applications.id, current.application.id));
+    .insert(participantBadges)
+    .values({
+      applicationId: current.application.id,
+      status: "pending",
+      pictureSource,
+      pictureUrl,
+    })
+    .onConflictDoUpdate({
+      target: participantBadges.applicationId,
+      set: {
+        pictureSource,
+        pictureUrl,
+        status: "pending",
+        updatedAt: new Date(),
+      },
+    });
 
   return await getRegistration(identity.clerkUserId);
 };

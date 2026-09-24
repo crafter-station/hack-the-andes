@@ -201,7 +201,7 @@ const badgeRegenerateCommand = Command.make(
     input: inputFlag,
     picture: Flag.string("picture").pipe(
       Flag.optional,
-      Flag.withDescription("Path to a JPEG, PNG, or WebP picture (5 MB max)"),
+      Flag.withDescription("Ruta a una foto JPEG, PNG o WebP (máximo 5 MB)"),
     ),
   },
   Effect.fn("badgeRegenerateCommand")(function* ({ input, picture }) {
@@ -214,7 +214,7 @@ const badgeRegenerateCommand = Command.make(
         return yield* Effect.fail(
           cliError(
             "INVALID_APPLICATION_STATE",
-            "Confirm attendance before regenerating your badge",
+            "Confirma tu asistencia antes de regenerar tu carnet",
           ),
         );
       }
@@ -238,7 +238,7 @@ const badgeRegenerateCommand = Command.make(
         return yield* Effect.fail(
           cliError(
             "UNEXPECTED_PICTURE_PATH",
-            "--picture can only be used when pictureSource is upload",
+            "--picture solo se puede usar cuando pictureSource es upload",
           ),
         );
       }
@@ -248,7 +248,7 @@ const badgeRegenerateCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Update the photo, name, one-liner and QR link, then regenerate the badge",
+    "Actualiza la foto, el nombre, la presentación y el enlace QR del carnet",
   ),
 );
 
@@ -262,7 +262,7 @@ const badgeCommand = Command.make(
     yield* execute(options.output, operation, badgeText);
   }),
 ).pipe(
-  Command.withDescription("Show or regenerate your participant badge"),
+  Command.withDescription("Muestra o regenera tu carnet de participante"),
   Command.withSubcommands([badgeRegenerateCommand]),
 );
 

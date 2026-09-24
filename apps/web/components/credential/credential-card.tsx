@@ -13,6 +13,11 @@
  * accepted.
  */
 
+import { brandColors } from "@chofex/ui/lib/brand-theme";
+import QRCode from "qrcode";
+
+import { SHEET } from "@/lib/credential/tones";
+
 import type { Credential } from "./credential-model";
 import { CredentialPortrait } from "./credential-portrait";
 
@@ -20,7 +25,13 @@ interface CredentialCardProps {
   readonly credential: Credential;
 }
 
-export function CredentialCard({ credential }: CredentialCardProps) {
+export async function CredentialCard({ credential }: CredentialCardProps) {
+  const qr = await QRCode.toDataURL(credential.linkUrl, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 160,
+    color: { dark: brandColors.dark.ink, light: SHEET },
+  });
   let role = null;
   if (credential.role) {
     role = <p className="credential-card-role">{credential.role}</p>;
@@ -46,6 +57,15 @@ export function CredentialCard({ credential }: CredentialCardProps) {
         <h2 className="credential-card-name">{credential.name}</h2>
         {role}
       </div>
+
+      {/* biome-ignore lint/performance/noImgElement: generated data URI */}
+      <img
+        alt="Enlace QR del participante"
+        className="credential-card-qr"
+        height={80}
+        src={qr}
+        width={80}
+      />
 
       <footer className="credential-card-foot">
         <span className="credential-card-date">17–18 OCT 2026 · LIMA</span>

@@ -6,7 +6,6 @@ import {
 } from "@/lib/badges/profile";
 import { getParticipantBadge } from "@/lib/badges/service";
 import { jsonSuccess, readJson, withApiHandler } from "@/lib/registration/http";
-import { changePictureSource } from "@/lib/registration/service";
 
 export const runtime = "nodejs";
 
@@ -21,20 +20,7 @@ export const PATCH = (request: Request): Promise<Response> =>
   withApiHandler(request, async (requestId) => {
     const participant = await requireAuthenticatedParticipantProfile(request);
     const input = badgeRegenerationInput(await readJson(request));
-    if (input.pictureSource) {
-      await changePictureSource(
-        {
-          clerkUserId: participant.clerkUserId,
-          email: participant.email,
-          clerkPictureUrl: participant.clerkPictureUrl,
-        },
-        input.pictureSource,
-      );
-    }
-    const applicationId = await updateBadgeProfile(
-      participant.clerkUserId,
-      input,
-    );
+    const applicationId = await updateBadgeProfile(participant, input);
     await enqueueBadgeGeneration(applicationId, { force: true });
     return jsonSuccess(
       requestId,

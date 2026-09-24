@@ -786,8 +786,8 @@ const CandidateDrawer = ({
                     Notify candidate by email
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    Acceptance always sends the confirmation instructions. This
-                    option controls decline notifications.
+                    La aceptación siempre envía las instrucciones de
+                    confirmación. Esta opción controla los avisos de rechazo.
                   </p>
                   <div className="space-y-1.5">
                     <label

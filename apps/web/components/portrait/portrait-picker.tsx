@@ -160,7 +160,7 @@ export function PortraitPicker({
       /*
         The step without which none of the above shows on the badge.
 
-        Storing an upload writes `customPictureUrl`; the card reads
+        Storing an upload writes the badge profile; the card reads
         `pictureUrl`, and only a confirmation turns one into the other.
         The first version stopped at the line above, told somebody their
         photograph was saved, reloaded, and changed nothing.

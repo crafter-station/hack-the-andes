@@ -39,8 +39,7 @@ import {
 } from "@chofex/db/schema";
 import type { Credential } from "@/components/credential/credential-model";
 import { AVATAR_PORTRAIT, githubAvatarUrl } from "@/lib/registration/pictures";
-import { roleFor } from "./printing";
-import { badgeLinkFor } from "./profile";
+import { resolveBadgeProfile } from "./profile";
 
 export interface AcceptedParticipant {
   /** As they wrote it, not as any profile spells it. */
@@ -59,12 +58,9 @@ export interface AcceptedParticipant {
   readonly githubUrl: string | null;
   readonly linkUrl: string;
   readonly placement: string;
+  /** The generated halftone used by the HTML fallback. */
+  readonly portraitUrl: string | null;
 }
-
-export const fullNameOf = (
-  firstName: string | null,
-  lastName: string | null,
-): string => [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
 
 /**
  * The participant, reached through their session.
@@ -78,20 +74,7 @@ export const acceptedByClerkUser = async (
   clerkUserId: string,
 ): Promise<AcceptedParticipant | null> => {
   const [row] = await db
-    .select({
-      firstName: applications.firstName,
-      lastName: applications.lastName,
-      role: applications.role,
-      organization: applications.organization,
-      pictureUrl: applications.pictureUrl,
-      githubUrl: applications.githubUrl,
-      linkedInUrl: applications.linkedInUrl,
-      portfolioUrl: applications.portfolioUrl,
-      displayName: participantBadges.displayName,
-      oneLiner: participantBadges.oneLiner,
-      badgeLinkUrl: participantBadges.linkUrl,
-      placement: participantBadges.placement,
-    })
+    .select({ application: applications, badge: participantBadges })
     .from(applications)
     .innerJoin(participants, eq(applications.participantId, participants.id))
     .leftJoin(
@@ -110,29 +93,28 @@ export const acceptedByClerkUser = async (
     return null;
   }
 
-  const applicationName = fullNameOf(row.firstName, row.lastName);
-  const name = row.displayName?.trim() || applicationName;
+  const profile = resolveBadgeProfile(
+    {
+      ...row.application,
+      websiteUrl: row.application.portfolioUrl,
+    },
+    row.badge,
+  );
+  const name = profile.fullName;
   if (name === "") {
     // Accepted but nameless is a data problem, not a credential: a card
     // with an empty name reads as broken rather than as incomplete.
     return null;
   }
-  const roleSource = row.oneLiner?.trim() || row.role?.trim() || null;
-
   return {
     name,
-    role: roleFor(roleSource),
-    organization: row.organization?.trim() || null,
-    pictureUrl: row.pictureUrl?.trim() || null,
-    githubUrl: row.githubUrl?.trim() || null,
-    linkUrl:
-      row.badgeLinkUrl?.trim() ||
-      badgeLinkFor({
-        websiteUrl: row.portfolioUrl,
-        githubUrl: row.githubUrl,
-        linkedInUrl: row.linkedInUrl,
-      }),
-    placement: row.placement?.trim() || "PARTICIPANT",
+    role: profile.oneLiner,
+    organization: row.application.organization?.trim() || null,
+    pictureUrl: profile.pictureUrl,
+    githubUrl: row.application.githubUrl?.trim() || null,
+    linkUrl: profile.linkUrl,
+    placement: profile.placement,
+    portraitUrl: profile.portraitUrl,
   };
 };
 
@@ -172,6 +154,7 @@ export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   role: accepted.role,
   organization: accepted.organization,
   pictureUrl: portraitFor(accepted).url,
+  portraitUrl: accepted.portraitUrl,
   placement: accepted.placement,
   linkUrl: accepted.linkUrl,
 });

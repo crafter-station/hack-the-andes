@@ -1,4 +1,4 @@
-import { eq } from "@chofex/db/orm";
+import { and, eq } from "@chofex/db/orm";
 import {
   acceptanceDetails,
   applications,
@@ -8,9 +8,7 @@ import { db } from "@chofex/db/worker";
 import { logger, task } from "@trigger.dev/sdk";
 
 import { sendBadgeReadyEmail } from "../lib/badges/email";
-import { fullNameOf } from "../lib/credential/accepted";
-import { roleFor } from "../lib/credential/printing";
-import { badgeLinkFor } from "../lib/credential/profile";
+import { resolveBadgeProfile } from "../lib/credential/profile";
 import { generateBadge } from "./generate-badge";
 import { generatePortrait } from "./generate-portrait";
 
@@ -30,12 +28,16 @@ export const generateParticipantBadge = task<
   id: "generate-participant-badge",
   queue: { concurrencyLimit: 5 },
   maxDuration: 900,
-  onFailure: async ({ payload, error }) => {
+  onFailure: async ({ payload, ctx, error }) => {
     const [badge] = await db
-      .select({ badgeUrl: participantBadges.badgeUrl })
+      .select({
+        badgeUrl: participantBadges.badgeUrl,
+        triggerRunId: participantBadges.triggerRunId,
+      })
       .from(participantBadges)
       .where(eq(participantBadges.applicationId, payload.applicationId))
       .limit(1);
+    if (badge?.triggerRunId !== ctx.run.id) return;
     let status: "failed" | "completed" = "failed";
     let message = String(error).slice(0, 4_000);
     if (badge?.badgeUrl) {
@@ -49,7 +51,12 @@ export const generateParticipantBadge = task<
         error: message,
         updatedAt: new Date(),
       })
-      .where(eq(participantBadges.applicationId, payload.applicationId));
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, ctx.run.id),
+        ),
+      );
   },
   run: async (payload: GenerateParticipantBadgePayload, { ctx }) => {
     const [record] = await db
@@ -76,60 +83,42 @@ export const generateParticipantBadge = task<
     if (!record.details?.completedAt) {
       throw new Error("Participant has not completed attendance confirmation");
     }
-    const pictureUrl = record.application.pictureUrl;
-    if (!pictureUrl) throw new Error("Participant has no confirmed picture");
-    /*
-      Badge-profile choices win without rewriting the historical
-      application. Before somebody customizes the public name, the
-      application name remains the default.
-    */
-    const credentialName = fullNameOf(
-      record.application.firstName,
-      record.application.lastName,
-    );
-    const fullName =
-      record.badge?.displayName?.trim() ||
-      credentialName ||
-      record.details?.fullName?.trim() ||
-      "";
-    if (!fullName) throw new Error("Participant has no name");
-    const oneLiner = roleFor(
-      record.badge?.oneLiner?.trim() || record.application.role,
-    );
-    const linkUrl =
-      record.badge?.linkUrl?.trim() ||
-      badgeLinkFor({
+    const profile = resolveBadgeProfile(
+      {
+        ...record.application,
         websiteUrl: record.application.portfolioUrl,
-        githubUrl: record.application.githubUrl,
-        linkedInUrl: record.application.linkedInUrl,
-      });
-    const placement = record.badge?.placement?.trim() || "PARTICIPANT";
+      },
+      record.badge,
+    );
+    const pictureUrl = profile.pictureUrl;
+    if (!pictureUrl) throw new Error("Participant has no confirmed picture");
+    const fullName = profile.fullName || record.details?.fullName?.trim() || "";
+    if (!fullName) throw new Error("Participant has no name");
     const email = record.application.email;
     if (!email) throw new Error("Participant has no email address");
 
-    await db
-      .insert(participantBadges)
-      .values({
-        applicationId: payload.applicationId,
-        status: "running",
-        triggerRunId: ctx.run.id,
-      })
-      .onConflictDoUpdate({
-        target: participantBadges.applicationId,
-        set: {
-          status: "running",
-          triggerRunId: ctx.run.id,
-          error: null,
-          updatedAt: new Date(),
-        },
-      });
+    const [claimed] = await db
+      .update(participantBadges)
+      .set({ status: "running", error: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, ctx.run.id),
+        ),
+      )
+      .returning({ applicationId: participantBadges.applicationId });
+    if (!claimed) throw new Error("Badge generation was superseded");
 
     logger.info("Starting participant badge workflow", {
       applicationId: payload.applicationId,
     });
     const portrait = await generatePortrait
       .triggerAndWait(
-        { applicationId: payload.applicationId, pictureUrl },
+        {
+          applicationId: payload.applicationId,
+          generationId: ctx.run.id,
+          pictureUrl,
+        },
         { idempotencyKey: `portrait/${ctx.run.id}` },
       )
       .unwrap();
@@ -137,33 +126,51 @@ export const generateParticipantBadge = task<
       .triggerAndWait(
         {
           applicationId: payload.applicationId,
+          generationId: ctx.run.id,
           fullName,
-          role: oneLiner,
-          placement,
-          linkUrl,
+          role: profile.oneLiner,
+          placement: profile.placement,
+          linkUrl: profile.linkUrl,
           portraitUrl: portrait.url,
         },
         { idempotencyKey: `badge/${ctx.run.id}` },
       )
       .unwrap();
 
-    await db
+    const [completed] = await db
       .update(participantBadges)
       .set({ status: "completed", error: null, updatedAt: new Date() })
-      .where(eq(participantBadges.applicationId, payload.applicationId));
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, ctx.run.id),
+        ),
+      )
+      .returning({ applicationId: participantBadges.applicationId });
+    if (!completed) {
+      logger.info("Skipping notification for superseded badge generation", {
+        applicationId: payload.applicationId,
+      });
+      return { badgeUrl: badge.url, portraitUrl: portrait.url };
+    }
     await sendBadgeReadyEmail({
       applicationId: payload.applicationId,
       email,
       firstName: record.application.firstName ?? fullName,
       badgeUrl: badge.url,
-      placement,
+      placement: profile.placement,
       badgePageUrl: BADGE_PAGE_URL,
       generationId: ctx.run.id,
     });
     await db
       .update(participantBadges)
       .set({ notificationSentAt: new Date(), updatedAt: new Date() })
-      .where(eq(participantBadges.applicationId, payload.applicationId));
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, ctx.run.id),
+        ),
+      );
 
     return { badgeUrl: badge.url, portraitUrl: portrait.url };
   },

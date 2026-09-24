@@ -5,10 +5,9 @@
  *
  * Initials underneath and the picture over them, so a card whose image
  * fails to load falls back to something rather than to a hole. The
- * picture is the one the participant confirmed and nothing else — when
- * they have not confirmed one there is simply no image element, because
- * `CONTEXT.md` is explicit that available images are not used until they
- * choose a source.
+ * picture is the generated halftone of the photo the participant confirmed
+ * and nothing else. While generation is pending there is no image element,
+ * so the fallback never flashes the unscreened original.
  */
 
 import Image from "next/image";
@@ -22,7 +21,7 @@ interface CredentialPortraitProps {
 
 export function CredentialPortrait({ credential }: CredentialPortraitProps) {
   const [failed, setFailed] = useState(false);
-  const picture = credential.pictureUrl;
+  const picture = credential.portraitUrl;
 
   let photo = null;
   if (picture && !failed) {
@@ -32,10 +31,8 @@ export function CredentialPortrait({ credential }: CredentialPortraitProps) {
         className="credential-card-photo"
         height={460}
         onError={() => setFailed(true)}
-        // Unoptimised: the confirmed picture may come from Clerk, from a
-        // GitHub profile or from an upload, and routing three unrelated
-        // hosts through the optimizer buys nothing on an image this size
-        // while adding a hop that can fail on its own.
+        // Unoptimised: this is already a generated, public PNG. Sending it
+        // through another optimizer adds a failure point without changing it.
         src={picture}
         unoptimized
         width={460}

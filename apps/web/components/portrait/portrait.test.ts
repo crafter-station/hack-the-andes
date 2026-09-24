@@ -85,7 +85,7 @@ describe("portrait-picker", () => {
   test("confirms the source, not only the upload", async () => {
     // The defect this exists for shipped and was found by reading the
     // service rather than by using the picker: storing an upload writes
-    // `customPictureUrl`, the card reads `pictureUrl`, and only a
+    // the badge profile, the card reads `pictureUrl`, and only a
     // confirmation turns one into the other. Without the PATCH the
     // picker told somebody their photograph was saved, reloaded, and
     // changed nothing on their badge.

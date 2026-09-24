@@ -13,6 +13,12 @@ import {
 import { Schema } from "effect";
 
 import { HttpError } from "@/lib/registration/http";
+import { confirmedPictureUrl } from "@/lib/registration/pictures";
+
+interface BadgeIdentity {
+  readonly clerkUserId: string;
+  readonly clerkPictureUrl?: string;
+}
 
 export const badgeRegenerationInput = (input: unknown): Input => {
   try {
@@ -23,7 +29,7 @@ export const badgeRegenerationInput = (input: unknown): Input => {
     throw new HttpError(
       422,
       "VALIDATION_ERROR",
-      "Input validation failed",
+      "Los datos del carnet no son válidos",
       false,
       { issues: String(error) },
     );
@@ -31,20 +37,24 @@ export const badgeRegenerationInput = (input: unknown): Input => {
 };
 
 export const updateBadgeProfile = async (
-  clerkUserId: string,
+  identity: BadgeIdentity,
   input: Input,
 ): Promise<string> => {
   const [record] = await db
-    .select({ applicationId: applications.id })
+    .select({ application: applications, badge: participantBadges })
     .from(applications)
     .innerJoin(participants, eq(participants.id, applications.participantId))
     .innerJoin(
       acceptanceDetails,
       eq(acceptanceDetails.applicationId, applications.id),
     )
+    .leftJoin(
+      participantBadges,
+      eq(participantBadges.applicationId, applications.id),
+    )
     .where(
       and(
-        eq(participants.clerkUserId, clerkUserId),
+        eq(participants.clerkUserId, identity.clerkUserId),
         eq(applications.status, "accepted"),
         isNotNull(acceptanceDetails.completedAt),
       ),
@@ -54,30 +64,41 @@ export const updateBadgeProfile = async (
     throw new HttpError(
       409,
       "ATTENDANCE_NOT_CONFIRMED",
-      "Confirm attendance before regenerating your badge",
+      "Confirma tu asistencia antes de regenerar tu carnet",
     );
   }
 
-  await db
-    .insert(participantBadges)
-    .values({
-      applicationId: record.applicationId,
-      displayName: input.fullName,
-      oneLiner: input.oneLiner,
-      linkUrl: input.linkUrl,
-      status: "pending",
-    })
-    .onConflictDoUpdate({
-      target: participantBadges.applicationId,
-      set: {
-        displayName: input.fullName,
-        oneLiner: input.oneLiner,
-        linkUrl: input.linkUrl,
-        status: "pending",
-        error: null,
-        updatedAt: new Date(),
-      },
+  const values: typeof participantBadges.$inferInsert = {
+    applicationId: record.application.id,
+    displayName: input.fullName,
+    oneLiner: input.oneLiner,
+    linkUrl: input.linkUrl,
+    status: "pending",
+  };
+  const updates: Partial<typeof participantBadges.$inferInsert> = {
+    displayName: input.fullName,
+    oneLiner: input.oneLiner,
+    linkUrl: input.linkUrl,
+    status: "pending",
+    error: null,
+    updatedAt: new Date(),
+  };
+  if (input.pictureSource) {
+    const pictureUrl = confirmedPictureUrl(input.pictureSource, {
+      clerkPictureUrl: identity.clerkPictureUrl,
+      githubUrl: record.application.githubUrl,
+      uploadedPictureUrl: record.badge?.customPictureUrl,
     });
+    values.pictureSource = input.pictureSource;
+    values.pictureUrl = pictureUrl;
+    updates.pictureSource = input.pictureSource;
+    updates.pictureUrl = pictureUrl;
+  }
 
-  return record.applicationId;
+  await db.insert(participantBadges).values(values).onConflictDoUpdate({
+    target: participantBadges.applicationId,
+    set: updates,
+  });
+
+  return record.application.id;
 };

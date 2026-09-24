@@ -535,21 +535,21 @@ export const badgeProfileInput = (
     const publicFields = yield* Prompt.run(
       Prompt.all({
         fullName: requiredText(
-          "Name printed on the badge",
+          "Nombre impreso en el carnet",
           Schema.Trim.pipe(
             Schema.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
           ),
           defaults.fullName,
         ),
         oneLiner: requiredText(
-          "One-line description",
+          "Presentación de una línea",
           Schema.Trim.pipe(
-            Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120)),
+            Schema.check(Schema.isMinLength(1), Schema.isMaxLength(30)),
           ),
           defaults.oneLiner,
         ),
         linkUrl: requiredText(
-          "QR destination",
+          "Destino del QR",
           Schema.Trim.pipe(
             Schema.check(Schema.isMinLength(1), Schema.isMaxLength(2_048)),
           ),
@@ -560,20 +560,20 @@ export const badgeProfileInput = (
     const pictureChoices: Array<{
       readonly title: string;
       readonly value: "keep" | "clerk" | "github" | "upload";
-    }> = [{ title: "Keep my current picture", value: "keep" }];
+    }> = [{ title: "Mantener mi foto actual", value: "keep" }];
     if (pictures.clerkPictureUrl) {
-      pictureChoices.push({ title: "Use my Clerk picture", value: "clerk" });
+      pictureChoices.push({ title: "Usar mi foto de Clerk", value: "clerk" });
     }
     if (pictures.githubUrl) {
-      pictureChoices.push({ title: "Use my GitHub picture", value: "github" });
+      pictureChoices.push({ title: "Usar mi foto de GitHub", value: "github" });
     }
     pictureChoices.push({
-      title: "Upload a different picture",
+      title: "Subir otra foto",
       value: "upload",
     });
     const pictureChoice = yield* Prompt.run(
       Prompt.select({
-        message: "Picture printed on the badge",
+        message: "Foto impresa en el carnet",
         choices: pictureChoices,
       }),
     );

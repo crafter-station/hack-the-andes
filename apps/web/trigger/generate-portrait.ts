@@ -1,4 +1,4 @@
-import { eq } from "@chofex/db/orm";
+import { and, eq } from "@chofex/db/orm";
 import { participantBadges } from "@chofex/db/schema";
 import { db } from "@chofex/db/worker";
 import { logger, task } from "@trigger.dev/sdk";
@@ -21,6 +21,7 @@ import { downloadImage, uploadPng } from "./badge-assets";
  */
 export interface GeneratePortraitPayload {
   readonly applicationId: string;
+  readonly generationId: string;
   readonly pictureUrl: string;
 }
 
@@ -37,7 +38,7 @@ export const generatePortrait = task({
     const screened = await halftonePortraitPng(Buffer.from(original));
 
     const blob = await uploadPng(
-      `participant-badges/${payload.applicationId}/portrait.png`,
+      `participant-badges/${payload.applicationId}/${payload.generationId}/portrait.png`,
       // `uploadPng` speaks ArrayBuffer; sharp answers in Buffer, whose
       // own buffer may be a slice of a larger pool.
       screened.buffer.slice(
@@ -52,7 +53,12 @@ export const generatePortrait = task({
         portraitPathname: blob.pathname,
         updatedAt: new Date(),
       })
-      .where(eq(participantBadges.applicationId, payload.applicationId));
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, payload.generationId),
+        ),
+      );
 
     return { url: blob.url, pathname: blob.pathname };
   },

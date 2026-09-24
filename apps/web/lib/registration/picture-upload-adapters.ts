@@ -1,6 +1,11 @@
 import { db } from "@chofex/db";
 import { and, desc, eq, isNull, lt, or, sql } from "@chofex/db/orm";
-import { applications, participants } from "@chofex/db/schema";
+import {
+  acceptanceDetails,
+  applications,
+  participantBadges,
+  participants,
+} from "@chofex/db/schema";
 import { maximumPictureBytes } from "@chofex/registration-contract";
 import { del, head } from "@vercel/blob";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
@@ -18,11 +23,21 @@ const authorize: PictureUploadDependencies["authorize"] = async (request) => {
     .select({
       applicationId: applications.id,
       clerkUserId: participants.clerkUserId,
-      pendingPicturePathname: applications.pendingPicturePathname,
+      attendanceCompletedAt: acceptanceDetails.completedAt,
+      applicationPendingPicturePathname: applications.pendingPicturePathname,
+      badgePendingPicturePathname: participantBadges.pendingPicturePathname,
       status: applications.status,
     })
     .from(participants)
     .innerJoin(applications, eq(applications.participantId, participants.id))
+    .leftJoin(
+      acceptanceDetails,
+      eq(acceptanceDetails.applicationId, applications.id),
+    )
+    .leftJoin(
+      participantBadges,
+      eq(participantBadges.applicationId, applications.id),
+    )
     .where(eq(participants.clerkUserId, authentication.clerkUserId))
     .orderBy(desc(applications.createdAt))
     .limit(1);
@@ -33,14 +48,24 @@ const authorize: PictureUploadDependencies["authorize"] = async (request) => {
       "Only accepted participants can upload a picture",
     );
   }
+  if (current.attendanceCompletedAt) {
+    return {
+      applicationId: current.applicationId,
+      clerkUserId: current.clerkUserId,
+      target: "badge",
+      pendingPicturePathname: current.badgePendingPicturePathname ?? undefined,
+    };
+  }
   return {
     applicationId: current.applicationId,
     clerkUserId: current.clerkUserId,
-    pendingPicturePathname: current.pendingPicturePathname ?? undefined,
+    target: "application",
+    pendingPicturePathname:
+      current.applicationPendingPicturePathname ?? undefined,
   };
 };
 
-const reserve: PictureUploadDependencies["reserve"] = async (
+const reserveApplication: PictureUploadDependencies["reserve"] = async (
   identity,
   pathname,
 ) => {
@@ -112,6 +137,86 @@ const reserve: PictureUploadDependencies["reserve"] = async (
   }
 };
 
+const reserveBadge: PictureUploadDependencies["reserve"] = async (
+  identity,
+  pathname,
+) => {
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - uploadWindowMilliseconds);
+  const tokenExpiresAt = new Date(now.getTime() + 10 * 60 * 1_000);
+  await db
+    .insert(participantBadges)
+    .values({ applicationId: identity.applicationId, status: "pending" })
+    .onConflictDoNothing();
+  const [pending] = await db
+    .select({
+      pathname: participantBadges.pendingPicturePathname,
+      expiresAt: participantBadges.pendingPictureExpiresAt,
+    })
+    .from(participantBadges)
+    .where(eq(participantBadges.applicationId, identity.applicationId))
+    .limit(1);
+  if (pending?.pathname && pending.expiresAt && pending.expiresAt > now) {
+    throw new HttpError(
+      409,
+      "PICTURE_UPLOAD_PENDING",
+      "Finish the pending picture upload before starting another",
+      true,
+    );
+  }
+  const [reserved] = await db
+    .update(participantBadges)
+    .set({
+      pictureUploadWindowStartedAt: sql`case
+        when ${participantBadges.pictureUploadWindowStartedAt} is null
+          or ${participantBadges.pictureUploadWindowStartedAt} < ${cutoff}
+        then ${now}
+        else ${participantBadges.pictureUploadWindowStartedAt}
+      end`,
+      pictureUploadCount: sql`case
+        when ${participantBadges.pictureUploadWindowStartedAt} is null
+          or ${participantBadges.pictureUploadWindowStartedAt} < ${cutoff}
+        then 1
+        else ${participantBadges.pictureUploadCount} + 1
+      end`,
+      pendingPicturePathname: pathname,
+      pendingPictureExpiresAt: tokenExpiresAt,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(participantBadges.applicationId, identity.applicationId),
+        or(
+          isNull(participantBadges.pictureUploadWindowStartedAt),
+          lt(participantBadges.pictureUploadWindowStartedAt, cutoff),
+          lt(participantBadges.pictureUploadCount, uploadLimit),
+        ),
+        or(
+          isNull(participantBadges.pendingPicturePathname),
+          isNull(participantBadges.pendingPictureExpiresAt),
+          lt(participantBadges.pendingPictureExpiresAt, now),
+        ),
+      ),
+    )
+    .returning({ applicationId: participantBadges.applicationId });
+  if (!reserved) {
+    throw new HttpError(
+      429,
+      "PICTURE_UPLOAD_RATE_LIMITED",
+      "You can upload at most 5 pictures every 24 hours",
+      true,
+    );
+  }
+  if (pending?.pathname) {
+    await del(pending.pathname).catch(() => undefined);
+  }
+};
+
+const reserve: PictureUploadDependencies["reserve"] = (identity, pathname) => {
+  if (identity.target === "badge") return reserveBadge(identity, pathname);
+  return reserveApplication(identity, pathname);
+};
+
 const issueToken: PictureUploadDependencies["issueToken"] = (options) =>
   generateClientTokenFromReadWriteToken({
     pathname: options.pathname,
@@ -122,7 +227,7 @@ const issueToken: PictureUploadDependencies["issueToken"] = (options) =>
     allowOverwrite: false,
   });
 
-const discard: PictureUploadDependencies["discard"] = async (
+const discardApplication: PictureUploadDependencies["discard"] = async (
   identity,
   pathname,
 ) => {
@@ -148,6 +253,38 @@ const discard: PictureUploadDependencies["discard"] = async (
       "This picture upload is not pending or was already completed",
     );
   }
+};
+
+const discardBadge: PictureUploadDependencies["discard"] = async (
+  identity,
+  pathname,
+) => {
+  const [updated] = await db
+    .update(participantBadges)
+    .set({
+      pendingPicturePathname: null,
+      pendingPictureExpiresAt: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(participantBadges.applicationId, identity.applicationId),
+        eq(participantBadges.pendingPicturePathname, pathname),
+      ),
+    )
+    .returning({ applicationId: participantBadges.applicationId });
+  if (!updated) {
+    throw new HttpError(
+      409,
+      "PICTURE_UPLOAD_NOT_PENDING",
+      "This picture upload is not pending or was already completed",
+    );
+  }
+};
+
+const discard: PictureUploadDependencies["discard"] = (identity, pathname) => {
+  if (identity.target === "badge") return discardBadge(identity, pathname);
+  return discardApplication(identity, pathname);
 };
 
 const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
@@ -207,7 +344,7 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
   };
 };
 
-const record: PictureUploadDependencies["record"] = async (
+const recordApplication: PictureUploadDependencies["record"] = async (
   identity,
   completion,
 ) => {
@@ -241,6 +378,50 @@ const record: PictureUploadDependencies["record"] = async (
     );
   }
   return current?.url ?? undefined;
+};
+
+const recordBadge: PictureUploadDependencies["record"] = async (
+  identity,
+  completion,
+) => {
+  const [current] = await db
+    .select({
+      url: participantBadges.customPictureUrl,
+      selectedUrl: participantBadges.pictureUrl,
+    })
+    .from(participantBadges)
+    .where(eq(participantBadges.applicationId, identity.applicationId))
+    .limit(1);
+  const [updated] = await db
+    .update(participantBadges)
+    .set({
+      customPictureUrl: completion.url,
+      customPicturePathname: completion.pathname,
+      pendingPicturePathname: null,
+      pendingPictureExpiresAt: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(participantBadges.applicationId, identity.applicationId),
+        eq(participantBadges.pendingPicturePathname, completion.pathname),
+      ),
+    )
+    .returning({ applicationId: participantBadges.applicationId });
+  if (!updated) {
+    throw new HttpError(
+      409,
+      "INVALID_APPLICATION_STATE",
+      "Application is no longer accepted",
+    );
+  }
+  if (current?.url === current?.selectedUrl) return undefined;
+  return current?.url ?? undefined;
+};
+
+const record: PictureUploadDependencies["record"] = (identity, completion) => {
+  if (identity.target === "badge") return recordBadge(identity, completion);
+  return recordApplication(identity, completion);
 };
 
 export const pictureUploadDependencies: PictureUploadDependencies = {

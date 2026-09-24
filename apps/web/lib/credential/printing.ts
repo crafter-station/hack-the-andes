@@ -14,29 +14,7 @@
 
 import { readFile } from "node:fs/promises";
 
-/**
- * The tones, which are an object's and not the brand's.
- *
- * The shell, the printed sheet inside it, and the seam between them —
- * none of these are brand tokens because none of them are brand. The
- * version they replace had the sheet at `paper`, which is far blacker
- * than the design's card and left the shell and the sheet reading as one
- * flat shape.
- */
-export const HOLDER = "#282828";
-export const SHEET = "#141510";
-
-/** The seam, which is darker than both — not the light hairline it was. */
-export const SEAM = "#060604";
-
-/**
- * The photo window carries no fill of its own, only this line.
- *
- * Light enough to be a line. At #2a2a26 — a sample taken off a
- * screenshot rather than off the artwork — it was two levels above the
- * sheet and the window simply did not appear.
- */
-export const WINDOW_EDGE = "#6d6d68";
+export { HOLDER, SEAM, SHEET, WINDOW_EDGE } from "./tones";
 
 /**
  * How far the ridge sits behind the type.
@@ -103,29 +81,3 @@ export const notchFonts = [
     weight: 700 as const,
   },
 ];
-
-/**
- * How long a role may be before the line stops fitting.
- *
- * Measured against the sheet at the size the role is set: the line holds
- * about thirty characters.
- */
-const ROLE_LIMIT = 30;
-
-/**
- * The role as it is printed, with its default.
- *
- * Shared, because the card and the emailed image both print it and a
- * participant with no role on one and "PARTICIPANTE" on the other is the
- * same drift this module exists to stop.
- */
-export const roleFor = (role: string | null): string => {
-  const source = (role ?? "PARTICIPANTE").trim();
-  // Cut at a word so the line does not end mid-syllable.
-  if (source.length <= ROLE_LIMIT) {
-    return source;
-  }
-  const clipped = source.slice(0, ROLE_LIMIT);
-  const lastSpace = clipped.lastIndexOf(" ");
-  return `${lastSpace > 12 ? clipped.slice(0, lastSpace) : clipped}…`;
-};

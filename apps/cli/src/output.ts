@@ -143,10 +143,10 @@ export const requirementsOnlyText = (result: RegistrationResult): string =>
 export const badgeText = (result: BadgeResult): string => {
   if (result.url) return result.url;
   if (result.status === "pending" || result.status === "running") {
-    return "Your badge is being generated.";
+    return "Tu carnet se está generando.";
   }
   if (result.status === "failed") {
-    return "Badge generation failed. Run `chofex badge regenerate` to try again.";
+    return "No se pudo generar tu carnet. Ejecuta `chofex badge regenerate` para intentarlo de nuevo.";
   }
-  return "You don't have a badge yet.";
+  return "Todavía no tienes un carnet.";
 };

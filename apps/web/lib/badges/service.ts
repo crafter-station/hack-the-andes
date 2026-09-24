@@ -6,28 +6,23 @@ import {
   participants,
 } from "@chofex/db/schema";
 import type { BadgeProfile, BadgeResult } from "@chofex/registration-contract";
-import { badgeLinkFor } from "@/lib/credential/profile";
+import { resolveBadgeProfile } from "@/lib/credential/profile";
 
 const profileFor = (
   application: typeof applications.$inferSelect,
   badge: typeof participantBadges.$inferSelect | null,
-): BadgeProfile => ({
-  fullName:
-    badge?.displayName?.trim() ||
-    [application.firstName?.trim(), application.lastName?.trim()]
-      .filter(Boolean)
-      .join(" "),
-  oneLiner:
-    badge?.oneLiner?.trim() || application.role?.trim() || "Participant",
-  linkUrl:
-    badge?.linkUrl?.trim() ||
-    badgeLinkFor({
-      websiteUrl: application.portfolioUrl,
-      githubUrl: application.githubUrl,
-      linkedInUrl: application.linkedInUrl,
-    }),
-  placement: badge?.placement?.trim() || "PARTICIPANT",
-});
+): BadgeProfile => {
+  const resolved = resolveBadgeProfile(
+    { ...application, websiteUrl: application.portfolioUrl },
+    badge,
+  );
+  return {
+    fullName: resolved.fullName,
+    oneLiner: resolved.oneLiner,
+    linkUrl: resolved.linkUrl,
+    placement: resolved.placement,
+  };
+};
 
 export const getParticipantBadge = async (
   clerkUserId: string,

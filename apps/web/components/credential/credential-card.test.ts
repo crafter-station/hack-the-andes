@@ -73,7 +73,7 @@ describe("credential-card", () => {
     // avatar or a GitHub profile directly is the defect.
     const portrait = await source("./credential-portrait.tsx");
 
-    expect(portrait).toContain("credential.pictureUrl");
+    expect(portrait).toContain("credential.portraitUrl");
     expect(portrait).not.toContain("clerk");
     expect(portrait).not.toContain("github");
   });
@@ -112,6 +112,13 @@ describe("credential-card", () => {
 
     expect(card).toContain("CredentialPortrait");
     expect(card).not.toContain("<Image");
+  });
+
+  test("keeps the participant QR in the no-WebGL fallback", async () => {
+    const card = await source("./credential-card.tsx");
+
+    expect(card).toContain("QRCode.toDataURL(credential.linkUrl");
+    expect(card).toContain("credential-card-qr");
   });
 
   test("never lets the model's own demo card be what somebody sees", async () => {

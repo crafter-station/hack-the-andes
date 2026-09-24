@@ -672,7 +672,7 @@ export const BadgeStatus = Schema.Literals([
 
 export const BadgeProfileSchema = Schema.Struct({
   fullName: nonBlank(200),
-  oneLiner: nonBlank(120),
+  oneLiner: nonBlank(30),
   linkUrl: url,
   placement: Schema.String,
 });
@@ -689,7 +689,7 @@ export type BadgeResult = typeof BadgeResultSchema.Type;
 
 export const badgeRegenerationInputFields = {
   fullName: nonBlank(200),
-  oneLiner: nonBlank(120),
+  oneLiner: nonBlank(30),
   linkUrl: url,
   pictureSource: Schema.optional(PictureSource),
 };

@@ -30,6 +30,8 @@ export interface Credential {
    * picture they did not pick.
    */
   readonly pictureUrl: string | null;
+  /** The generated halftone used by the HTML fallback, or null while pending. */
+  readonly portraitUrl: string | null;
   /** Their best exact placement across current playable challenges. */
   readonly placement: string;
   /** The destination encoded in the QR. */

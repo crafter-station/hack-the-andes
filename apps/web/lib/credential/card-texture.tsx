@@ -42,11 +42,11 @@ import {
   notchFonts,
   RIDGE_BACK,
   RIDGE_FRONT,
-  roleFor,
   SEAM,
   SHEET,
   WINDOW_EDGE,
 } from "./printing";
+import { badgeOneLinerFor } from "./profile";
 
 /**
  * The shape of the atlas, derived from the model rather than chosen.
@@ -294,7 +294,7 @@ export const renderCardTexture = async (
       ),
     ]);
 
-  const role = roleFor(credential.role);
+  const role = badgeOneLinerFor(credential.role);
 
   let portraitNode = (
     <div

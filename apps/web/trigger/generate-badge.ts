@@ -1,4 +1,4 @@
-import { eq } from "@chofex/db/orm";
+import { and, eq } from "@chofex/db/orm";
 import { participantBadges } from "@chofex/db/schema";
 import { db } from "@chofex/db/worker";
 import { task } from "@trigger.dev/sdk";
@@ -8,6 +8,7 @@ import { downloadImage, uploadPng } from "./badge-assets";
 
 export interface GenerateBadgePayload {
   readonly applicationId: string;
+  readonly generationId: string;
   readonly fullName: string;
   readonly role: string;
   readonly placement: string;
@@ -39,7 +40,7 @@ export const generateBadge = task({
       portrait,
     });
     const blob = await uploadPng(
-      `participant-badges/${payload.applicationId}/badge.png`,
+      `participant-badges/${payload.applicationId}/${payload.generationId}/badge.png`,
       new Uint8Array(badge).buffer,
     );
     await db
@@ -49,7 +50,12 @@ export const generateBadge = task({
         badgePathname: blob.pathname,
         updatedAt: new Date(),
       })
-      .where(eq(participantBadges.applicationId, payload.applicationId));
+      .where(
+        and(
+          eq(participantBadges.applicationId, payload.applicationId),
+          eq(participantBadges.triggerRunId, payload.generationId),
+        ),
+      );
 
     return { url: blob.url, pathname: blob.pathname };
   },

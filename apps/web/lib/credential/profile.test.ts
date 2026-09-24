@@ -3,8 +3,10 @@ import { describe, expect, test } from "bun:test";
 import {
   badgeFallbackUrl,
   badgeLinkFor,
+  badgeOneLinerFor,
   bestChallengePlacement,
   challengePlacementLabel,
+  resolveBadgeProfile,
 } from "./profile";
 
 describe("badge profile", () => {
@@ -35,6 +37,35 @@ describe("badge profile", () => {
     ]);
 
     expect(challengePlacementLabel(best)).toBe("BROKEN AGENT · #03");
-    expect(challengePlacementLabel(undefined)).toBe("PARTICIPANT");
+    expect(challengePlacementLabel(undefined)).toBe("PARTICIPANTE");
+  });
+
+  test("resolves application defaults and badge-only overrides in one place", () => {
+    expect(
+      resolveBadgeProfile(
+        {
+          firstName: "Ada",
+          lastName: "Lovelace",
+          role: "Mathematician",
+          websiteUrl: "https://ada.dev",
+          pictureUrl: "https://images.example/original.png",
+        },
+        {
+          displayName: "Ada L.",
+          oneLiner: "Computing pioneer",
+          pictureUrl: "https://images.example/badge.png",
+        },
+      ),
+    ).toEqual({
+      fullName: "Ada L.",
+      oneLiner: "Computing pioneer",
+      linkUrl: "https://ada.dev",
+      placement: "PARTICIPANTE",
+      pictureUrl: "https://images.example/badge.png",
+      portraitUrl: null,
+    });
+    expect(
+      badgeOneLinerFor("A description that cannot fit on one line"),
+    ).toEndWith("…");
   });
 });

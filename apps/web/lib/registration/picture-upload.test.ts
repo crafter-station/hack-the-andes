@@ -10,6 +10,7 @@ const dependencies = (): PictureUploadDependencies => ({
   authorize: async () => ({
     applicationId: "application-123",
     clerkUserId: "user-123",
+    target: "application",
     pendingPicturePathname:
       "profile-pictures/user-123/application-123/upload-123.png",
   }),
@@ -40,7 +41,11 @@ describe("profile picture upload HTTP endpoint", () => {
       ...dependencies(),
       authorize: async () => {
         events.push("authorize");
-        return { applicationId: "application-123", clerkUserId: "user-123" };
+        return {
+          applicationId: "application-123",
+          clerkUserId: "user-123",
+          target: "application",
+        };
       },
       reserve: async () => {
         events.push("reserve");
@@ -134,6 +139,7 @@ describe("profile picture upload HTTP endpoint", () => {
       authorize: async () => ({
         applicationId: "application-123",
         clerkUserId: "user-123",
+        target: "application",
       }),
       issueToken: async () => {
         throw tokenError;
@@ -168,6 +174,7 @@ describe("profile picture upload HTTP endpoint", () => {
         authorize: async () => ({
           applicationId: "application-123",
           clerkUserId: "user-123",
+          target: "application",
         }),
         inspect: async () => {
           inspected = true;

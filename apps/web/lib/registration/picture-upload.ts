@@ -15,6 +15,8 @@ type PictureContentType = PictureUpload["contentType"];
 interface UploadIdentity {
   readonly applicationId: string;
   readonly clerkUserId: string;
+  /** Attendance uploads belong to the application; later ones to the badge. */
+  readonly target: "application" | "badge";
   readonly pendingPicturePathname?: string;
 }
 

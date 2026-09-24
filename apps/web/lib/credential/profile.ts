@@ -1,5 +1,15 @@
 export const badgeFallbackUrl = "https://hacktheandes.com";
 
+const ONE_LINER_LIMIT = 30;
+
+export const badgeOneLinerFor = (oneLiner: string | null): string => {
+  const source = (oneLiner ?? "PARTICIPANTE").trim();
+  if (source.length <= ONE_LINER_LIMIT) return source;
+  const clipped = source.slice(0, ONE_LINER_LIMIT);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return `${lastSpace > 12 ? clipped.slice(0, lastSpace) : clipped}…`;
+};
+
 export interface BadgeLinkCandidates {
   readonly websiteUrl?: string | null;
   readonly githubUrl?: string | null;
@@ -37,7 +47,61 @@ export const bestChallengePlacement = (
 export const challengePlacementLabel = (
   placement: ChallengePlacementCandidate | undefined,
 ): string => {
-  if (!placement) return "PARTICIPANT";
+  if (!placement) return "PARTICIPANTE";
   const rank = String(placement.rank).padStart(2, "0");
   return `${placement.theme.toUpperCase()} · #${rank}`;
+};
+
+export interface BadgeApplicationProfileSource extends BadgeLinkCandidates {
+  readonly firstName?: string | null;
+  readonly lastName?: string | null;
+  readonly role?: string | null;
+  readonly pictureUrl?: string | null;
+}
+
+export interface BadgeProfileOverrides {
+  readonly displayName?: string | null;
+  readonly oneLiner?: string | null;
+  readonly linkUrl?: string | null;
+  readonly placement?: string | null;
+  readonly pictureUrl?: string | null;
+  readonly portraitUrl?: string | null;
+}
+
+export interface ResolvedBadgeProfile {
+  readonly fullName: string;
+  readonly oneLiner: string;
+  readonly linkUrl: string;
+  readonly placement: string;
+  readonly pictureUrl: string | null;
+  readonly portraitUrl: string | null;
+}
+
+export const resolveBadgeProfile = (
+  application: BadgeApplicationProfileSource,
+  overrides?: BadgeProfileOverrides | null,
+): ResolvedBadgeProfile => {
+  const applicationName = [
+    application.firstName?.trim(),
+    application.lastName?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return {
+    fullName: overrides?.displayName?.trim() || applicationName,
+    oneLiner: badgeOneLinerFor(
+      overrides?.oneLiner?.trim() || application.role?.trim() || null,
+    ),
+    linkUrl:
+      overrides?.linkUrl?.trim() ||
+      badgeLinkFor({
+        websiteUrl: application.websiteUrl,
+        githubUrl: application.githubUrl,
+        linkedInUrl: application.linkedInUrl,
+      }),
+    placement: overrides?.placement?.trim() || "PARTICIPANTE",
+    pictureUrl:
+      overrides?.pictureUrl?.trim() || application.pictureUrl?.trim() || null,
+    portraitUrl: overrides?.portraitUrl?.trim() || null,
+  };
 };

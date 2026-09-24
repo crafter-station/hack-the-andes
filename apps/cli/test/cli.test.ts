@@ -533,11 +533,11 @@ describe("CLI JSON mode", () => {
 
     expect(help.exitCode).toBe(0);
     expect(help.stdout).toContain("badge");
-    expect(help.stdout).toContain("Show or regenerate your participant badge");
+    expect(help.stdout).toContain("Muestra o regenera tu carnet");
 
     const badgeHelp = await runCli("badge", "--help");
     expect(badgeHelp.stdout).toContain("regenerate");
-    expect(badgeHelp.stdout).toContain("one-liner");
+    expect(badgeHelp.stdout).toContain("presentación");
   });
 
   test("prints every accepted application input field", async () => {

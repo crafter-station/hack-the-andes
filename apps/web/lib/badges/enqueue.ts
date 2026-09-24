@@ -39,6 +39,10 @@ export const enqueueBadgeGeneration = async (
         placement,
         error: null,
         notificationSentAt: null,
+        portraitUrl: null,
+        portraitPathname: null,
+        badgeUrl: null,
+        badgePathname: null,
         updatedAt: new Date(),
       },
     });
