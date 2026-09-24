@@ -12,7 +12,11 @@ import {
   reserveChallengeUse,
 } from "./reservations";
 
-const migration = ["0010_strong_blackheart.sql", "0011_boring_bushwacker.sql"]
+const migration = [
+  "0010_strong_blackheart.sql",
+  "0011_boring_bushwacker.sql",
+  "0018_rank_challenge_runtime.sql",
+]
   .map((name) =>
     readFileSync(
       new URL(`../../../../packages/db/drizzle/${name}`, import.meta.url),
@@ -360,7 +364,7 @@ describe("challenge reservations", () => {
     expect(result.rows[0]?.accuracy).toBe(1);
   });
 
-  test("does not promote an otherwise tied evaluation because of runtime", async () => {
+  test("promotes an otherwise tied evaluation with a lower runtime", async () => {
     const first = await reserveChallengeUse(attemptId, "evaluation", database);
     if (!first) throw new Error("missing first reservation");
     await completeEvaluationReservation(
@@ -401,6 +405,6 @@ describe("challenge reservations", () => {
       where attempt.id = $1`,
       [attemptId],
     );
-    expect(result.rows[0]?.runtime_ms).toBe(100);
+    expect(result.rows[0]?.runtime_ms).toBe(1);
   });
 });

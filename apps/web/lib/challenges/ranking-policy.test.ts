@@ -17,14 +17,14 @@ const score = (overrides: Partial<ChallengeScore> = {}): ChallengeScore => ({
 });
 
 describe("challenge ranking policy", () => {
-  test("gives otherwise identical scores the same rank despite runtime", () => {
+  test("breaks otherwise identical scores by runtime", () => {
     expect(
       competitionRanks([
         score({ runtimeMs: 1_000 }),
         score(),
         score({ accuracy: 0.8, exactCount: 800 }),
       ]),
-    ).toEqual([1, 1, 3]);
+    ).toEqual([1, 2, 3]);
   });
 
   test("shows only the first 17 ranked entries", () => {

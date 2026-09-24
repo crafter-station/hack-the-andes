@@ -45,9 +45,6 @@ export const compareRankedChallengeEvaluations = (
 ): number => {
   const scoreOrder = compareChallengeScores(left.score, right.score);
   if (scoreOrder !== 0) return scoreOrder;
-  if (left.score.runtimeMs !== right.score.runtimeMs) {
-    return left.score.runtimeMs - right.score.runtimeMs;
-  }
   if (left.score.breakdown && right.score.breakdown) {
     return left.evaluatedAt.getTime() - right.evaluatedAt.getTime();
   }

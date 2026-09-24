@@ -127,6 +127,13 @@
       "when": 1790275050735,
       "tag": "0017_unknown_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790280704407,
+      "tag": "0018_rank_challenge_runtime",
+      "breakpoints": true
     }
   ]
 }

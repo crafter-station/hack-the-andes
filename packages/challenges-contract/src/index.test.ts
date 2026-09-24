@@ -146,11 +146,11 @@ describe("challenge scoring", () => {
     expect(compareChallengeScores(fewerQueries, perfect)).toBeLessThan(0);
   });
 
-  test("does not use runtime to break otherwise identical scores", () => {
+  test("uses runtime to break otherwise identical scores", () => {
     const score = scoreFromPredictions([10, 20], [10, 20], 8, 1);
-    expect(compareChallengeScores(score, { ...score, runtimeMs: 10_000 })).toBe(
-      0,
-    );
+    expect(
+      compareChallengeScores(score, { ...score, runtimeMs: 10_000 }),
+    ).toBeLessThan(0);
   });
 
   test("breaks Broken Agent ties by fewer evaluations and then runtime", () => {

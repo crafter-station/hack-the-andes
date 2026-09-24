@@ -523,9 +523,9 @@ export const compareChallengeScores = (
     ) {
       return left.evaluationsUsed - right.evaluationsUsed;
     }
-    if (left.runtimeMs !== right.runtimeMs) {
-      return left.runtimeMs - right.runtimeMs;
-    }
+  }
+  if (left.runtimeMs !== right.runtimeMs) {
+    return left.runtimeMs - right.runtimeMs;
   }
   return 0;
 };
