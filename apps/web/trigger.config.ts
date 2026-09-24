@@ -16,7 +16,7 @@ export default defineConfig({
     },
   },
   build: {
-    external: ["sharp"],
+    external: ["next", "sharp"],
     extensions: [aptGet({ packages: ["fonts-liberation2"] })],
   },
 });
