@@ -70,6 +70,29 @@ const WEBBING = "#1d1c22";
  * the checkerboard. At the old length the band was under four
  * strap-widths end to end and barely one was ever in frame.
  */
+/**
+ * Where the card is punched, above its centre.
+ *
+ * The pivot that makes it swing rather than spin, and the point the
+ * webbing has to end at — one number, because when they were two the
+ * strap and the hook drifted apart.
+ */
+const GROMMET_ABOVE_CENTRE = 1.45;
+
+/**
+ * Where the webbing stops, measured up from the grommet.
+ *
+ * Not at the grommet and not at the rope's last knot: above the swivel
+ * ring. The ribbon is a flat quad with no thickness, so any part of it
+ * that reaches the ring passes through the metal and splits it — the
+ * ring renders half in front of the strap and half behind, which is the
+ * torn hook in the recording.
+ *
+ * Ending short leaves the ring holding the strap's end, which is what a
+ * lanyard looks like and what the geometry can actually express.
+ */
+const BAND_ENDS_ABOVE_GROMMET = 0.2;
+
 const ROPE = 2;
 const ANCHOR = 1 + ROPE * 3;
 
@@ -428,6 +451,18 @@ function Band({ faceUrl, isMobile, onFaceReady }: BandProps) {
   // biome-ignore lint/suspicious/noExplicitAny: rapier's ref types are internal
   const card = useRef<any>(null);
 
+  /**
+   * Where the webbing ends: the grommet, in world space.
+   *
+   * It used to end at `j3`, the last knot of the rope. That is a physics
+   * proxy, and the spherical joint below lets it drift from the card it
+   * holds — so under any real movement the webbing and the hook came
+   * apart, the strap's end poking through the ring and a gap opening
+   * above the card. Following the card's own punched hole instead keeps
+   * the two together whatever the rope is doing.
+   */
+  const grommet = useMemo(() => new THREE.Vector3(), []);
+  const cardSpin = useMemo(() => new THREE.Quaternion(), []);
   const vec = useMemo(() => new THREE.Vector3(), []);
   const ang = useMemo(() => new THREE.Vector3(), []);
   const rot = useMemo(() => new THREE.Vector3(), []);
@@ -656,11 +691,9 @@ function Band({ faceUrl, isMobile, onFaceReady }: BandProps) {
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], ROPE]);
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], ROPE]);
   useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], ROPE]);
-  // The pivot that makes it swing rather than spin: 1.45 above the card's
-  // centre is where the grommet is punched.
   useSphericalJoint(j3, card, [
     [0, 0, 0],
-    [0, 1.45, 0],
+    [0, GROMMET_ABOVE_CENTRE, 0],
   ]);
 
   useEffect(() => {
@@ -717,7 +750,16 @@ function Band({ faceUrl, isMobile, onFaceReady }: BandProps) {
     if (!tip || !mid || !high || !top) {
       return;
     }
-    tip.copy(j3.current.translation());
+    const seat = card.current.translation();
+    const spin = card.current.rotation();
+    cardSpin.set(spin.x, spin.y, spin.z, spin.w);
+    tip
+      .copy(
+        grommet
+          .set(0, GROMMET_ABOVE_CENTRE + BAND_ENDS_ABOVE_GROMMET, 0)
+          .applyQuaternion(cardSpin),
+      )
+      .add(vec.set(seat.x, seat.y, seat.z));
     mid.copy(j2.current.lerped);
     high.copy(j1.current.lerped);
     top.copy(fixed.current.translation());
