@@ -23,11 +23,11 @@ describe("challenge ranking policy", () => {
     ).toEqual([1, 1, 3]);
   });
 
-  test("shows only the first 18 ranked entries", () => {
+  test("shows only the first 17 ranked entries", () => {
     const ranked = Array.from({ length: 20 }, (_, index) => ({
       position: index + 1,
     }));
 
-    expect(publicRankingEntries(ranked)).toEqual(ranked.slice(0, 18));
+    expect(publicRankingEntries(ranked)).toEqual(ranked.slice(0, 17));
   });
 });
