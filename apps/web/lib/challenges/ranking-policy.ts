@@ -3,6 +3,12 @@ import {
   compareChallengeScores,
 } from "@chofex/challenges-contract";
 
+const publicRankingEntryLimit = 18;
+
+export const publicRankingEntries = <Entry>(
+  ranked: ReadonlyArray<Entry>,
+): Array<Entry> => ranked.slice(0, publicRankingEntryLimit);
+
 export const competitionRanks = (
   scores: ReadonlyArray<ChallengeScore>,
 ): Array<number> => {

@@ -18,7 +18,7 @@ import { catalogItemFor } from "./catalog";
 import { challengesForceOpen, currentChallengeTime } from "./clock";
 import { currentChallengeVersion } from "./engine";
 import { rankingDisplayName } from "./names";
-import { competitionRanks } from "./ranking-policy";
+import { competitionRanks, publicRankingEntries } from "./ranking-policy";
 import { scoreFromStored } from "./score";
 
 interface RankedEvaluation {
@@ -133,30 +133,33 @@ export const getChallengeRanking = async (
   }
 
   const ranks = competitionRanks(ranked.map((row) => row.score));
-  const entries: Array<ChallengeRankingEntry> = ranked.map((row, index) => {
-    const identity = identityByParticipant.get(row.participantId);
-    return {
-      rank: ranks[index] ?? 1,
-      displayName: rankingDisplayName({
-        firstName: identity?.firstName,
-        lastName: identity?.lastName,
-        githubUrl: identity?.githubUrl,
+  const publicRanked = publicRankingEntries(ranked);
+  const entries: Array<ChallengeRankingEntry> = publicRanked.map(
+    (row, index) => {
+      const identity = identityByParticipant.get(row.participantId);
+      return {
+        rank: ranks[index] ?? 1,
+        displayName: rankingDisplayName({
+          firstName: identity?.firstName,
+          lastName: identity?.lastName,
+          githubUrl: identity?.githubUrl,
+          shareCode: row.shareCode,
+        }),
         shareCode: row.shareCode,
-      }),
-      shareCode: row.shareCode,
-      accuracy: row.score.accuracy,
-      exactCount: row.score.exactCount,
-      sampleSize: row.score.sampleSize,
-      meanError: row.score.meanError,
-      queriesUsed: row.score.queriesUsed,
-      runtimeMs: row.score.runtimeMs,
-      evaluatedAt: row.evaluatedAt.toISOString(),
-    };
-  });
+        accuracy: row.score.accuracy,
+        exactCount: row.score.exactCount,
+        sampleSize: row.score.sampleSize,
+        meanError: row.score.meanError,
+        queriesUsed: row.score.queriesUsed,
+        runtimeMs: row.score.runtimeMs,
+        evaluatedAt: row.evaluatedAt.toISOString(),
+      };
+    },
+  );
 
   return {
     challenge: challengeItem,
     entries,
-    competitorCount: entries.length,
+    competitorCount: ranked.length,
   };
 };
