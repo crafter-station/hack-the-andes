@@ -1,24 +1,28 @@
 import { describe, expect, test } from "bun:test";
 
-import { rankingDisplayName } from "./names";
+import { participantDisplayName, rankingDisplayName } from "./names";
 
 describe("ranking display names", () => {
-  test("prefers a GitHub handle, then a first name with last initial", () => {
+  test("uses the same full application name as the admin dashboard", () => {
     expect(
       rankingDisplayName({
-        githubUrl: "https://github.com/cuevaio",
         firstName: "Anthony",
         lastName: "Cueva",
-        shareCode: "7A3F",
       }),
-    ).toBe("cuevaio");
+    ).toBe("Anthony Cueva");
     expect(
       rankingDisplayName({
         firstName: "Ada",
         lastName: "Lovelace",
-        shareCode: "7A3F",
       }),
-    ).toBe("Ada L.");
-    expect(rankingDisplayName({ shareCode: "7A3F" })).toBe("BOX-7A3F");
+    ).toBe("Ada Lovelace");
+    expect(rankingDisplayName({ lastName: "Smith" })).toBe("Unknown Smith");
+    expect(rankingDisplayName({ firstName: "Madonna", lastName: "" })).toBe(
+      "Madonna",
+    );
+    expect(rankingDisplayName({})).toBe("Unknown participant");
+    expect(participantDisplayName({ firstName: "Madonna", lastName: "" })).toBe(
+      "Madonna",
+    );
   });
 });

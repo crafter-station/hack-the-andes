@@ -100,6 +100,7 @@ import {
   reviewableCandidateStatuses,
 } from "@/lib/admin/types";
 import { whatsappMessage, whatsappUrl } from "@/lib/admin/whatsapp";
+import { participantDisplayName } from "@/lib/challenges/names";
 import { formatChallengeScore } from "@/lib/challenges/score";
 
 interface CandidateDashboardProps {
@@ -207,7 +208,7 @@ const filterStatuses: ReadonlyArray<{
 ];
 
 const displayName = (candidate: Candidate): string =>
-  `${candidate.firstName} ${candidate.lastName}`.trim();
+  participantDisplayName(candidate);
 
 const WhatsAppIcon = ({ className }: { readonly className?: string }) => (
   <svg
