@@ -150,6 +150,39 @@ describe("automatic CLI updates", () => {
     ).toBe(false);
   });
 
+  test("does not mistake an option value for the update command", async () => {
+    const globalNodeModulesPath = join("usr", "local", "lib", "node_modules");
+
+    expect(
+      await shouldAutoUpdateCli({
+        arguments: ["validate", "--input", "update"],
+        entryPath: join(
+          globalNodeModulesPath,
+          "chofex-cli",
+          "dist",
+          "index.js",
+        ),
+        environmentValue: undefined,
+        globalNodeModulesPath,
+        standalone: false,
+      }),
+    ).toBe(true);
+    expect(
+      await shouldAutoUpdateCli({
+        arguments: ["--token", "update", "status"],
+        entryPath: join(
+          globalNodeModulesPath,
+          "chofex-cli",
+          "dist",
+          "index.js",
+        ),
+        environmentValue: undefined,
+        globalNodeModulesPath,
+        standalone: false,
+      }),
+    ).toBe(true);
+  });
+
   test("recognizes the package inside npm's reported global root", async () => {
     const globalNodeModulesPath = join("usr", "local", "lib", "node_modules");
     const npmCalls: Array<ReadonlyArray<string>> = [];

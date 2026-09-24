@@ -119,7 +119,9 @@ const programForArguments = () => {
   return commandProgram;
 };
 
-const runAutomaticUpdate = async (): Promise<boolean> => {
+type AutomaticUpdateOutcome = "command-completed" | "continue";
+
+const runAutomaticUpdate = async (): Promise<AutomaticUpdateOutcome> => {
   try {
     const standalone = isStandaloneExecutable();
     const enabled = await shouldAutoUpdateCli({
@@ -128,33 +130,33 @@ const runAutomaticUpdate = async (): Promise<boolean> => {
       environmentValue: process.env.CHOFEX_AUTO_UPDATE,
       standalone,
     });
-    if (!enabled) return false;
+    if (!enabled) return "continue";
 
     const result = await autoUpdateCli(cliVersion);
-    if (result.status === "current") return false;
+    if (result.status === "current") return "continue";
     process.stderr.write(
       `${cliPackageName} se actualizó de ${result.previousVersion} a ${result.version}.\n`,
     );
     if (standalone && process.platform === "win32") {
       process.stderr.write(
-        "Ejecuta el comando de nuevo para usar la versión actualizada.\n",
+        "La actualización se aplicará cuando termine este comando.\n",
       );
-      return true;
+      return "continue";
     }
 
     process.exitCode = await runUpdatedCli();
-    return true;
-  } catch (error) {
+    return "command-completed";
+  } catch {
     process.stderr.write(
-      `No se pudo comprobar o instalar una actualización de ${cliPackageName}; se continuará con ${cliVersion}. ${String(error)}\n`,
+      `No se pudo comprobar o instalar una actualización de ${cliPackageName}; se continuará con ${cliVersion}.\n`,
     );
-    return false;
+    return "continue";
   }
 };
 
 Effect.promise(runAutomaticUpdate).pipe(
-  Effect.flatMap((updated) => {
-    if (updated) return Effect.void;
+  Effect.flatMap((outcome) => {
+    if (outcome === "command-completed") return Effect.void;
     return programForArguments();
   }),
   Effect.provide(NodeServices.layer),

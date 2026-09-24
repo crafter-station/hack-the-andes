@@ -296,6 +296,24 @@ const pathIsInside = (parent: string, child: string): boolean => {
   );
 };
 
+const rootFlagsWithValues = new Set(["--api-url", "--output", "--token"]);
+
+const requestedCommand = (
+  arguments_: ReadonlyArray<string>,
+): string | undefined => {
+  for (let index = 0; index < arguments_.length; index += 1) {
+    const argument = arguments_[index];
+    if (argument === undefined) continue;
+    if (rootFlagsWithValues.has(argument)) {
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith("-")) continue;
+    return argument;
+  }
+  return undefined;
+};
+
 export const shouldAutoUpdateCli = async ({
   arguments: arguments_,
   entryPath,
@@ -305,7 +323,8 @@ export const shouldAutoUpdateCli = async ({
   standalone,
 }: AutoUpdateEligibility): Promise<boolean> => {
   if (environmentValue === "0" || environmentValue === "false") return false;
-  if (arguments_.includes("update") || arguments_.includes("upgrade")) {
+  const command = requestedCommand(arguments_);
+  if (command === "update" || command === "upgrade") {
     return false;
   }
   if (standalone) return true;
