@@ -22,9 +22,8 @@ afterAll(() => {
 });
 
 describe("halftonePortrait", () => {
-  test("answers null when nothing has been confirmed", async () => {
-    // CONTEXT.md: available images are not used until the participant
-    // confirms a source. No confirmation means initials, not a guess.
+  test("answers null when the badge has no stored picture", async () => {
+    // No acceptance default or confirmed replacement means initials.
     expect(await halftonePortrait(null)).toBeNull();
   });
 

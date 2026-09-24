@@ -282,6 +282,23 @@ describe("registration contract", () => {
     expect(acceptedDetailsSemanticRequirements(details, "remote")).toEqual([]);
   });
 
+  test("accepts an optional one-line badge description during confirmation", () => {
+    const details = Schema.decodeUnknownSync(AcceptedDetailsInput)({
+      fullName: "Ada Lovelace",
+      displayName: "Ada L.",
+      oneLiner: "Computing pioneer",
+      phone: "+44 20 0000 0000",
+      dateOfBirth: "1990-01-01",
+      nationalIdNumber: "AB123456",
+      emergencyContactName: "Charles Babbage",
+      emergencyContactPhone: "+44 20 0000 0001",
+      pictureSource: "clerk",
+    });
+
+    expect(details.displayName).toBe("Ada L.");
+    expect(details.oneLiner).toBe("Computing pioneer");
+  });
+
   test("requires a national ID after acceptance", () => {
     expect(() =>
       Schema.decodeUnknownSync(AcceptedDetailsInput)({

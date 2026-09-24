@@ -48,19 +48,28 @@ export const buildBadgeReadyEmail = (
   const name = input.firstName.trim();
   const greeting = name ? `Hola ${name},` : "Hola,";
   const introduction =
-    "Tu carnet ya está hecho: tu foto tramada, tu nombre, tu presentación y tu mejor posición en los challenges.";
+    "Tu carnet predeterminado ya está hecho con el nombre, la foto y la presentación que teníamos al aceptar tu postulación.";
+  const ranked = input.placement !== "PARTICIPANT";
+  const congratulation = ranked
+    ? `¡Felicitaciones! Alcanzaste ${input.placement}; tu posición en el challenge también aparece en el carnet.`
+    : undefined;
   const body =
-    "En el sitio está el carnet completo. Si quieres cambiar la foto, el nombre, la presentación o el enlace del QR, ejecuta chofex badge regenerate.";
+    "Ejecuta chofex confirm para cambiar el nombre del carnet, la foto o la presentación de una línea y generar uno nuevo. Completa el comando aunque quieras conservar este carnet: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si necesitamos coordinar contigo.";
+  const sharing =
+    "Celebra este logro compartiendo tu carnet en LinkedIn e Instagram.";
 
   const text = [
     greeting,
     "",
     introduction,
+    ...(congratulation ? ["", congratulation] : []),
     "",
     body,
     "",
+    sharing,
+    "",
     `Ver mi carnet: ${input.badgePageUrl}`,
-    "Personalizar y regenerar: chofex badge regenerate",
+    "Confirmar, personalizar y regenerar: chofex confirm",
     "",
     "Nos vemos en la cima.",
     "— El equipo de Hack the Andes",
@@ -81,10 +90,12 @@ export const buildBadgeReadyEmail = (
       heading("Ya tienes carnet."),
       paragraph(greeting),
       paragraph(introduction),
+      ...(congratulation ? [paragraph(congratulation)] : []),
       picture(input.badgeUrl, "Tu carnet de Hack the Andes"),
       paragraph(body),
+      paragraph(sharing),
       button("Ver mi carnet", input.badgePageUrl),
-      paragraph("Desde tu terminal: chofex badge regenerate"),
+      paragraph("Desde tu terminal: chofex confirm"),
     ],
   });
 

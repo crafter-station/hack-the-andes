@@ -54,7 +54,7 @@ chofex register
 chofex status
 chofex requirements
 
-# After acceptance, provide private attendance details
+# After acceptance, personalize the default badge and provide attendance details
 chofex confirm
 
 # Check background badge generation
@@ -73,9 +73,11 @@ Rejected and withdrawn applications remain in history but allow a new
 application. Interactive registration pre-fills the latest application's
 answers; press Enter to keep an answer or Ctrl+U to clear and replace it.
 
-After acceptance, `chofex confirm` collects the required attendance details
-and asks the participant to confirm a Clerk picture, GitHub avatar, or custom
-upload. Custom uploads accept JPEG, PNG, or WebP files up to 5 MB:
+Acceptance immediately creates a default badge from the name, one-line role,
+and picture visible to reviewers, including the participant's best exact
+challenge placement. `chofex confirm` can replace the badge name, one-liner,
+and picture while collecting the full legal name, ID, phone, and other required
+attendance details. Custom uploads accept JPEG, PNG, or WebP files up to 5 MB:
 
 ```sh
 chofex confirm --input attendance.json --picture /path/to/picture.png
@@ -84,11 +86,10 @@ chofex confirm --input attendance.json --picture /path/to/picture.png
 For that non-interactive upload, set `pictureSource` to `upload` in
 `attendance.json`.
 
-After confirmation, the generated badge uses the participant's best exact
-challenge placement and a QR destination chosen from portfolio, GitHub, then
-LinkedIn. `chofex badge regenerate` can override the public name, one-line
-description, QR destination, and confirmed picture without changing the
-historical application.
+The QR destination is chosen from portfolio, GitHub, then LinkedIn.
+`chofex badge regenerate` remains available after confirmation to override the
+public name, one-line description, QR destination, and confirmed picture
+without changing the historical application.
 
 ### Technical challenges
 

@@ -18,16 +18,13 @@
  *   withdrawn applications are history. A credential must never be built
  *   from history — someone rejected this year would otherwise keep a
  *   badge from a form they filled in once;
- * - a confirmed profile picture is one the participant *explicitly chose*
- *   during attendance confirmation, and available images are not used
- *   until they do.
+ * - an acceptance badge may begin with the picture reviewers already saw;
+ *   after attendance confirmation, the confirmed profile picture replaces
+ *   that default.
  *
- * That second rule is why `pictureUrl` and `githubUrl` arrive here as
- * separate fields rather than one resolved picture. The confirmed one is
- * the picture; the GitHub one is a *proposal*, shown to its owner behind
- * their own session so they can accept or replace it, and never stored,
- * printed or shared until they say so. Collapsing the two here is how a
- * photograph nobody chose ends up on a printed badge.
+ * `pictureUrl` and `githubUrl` still arrive here as separate fields. The
+ * former is the picture currently selected by the badge profile; the latter
+ * is an alternative the participant may choose during confirmation.
  */
 
 import { db } from "@chofex/db";
@@ -47,7 +44,7 @@ export interface AcceptedParticipant {
   /** Their public description. The design's line under the name. */
   readonly oneLiner: string;
   readonly organization: string | null;
-  /** Only ever the confirmed one. Null until they choose. */
+  /** The acceptance default or the picture later confirmed by its owner. */
   readonly pictureUrl: string | null;
   /**
    * What their form said, if anything — a proposal, not a picture.
@@ -122,9 +119,9 @@ export const acceptedByClerkUser = async (
  * The picture to draw, and whether its owner has agreed to it.
  *
  * `confirmed` is what the page reads to decide between showing the
- * credential and asking about it. A proposal draws exactly the same —
- * somebody should see their own face immediately — but nothing downstream
- * may treat it as settled.
+ * credential and asking about an alternative. Acceptance defaults count as
+ * printable badge pictures; a GitHub fallback that was never selected does
+ * not.
  */
 export interface PortraitChoice {
   readonly url: string | null;
@@ -144,9 +141,8 @@ export const portraitFor = (accepted: AcceptedParticipant): PortraitChoice => {
 /**
  * The same participant, as the thing the card prints.
  *
- * Draws only the confirmed picture. The separate picker may preview a
- * GitHub proposal, but the credential itself stays on initials until its
- * owner explicitly selects a source.
+ * Draws the stored badge picture. The separate picker may still preview a
+ * GitHub proposal when no acceptance default was available.
  */
 export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   name: accepted.name,

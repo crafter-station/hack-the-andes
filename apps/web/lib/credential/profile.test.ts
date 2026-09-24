@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  acceptanceBadgeProfileFor,
   badgeFallbackUrl,
   badgeLinkFor,
   badgeOneLinerFor,
@@ -69,5 +70,23 @@ describe("badge profile", () => {
     );
     expect(oneLiner).toEndWith("…");
     expect(oneLiner.length).toBeLessThanOrEqual(30);
+  });
+
+  test("captures the reviewer-visible dashboard profile as acceptance defaults", () => {
+    expect(
+      acceptanceBadgeProfileFor({
+        firstName: "Ada",
+        lastName: "Lovelace",
+        role: "A description that is much too long for the badge",
+        avatarUrl: "https://github.com/ada.png?size=112",
+        githubUrl: "https://github.com/ada",
+        linkedInUrl: "https://linkedin.com/in/ada",
+      }),
+    ).toEqual({
+      displayName: "Ada Lovelace",
+      oneLiner: "A description that is much…",
+      linkUrl: "https://github.com/ada",
+      pictureUrl: "https://github.com/ada.png?size=460",
+    });
   });
 });

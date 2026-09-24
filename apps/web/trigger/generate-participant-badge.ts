@@ -24,7 +24,7 @@ export interface GenerateParticipantBadgePayload {
 export const generateParticipantBadge = task<
   "generate-participant-badge",
   GenerateParticipantBadgePayload,
-  { readonly badgeUrl: string; readonly portraitUrl: string }
+  { readonly badgeUrl: string; readonly portraitUrl: string | null }
 >({
   id: "generate-participant-badge",
   queue: { concurrencyLimit: 5 },
@@ -79,9 +79,6 @@ export const generateParticipantBadge = task<
     if (record.application.status !== "accepted") {
       throw new Error("Only accepted participants can receive a badge");
     }
-    if (!record.details?.completedAt) {
-      throw new Error("Participant has not completed attendance confirmation");
-    }
     const profile = resolveBadgeProfile(
       {
         ...record.application,
@@ -90,7 +87,6 @@ export const generateParticipantBadge = task<
       record.badge,
     );
     const pictureUrl = profile.pictureUrl;
-    if (!pictureUrl) throw new Error("Participant has no confirmed picture");
     const fullName = profile.fullName || record.details?.fullName?.trim() || "";
     if (!fullName) throw new Error("Participant has no name");
     const email = record.application.email;
@@ -111,16 +107,20 @@ export const generateParticipantBadge = task<
     logger.info("Starting participant badge workflow", {
       applicationId: payload.applicationId,
     });
-    const portrait = await generatePortrait
-      .triggerAndWait(
-        {
-          applicationId: payload.applicationId,
-          generationId: payload.generationId,
-          pictureUrl,
-        },
-        { idempotencyKey: `portrait/${payload.generationId}` },
-      )
-      .unwrap();
+    let portraitUrl: string | undefined;
+    if (pictureUrl) {
+      const portrait = await generatePortrait
+        .triggerAndWait(
+          {
+            applicationId: payload.applicationId,
+            generationId: payload.generationId,
+            pictureUrl,
+          },
+          { idempotencyKey: `portrait/${payload.generationId}` },
+        )
+        .unwrap();
+      portraitUrl = portrait.url;
+    }
     const badge = await generateBadge
       .triggerAndWait(
         {
@@ -130,7 +130,7 @@ export const generateParticipantBadge = task<
           oneLiner: profile.oneLiner,
           placement: profile.placement,
           linkUrl: profile.linkUrl,
-          portraitUrl: portrait.url,
+          portraitUrl,
         },
         { idempotencyKey: `badge/${payload.generationId}` },
       )
@@ -150,7 +150,7 @@ export const generateParticipantBadge = task<
       logger.info("Skipping notification for superseded badge generation", {
         applicationId: payload.applicationId,
       });
-      return { badgeUrl: badge.url, portraitUrl: portrait.url };
+      return { badgeUrl: badge.url, portraitUrl: portraitUrl ?? null };
     }
     await sendBadgeReadyEmail({
       applicationId: payload.applicationId,
@@ -171,6 +171,6 @@ export const generateParticipantBadge = task<
         ),
       );
 
-    return { badgeUrl: badge.url, portraitUrl: portrait.url };
+    return { badgeUrl: badge.url, portraitUrl: portraitUrl ?? null };
   },
 });

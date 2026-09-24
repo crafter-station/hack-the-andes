@@ -46,7 +46,7 @@ const decisionCopy = (decision: ApplicationDecision) => {
       heading: "Estás dentro.",
       introduction:
         "Nos alegra ofrecerte un lugar en Hack the Andes, en Lima, el 17 y 18 de octubre.",
-      body: "Falta un paso: confirmar tu asistencia con chofex confirm. Ahí completas tu nombre legal, documento, talla y contacto de emergencia, y eliges una foto de Clerk, GitHub o una nueva subida. En cuanto lo hagas, te enviamos tu carnet; después puedes personalizar el nombre público, la presentación y el enlace del QR con chofex badge regenerate.",
+      body: "Ya estamos preparando tu carnet predeterminado con el nombre y la foto que vimos en tu postulación. Aun así, completa chofex confirm: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si hace falta. En ese mismo paso puedes cambiar el nombre del carnet, la foto y la presentación de una línea; al terminar generaremos uno nuevo.",
       action: "Confirmar mi asistencia",
       url: CONFIRM_URL,
       commandLabel: "O desde tu terminal:",

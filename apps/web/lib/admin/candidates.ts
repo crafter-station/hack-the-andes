@@ -18,6 +18,8 @@ import {
 } from "@chofex/db/schema";
 import { clerkClient } from "@clerk/nextjs/server";
 
+import { storeAcceptanceBadgeProfile } from "@/lib/badges/acceptance";
+import { enqueueBadgeGeneration } from "@/lib/badges/enqueue";
 import { HttpError } from "@/lib/registration/http";
 import { rankedEvaluationsFor } from "../challenges/ranking";
 import { challengeActivityForParticipants } from "../challenges/service";
@@ -506,6 +508,13 @@ export interface CandidateDecisionResult {
   readonly candidate: Candidate;
   readonly emailStatus: "not_requested" | "sent" | "failed";
   readonly emailError?: string;
+  readonly badgeStatus:
+    | "not_requested"
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed";
+  readonly badgeError?: string;
 }
 
 const sendDecisionEmail = async (
@@ -604,21 +613,53 @@ export const decideCandidate = async (
   const [candidate] = await toCandidates([record]);
   if (!candidate) throw new Error("Candidate conversion returned no result");
 
+  let badgeStatus: CandidateDecisionResult["badgeStatus"] = "not_requested";
+  let badgeError: string | undefined;
+  if (input.decision === "accepted") {
+    const shouldInitialize = Boolean(updatedApplication) || !record.badge;
+    const shouldEnqueue =
+      shouldInitialize || !record.badge || record.badge.status === "failed";
+    try {
+      if (shouldInitialize) await storeAcceptanceBadgeProfile(candidate);
+      if (shouldEnqueue) {
+        await enqueueBadgeGeneration(candidate.id, { force: true });
+        badgeStatus = "pending";
+      } else {
+        badgeStatus = record.badge?.status ?? "pending";
+      }
+    } catch (error) {
+      console.error("Acceptance badge generation could not start", error);
+      badgeStatus = "failed";
+      badgeError =
+        "The decision was saved, but badge generation could not start";
+    }
+  }
+
   const shouldNotify = input.notify || input.decision === "accepted";
   if (!shouldNotify) {
-    return { candidate, emailStatus: "not_requested" };
+    return { candidate, emailStatus: "not_requested", badgeStatus };
   }
 
   try {
     const email = await sendDecisionEmail(candidate, input.decision, message);
-    if (email.ok) return { candidate, emailStatus: "sent" };
-    return { candidate, emailStatus: "failed", emailError: email.error };
+    if (email.ok) {
+      return { candidate, emailStatus: "sent", badgeStatus, badgeError };
+    }
+    return {
+      candidate,
+      emailStatus: "failed",
+      emailError: email.error,
+      badgeStatus,
+      badgeError,
+    };
   } catch (error) {
     console.error("Decision email failed", error);
     return {
       candidate,
       emailStatus: "failed",
       emailError: "The decision was saved, but the email could not be sent",
+      badgeStatus,
+      badgeError,
     };
   }
 };

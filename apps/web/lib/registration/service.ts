@@ -27,6 +27,7 @@ import {
 import { DateTime, Schema } from "effect";
 
 import { challengeProgressForParticipant } from "../challenges/service";
+import { badgeOneLinerFor } from "../credential/profile";
 import { isUniqueViolation } from "../db-errors";
 import { HttpError } from "./http";
 import { participantIdFor } from "./participants";
@@ -476,15 +477,16 @@ export const submitAcceptedDetails = async (
     ),
   );
 
-  let uploadedPictureUrl = current.application.customPictureUrl;
-  if (current.details?.completedAt) {
-    const [badge] = await db
-      .select({ customPictureUrl: participantBadges.customPictureUrl })
-      .from(participantBadges)
-      .where(eq(participantBadges.applicationId, current.application.id))
-      .limit(1);
-    uploadedPictureUrl = badge?.customPictureUrl ?? null;
-  }
+  const [currentBadge] = await db
+    .select({
+      customPictureUrl: participantBadges.customPictureUrl,
+      oneLiner: participantBadges.oneLiner,
+    })
+    .from(participantBadges)
+    .where(eq(participantBadges.applicationId, current.application.id))
+    .limit(1);
+  const uploadedPictureUrl =
+    currentBadge?.customPictureUrl ?? current.application.customPictureUrl;
   const pictureUrl = confirmedPictureUrl(input.pictureSource, {
     clerkPictureUrl: identity.clerkPictureUrl,
     githubUrl: current.application.githubUrl,
@@ -514,48 +516,6 @@ export const submitAcceptedDetails = async (
       set: values,
     })
     .returning();
-  if (current.details?.completedAt) {
-    const badgeUpdate = db
-      .insert(participantBadges)
-      .values({
-        applicationId: current.application.id,
-        status: "pending",
-        generationId: null,
-        triggerRunId: null,
-        pictureSource: input.pictureSource,
-        pictureUrl,
-      })
-      .onConflictDoUpdate({
-        target: participantBadges.applicationId,
-        set: {
-          status: "pending",
-          generationId: null,
-          triggerRunId: null,
-          pictureSource: input.pictureSource,
-          pictureUrl,
-          error: null,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    const [badgeRows, detailsRows] = await db.batch([
-      badgeUpdate,
-      detailsUpdate,
-    ]);
-    const [badge] = badgeRows;
-    const [details] = detailsRows;
-    if (!badge) throw new Error("Badge picture update returned no row");
-    if (!details) throw new Error("Acceptance details update returned no row");
-    return resultFor(
-      {
-        ...current.application,
-        pictureSource: input.pictureSource,
-        pictureUrl,
-      },
-      details,
-    );
-  }
-
   const applicationUpdate = db
     .update(applications)
     .set({
@@ -565,14 +525,48 @@ export const submitAcceptedDetails = async (
     })
     .where(eq(applications.id, current.application.id))
     .returning();
-  const [applicationRows, detailsRows] = await db.batch([
+  const oneLiner =
+    input.oneLiner ??
+    currentBadge?.oneLiner ??
+    badgeOneLinerFor(current.application.role);
+  const badgeUpdate = db
+    .insert(participantBadges)
+    .values({
+      applicationId: current.application.id,
+      status: "pending",
+      generationId: null,
+      triggerRunId: null,
+      displayName: input.displayName ?? input.fullName,
+      oneLiner,
+      pictureSource: input.pictureSource,
+      pictureUrl,
+    })
+    .onConflictDoUpdate({
+      target: participantBadges.applicationId,
+      set: {
+        status: "pending",
+        generationId: null,
+        triggerRunId: null,
+        displayName: input.displayName ?? input.fullName,
+        oneLiner,
+        pictureSource: input.pictureSource,
+        pictureUrl,
+        error: null,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+  const [applicationRows, badgeRows, detailsRows] = await db.batch([
     applicationUpdate,
+    badgeUpdate,
     detailsUpdate,
   ]);
   const [application] = applicationRows;
+  const [badge] = badgeRows;
   const [details] = detailsRows;
   if (!application)
     throw new Error("Application picture update returned no row");
+  if (!badge) throw new Error("Badge profile update returned no row");
   if (!details) throw new Error("Acceptance details update returned no row");
   return resultFor(application, details);
 };

@@ -13,7 +13,7 @@ export interface GenerateBadgePayload {
   readonly oneLiner: string;
   readonly placement: string;
   readonly linkUrl: string;
-  readonly portraitUrl: string;
+  readonly portraitUrl?: string;
 }
 
 export const generateBadge = task({
@@ -29,8 +29,11 @@ export const generateBadge = task({
       has not necessarily made it visible yet — a race that fails as a
       badge with an empty window, which nobody would think to look for.
     */
-    const source = await downloadImage(payload.portraitUrl);
-    const portrait = `data:image/png;base64,${Buffer.from(source).toString("base64")}`;
+    let portrait: string | null = null;
+    if (payload.portraitUrl) {
+      const source = await downloadImage(payload.portraitUrl);
+      portrait = `data:image/png;base64,${Buffer.from(source).toString("base64")}`;
+    }
 
     const badge = await renderShareBadge({
       fullName: payload.fullName,

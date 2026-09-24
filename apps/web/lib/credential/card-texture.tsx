@@ -168,12 +168,11 @@ const PORTRAIT_HEIGHT = PORTRAIT_ROWS * HALFTONE_CELL;
 export const revalidate = 86_400;
 
 /**
- * The confirmed picture, screened into dots.
+ * The stored badge picture, screened into dots.
  *
- * Only ever the picture the participant confirmed: `CONTEXT.md` is
- * explicit that available images are not used until they choose a
- * source, so a card with nothing confirmed falls through to initials
- * rather than reaching for a photograph they did not pick.
+ * This is either the reviewer-visible acceptance default or the replacement
+ * the participant chose during confirmation. A card with no stored picture
+ * falls through to initials rather than reaching for another profile source.
  *
  * Screened here rather than stored. What is stored is the cut-out, and
  * deriving the dots on each render means changing the grid does not

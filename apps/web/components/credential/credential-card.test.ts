@@ -42,16 +42,10 @@ describe("credential-card", () => {
     expect(card).not.toMatch(/@react-three/);
   });
 
-  test("screens only the confirmed picture onto the card", async () => {
-    // The same rule as the static card, now that a second surface draws
-    // a face: CONTEXT.md forbids using an available image before the
-    // participant picks a source. The texture may read the credential's
-    // own picture and nothing else — reaching for a Clerk avatar or a
-    // GitHub profile directly is the defect.
-    //
-    // The proposal shown before anybody confirms is resolved one layer
-    // up, in `portraitFor`, so that the choice is visible in one place
-    // rather than implied in two.
+  test("screens only the stored badge picture onto the card", async () => {
+    // The acceptance default or confirmed replacement is already resolved
+    // into the credential. Reaching for Clerk or GitHub directly here would
+    // bypass that badge profile.
     const texture = await Bun.file(
       new URL("../../lib/credential/card-texture.tsx", import.meta.url),
     ).text();
@@ -67,16 +61,15 @@ describe("credential-card", () => {
     expect(accepted).not.toContain("pictureUrl: portraitFor(accepted).url");
   });
 
-  test("shows no picture the participant did not confirm", async () => {
+  test("does not invent a picture outside the badge profile", async () => {
     // Replaces a test that warned the card carried a stranger's face —
     // true while anyone could generate anyone's badge from a GitHub
     // handle, and impossible now the card only ever exists behind its
     // holder's own session.
     //
-    // The rule that took its place is `CONTEXT.md`'s: available images
-    // are not used until the participant confirms a source. So the
-    // portrait may read exactly one column, and reaching for a Clerk
-    // avatar or a GitHub profile directly is the defect.
+    // The portrait may read exactly the generated badge portrait. Reaching
+    // for a Clerk avatar or GitHub profile directly would bypass the stored
+    // acceptance default or confirmed replacement.
     const portrait = await source("./credential-portrait.tsx");
 
     expect(portrait).toContain("credential.portraitUrl");

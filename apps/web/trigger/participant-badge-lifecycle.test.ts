@@ -34,11 +34,19 @@ describe("participant badge generation lifecycle", () => {
     );
   });
 
-  test("only exposes badge profiles after attendance confirmation", async () => {
+  test("exposes the default badge as soon as the application is accepted", async () => {
     const service = await source("../lib/badges/service.ts");
 
     expect(service).toContain('eq(applications.status, "accepted")');
-    expect(service).toContain("isNotNull(acceptanceDetails.completedAt)");
+    expect(service).not.toContain("isNotNull(acceptanceDetails.completedAt)");
+  });
+
+  test("generates the default badge before attendance confirmation", async () => {
+    const parent = await source("./generate-participant-badge.ts");
+
+    expect(parent).not.toContain(
+      "Participant has not completed attendance confirmation",
+    );
   });
 
   test("invalidates old generations before changing the badge profile", async () => {
@@ -55,12 +63,21 @@ describe("participant badge generation lifecycle", () => {
       "../app/api/v1/registration/attendance/route.ts",
     );
 
+    expect(registration).toContain("currentBadge?.customPictureUrl");
     expect(registration).toContain(
-      "uploadedPictureUrl = badge?.customPictureUrl ?? null",
+      "displayName: input.displayName ?? input.fullName",
     );
+    expect(registration).toContain("oneLiner");
     expect(attendanceRoute).toContain(
       "enqueueBadgeGeneration(result.registration.id, { force: true })",
     );
+  });
+
+  test("starts default badge generation when an admin accepts a candidate", async () => {
+    const candidates = await source("../lib/admin/candidates.ts");
+
+    expect(candidates).toContain("storeAcceptanceBadgeProfile");
+    expect(candidates).toContain("enqueueBadgeGeneration");
   });
 
   test("marks a generation failed when Trigger dispatch fails", async () => {

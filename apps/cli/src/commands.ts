@@ -303,6 +303,7 @@ const confirmCommand = Command.make(
         );
       }
       const currentUser = yield* getCurrentUser(client);
+      const currentBadge = yield* getBadge(client);
       const body = yield* acceptedDetailsInput(
         Option.getOrUndefined(input),
         current.data.registration.participationMode,
@@ -310,11 +311,16 @@ const confirmCommand = Command.make(
           clerkPictureUrl: currentUser.data.clerkPictureUrl,
           githubUrl: current.data.registration.githubUrl,
           currentPhone: current.data.registration.phone,
+          currentDisplayName: currentBadge.data.profile?.fullName,
+          currentOneLiner:
+            currentBadge.data.profile?.oneLiner ??
+            current.data.registration.role,
           currentFullName:
+            current.data.registration.fullName ||
             joinFullName(
               current.data.registration.firstName,
               current.data.registration.lastName,
-            ) || current.data.registration.fullName,
+            ),
         },
       );
       const picturePath = Option.getOrUndefined(picture);
@@ -516,6 +522,8 @@ const applicationTemplate = {
 
 const acceptanceTemplate = {
   fullName: "Ada Lovelace",
+  displayName: "Ada L.",
+  oneLiner: "Computing pioneer",
   phone: "+44 20 0000 0000",
   dateOfBirth: "1990-01-01",
   nationalIdNumber: "passport-or-national-id",

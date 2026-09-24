@@ -14,6 +14,7 @@ import {
   type BadgeProfile,
   BadgeRegenerationInput,
   badgeRegenerationInputFieldNames,
+  badgeRegenerationInputFields,
   dateOfBirthRequirement,
   joinFullName,
   type RegistrationView,
@@ -324,6 +325,8 @@ const interactiveAcceptedDetails = (
     readonly clerkPictureUrl?: string;
     readonly githubUrl?: string;
     readonly currentFullName?: string;
+    readonly currentDisplayName?: string;
+    readonly currentOneLiner?: string;
     readonly currentPhone?: string;
   },
 ) =>
@@ -349,6 +352,20 @@ const interactiveAcceptedDetails = (
         ),
       );
     }
+    const displayName = yield* Prompt.run(
+      requiredText(
+        "Name printed on your badge",
+        acceptedDetailsInputFields.fullName,
+        pictures.currentDisplayName ?? fullName,
+      ),
+    );
+    const oneLiner = yield* Prompt.run(
+      requiredText(
+        "One-line description printed on your badge",
+        badgeRegenerationInputFields.oneLiner,
+        pictures.currentOneLiner,
+      ),
+    );
     const details = yield* Prompt.run(
       Prompt.all({
         phone: requiredText(
@@ -409,7 +426,13 @@ const interactiveAcceptedDetails = (
         choices: pictureChoices,
       }),
     );
-    return withoutEmptyStrings({ fullName, ...details, pictureSource });
+    return withoutEmptyStrings({
+      fullName,
+      displayName,
+      oneLiner,
+      ...details,
+      pictureSource,
+    });
   });
 
 const inputOrInteractive = (
@@ -477,6 +500,8 @@ export const acceptedDetailsInput = (
     readonly clerkPictureUrl?: string;
     readonly githubUrl?: string;
     readonly currentFullName?: string;
+    readonly currentDisplayName?: string;
+    readonly currentOneLiner?: string;
     readonly currentPhone?: string;
   } = {},
 ): Effect.Effect<AcceptedDetailsInput, CliError, PromptModule.Environment> =>

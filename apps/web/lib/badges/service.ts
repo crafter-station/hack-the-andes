@@ -1,7 +1,6 @@
 import { db } from "@chofex/db";
-import { and, desc, eq, isNotNull } from "@chofex/db/orm";
+import { and, desc, eq } from "@chofex/db/orm";
 import {
-  acceptanceDetails,
   applications,
   participantBadges,
   participants,
@@ -32,10 +31,6 @@ export const getParticipantBadge = async (
     .select({ application: applications, badge: participantBadges })
     .from(participants)
     .innerJoin(applications, eq(applications.participantId, participants.id))
-    .innerJoin(
-      acceptanceDetails,
-      eq(acceptanceDetails.applicationId, applications.id),
-    )
     .leftJoin(
       participantBadges,
       eq(participantBadges.applicationId, applications.id),
@@ -44,7 +39,6 @@ export const getParticipantBadge = async (
       and(
         eq(participants.clerkUserId, clerkUserId),
         eq(applications.status, "accepted"),
-        isNotNull(acceptanceDetails.completedAt),
       ),
     )
     .orderBy(desc(applications.createdAt))

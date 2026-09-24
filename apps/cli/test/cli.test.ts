@@ -589,6 +589,8 @@ describe("CLI JSON mode", () => {
     expect(Object.keys(template).sort()).toEqual(
       [...acceptedDetailsInputFieldNames].sort(),
     );
+    expect(template).toHaveProperty("displayName");
+    expect(template).toHaveProperty("oneLiner");
   });
 
   test("validates an application without contacting the API", async () => {
@@ -1096,6 +1098,23 @@ describe("CLI JSON mode", () => {
               userId: "user-123",
               email: "ada@example.com",
               tokenType: "oauth_token",
+            },
+          });
+        }
+        if (path === "/api/v1/badge") {
+          return Response.json({
+            version: 1,
+            ok: true,
+            requestId: "request-badge",
+            data: {
+              status: "completed",
+              url: "https://example.com/badge.png",
+              profile: {
+                fullName: "Ada Lovelace",
+                oneLiner: "Programmer",
+                linkUrl: "https://example.com",
+                placement: "PARTICIPANT",
+              },
             },
           });
         }

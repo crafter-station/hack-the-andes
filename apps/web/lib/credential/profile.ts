@@ -59,6 +59,58 @@ export interface BadgeApplicationProfileSource extends BadgeLinkCandidates {
   readonly pictureUrl?: string | null;
 }
 
+export interface AcceptanceBadgeProfileSource extends BadgeLinkCandidates {
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly role?: string;
+  /** The same picture an administrator saw while making the decision. */
+  readonly avatarUrl?: string;
+}
+
+export interface AcceptanceBadgeProfile {
+  readonly displayName: string;
+  readonly oneLiner: string;
+  readonly linkUrl: string;
+  readonly pictureUrl?: string;
+}
+
+const portraitSizedDashboardAvatar = (
+  avatarUrl: string | undefined,
+  githubUrl: string | null | undefined,
+): string | undefined => {
+  if (!avatarUrl || !githubUrl) return avatarUrl;
+  try {
+    const thumbnail = new URL(avatarUrl);
+    if (
+      thumbnail.hostname !== "github.com" ||
+      thumbnail.searchParams.get("size") !== "112"
+    ) {
+      return avatarUrl;
+    }
+    thumbnail.searchParams.set("size", "460");
+    return thumbnail.toString();
+  } catch {
+    return avatarUrl;
+  }
+};
+
+export const acceptanceBadgeProfileFor = (
+  source: AcceptanceBadgeProfileSource,
+): AcceptanceBadgeProfile => {
+  const displayName = [source.firstName.trim(), source.lastName.trim()]
+    .filter(Boolean)
+    .join(" ");
+  return {
+    displayName,
+    oneLiner: badgeOneLinerFor(source.role ?? null),
+    linkUrl: badgeLinkFor(source),
+    pictureUrl: portraitSizedDashboardAvatar(
+      source.avatarUrl,
+      source.githubUrl,
+    ),
+  };
+};
+
 export interface BadgeProfileOverrides {
   readonly displayName?: string | null;
   readonly oneLiner?: string | null;

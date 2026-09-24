@@ -21,12 +21,10 @@ export interface Credential {
   readonly oneLiner: string;
   readonly organization: string | null;
   /**
-   * The picture they confirmed, and only that.
+   * The picture currently selected for the badge.
    *
-   * Null until they choose one. `CONTEXT.md` is explicit that available
-   * images are not used until the participant confirms a source, so a
-   * card with nothing here shows initials rather than reaching for a
-   * picture they did not pick.
+   * This may begin as the reviewer-visible acceptance default and later be
+   * replaced during confirmation. A card with nothing here shows initials.
    */
   readonly pictureUrl: string | null;
   /** The generated halftone used by the HTML fallback, or null while pending. */
@@ -46,7 +44,7 @@ export const truncate = (value: string, max: number): string => {
 };
 
 /**
- * Two letters for a card with no confirmed picture.
+ * Two letters for a card with no stored picture.
  *
  * Splits on spaces as well as punctuation, so a person's initials are
  * their initials. Falls back to the first two letters of a single name,

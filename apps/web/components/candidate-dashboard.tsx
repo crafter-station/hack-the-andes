@@ -613,7 +613,10 @@ const CandidateDrawer = ({
   };
 
   let failedDecision: "accepted" | "rejected" | undefined;
-  if (decisionMutation.data?.emailStatus === "failed") {
+  if (
+    decisionMutation.data?.emailStatus === "failed" ||
+    decisionMutation.data?.badgeStatus === "failed"
+  ) {
     failedDecision = decisionMutation.variables?.decision;
   }
   let feedback: string | undefined;
@@ -623,8 +626,16 @@ const CandidateDrawer = ({
     feedback =
       decisionMutation.data.emailError ??
       "Decision saved, but the notification email failed.";
+  } else if (decisionMutation.data?.badgeStatus === "failed") {
+    feedback =
+      decisionMutation.data.badgeError ??
+      "Decision saved, but badge generation could not start.";
   } else if (decisionMutation.data?.emailStatus === "sent") {
-    feedback = "Decision saved and email sent.";
+    if (decisionMutation.data.badgeStatus === "pending") {
+      feedback = "Decision saved, email sent, and badge generation started.";
+    } else {
+      feedback = "Decision saved and email sent.";
+    }
   } else if (decisionMutation.data?.emailStatus === "not_requested") {
     feedback = "Decision saved.";
   }
@@ -843,7 +854,7 @@ const CandidateDrawer = ({
                       disabled={decisionMutation.isPending}
                     >
                       <MailIcon />
-                      Retry notification email
+                      Retry acceptance delivery
                     </Button>
                   )}
                   {feedback && (

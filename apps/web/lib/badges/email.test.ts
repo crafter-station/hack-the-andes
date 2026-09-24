@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
-import { sendBadgeReadyEmail } from "./email";
+import { buildBadgeReadyEmail, sendBadgeReadyEmail } from "./email";
 
 const originalFetch = globalThis.fetch;
 const originalApiKey = process.env.RESEND_API_KEY;
@@ -15,6 +15,38 @@ afterEach(() => {
 });
 
 describe("badge-ready email", () => {
+  test("explains the default badge, confirmation, sharing, and ranked achievement", () => {
+    const email = buildBadgeReadyEmail({
+      firstName: "Ada",
+      badgeUrl: "https://example.com/badge.png",
+      placement: "BLACK BOX · #07",
+      badgePageUrl: "https://hacktheandes.com/badge",
+    });
+
+    expect(email.text).toContain("BLACK BOX · #07");
+    expect(email.text).toContain("carnet predeterminado");
+    expect(email.text).toContain("chofex confirm");
+    expect(email.text).toContain("nombre");
+    expect(email.text).toContain("foto");
+    expect(email.text).toContain("presentación");
+    expect(email.text).toContain("DNI o pasaporte");
+    expect(email.text).toContain("WhatsApp");
+    expect(email.text).toContain("LinkedIn");
+    expect(email.text).toContain("Instagram");
+    expect(email.html).toContain("BLACK BOX · #07");
+  });
+
+  test("does not claim an unranked participant has a ranking", () => {
+    const email = buildBadgeReadyEmail({
+      firstName: "Grace",
+      badgeUrl: "https://example.com/badge.png",
+      placement: "PARTICIPANT",
+      badgePageUrl: "https://hacktheandes.com/badge",
+    });
+
+    expect(email.text).not.toContain("posición en el challenge");
+  });
+
   test("sends one idempotent, HTML-safe notification", async () => {
     process.env.RESEND_API_KEY = "test-key";
     let headers = new Headers();
@@ -47,6 +79,6 @@ describe("badge-ready email", () => {
     expect(body.html).toContain("a=1&amp;b=2");
     // The face, and a way to the card — not a flattened picture of one.
     expect(body.html).toContain("https://hacktheandes.com/badge");
-    expect(body.html).toContain("chofex badge regenerate");
+    expect(body.html).toContain("chofex confirm");
   });
 });
