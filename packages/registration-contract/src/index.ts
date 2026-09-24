@@ -258,7 +258,7 @@ export const acceptedDetailsInputFields = {
   fullName: nonBlank(200),
   displayName: Schema.optional(nonBlank(200)),
   oneLiner: Schema.optional(nonBlank(30)),
-  phone,
+  phone: Schema.optional(phone),
   dateOfBirth: Schema.String.pipe(
     Schema.check(
       Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/, {
@@ -292,7 +292,6 @@ export const initialRequiredFields = [
 
 export const acceptedRequiredFields = [
   "fullName",
-  "phone",
   "dateOfBirth",
   "nationalIdNumber",
   "emergencyContactName",
@@ -463,7 +462,6 @@ const acceptedDetailsRequirementsFor = (
   const missing: Array<Requirement> = [];
 
   if (!registration.fullName) addMissingRequirement(missing, "fullName");
-  if (!registration.phone) addMissingRequirement(missing, "phone");
   if (!registration.dateOfBirth) {
     addMissingRequirement(missing, "dateOfBirth");
   }

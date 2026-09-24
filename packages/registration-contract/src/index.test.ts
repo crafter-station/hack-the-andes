@@ -287,7 +287,6 @@ describe("registration contract", () => {
       fullName: "Ada Lovelace",
       displayName: "Ada L.",
       oneLiner: "Computing pioneer",
-      phone: "+44 20 0000 0000",
       dateOfBirth: "1990-01-01",
       nationalIdNumber: "AB123456",
       emergencyContactName: "Charles Babbage",
@@ -297,6 +296,7 @@ describe("registration contract", () => {
 
     expect(details.displayName).toBe("Ada L.");
     expect(details.oneLiner).toBe("Computing pioneer");
+    expect(details.phone).toBeUndefined();
   });
 
   test("requires a national ID after acceptance", () => {
@@ -522,7 +522,7 @@ describe("registration contract", () => {
     ]);
   });
 
-  test("does not treat an application phone as confirmed attendance data", () => {
+  test("allows attendance confirmation without a WhatsApp phone", () => {
     const requirements = applicationRequirementsFor(
       registrationView({
         status: "accepted",
@@ -535,13 +535,12 @@ describe("registration contract", () => {
         emergencyContactPhone: "+1 555 0100",
         pictureSource: "clerk",
         pictureUrl: "https://images.example/ada.jpg",
+        acceptanceDetailsCompletedAt: "2026-09-02T12:00:00.000Z",
       }),
     );
 
-    expect(requirements.missing).toContainEqual({
-      field: "phone",
-      reason: "Required after acceptance",
-    });
+    expect(requirements.stage).toBe("complete");
+    expect(requirements.missing).toEqual([]);
   });
 
   test("does not require a shirt size for remote acceptance", () => {

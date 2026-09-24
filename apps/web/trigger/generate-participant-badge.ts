@@ -159,6 +159,7 @@ export const generateParticipantBadge = task<
       badgeUrl: badge.url,
       placement: profile.placement,
       badgePageUrl: BADGE_PAGE_URL,
+      requiresConfirmation: !record.details?.completedAt,
       generationId: payload.generationId,
     });
     await db

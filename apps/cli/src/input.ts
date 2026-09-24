@@ -26,6 +26,15 @@ import type * as PromptModule from "effect/unstable/cli/Prompt";
 import { CliError, cliError } from "./errors.js";
 import { profileUsernamePrompt } from "./profile-username-prompt.js";
 
+interface AcceptedDetailsDefaults {
+  readonly clerkPictureUrl?: string;
+  readonly githubUrl?: string;
+  readonly currentFullName?: string;
+  readonly currentDisplayName?: string;
+  readonly currentOneLiner?: string;
+  readonly currentPhone?: string;
+}
+
 const validatePromptValue = (
   schema: Schema.Decoder<unknown, never>,
   value: unknown,
@@ -321,14 +330,7 @@ const shirtSizePrompt = (
 
 const interactiveAcceptedDetails = (
   participationMode: "in_person" | "remote",
-  pictures: {
-    readonly clerkPictureUrl?: string;
-    readonly githubUrl?: string;
-    readonly currentFullName?: string;
-    readonly currentDisplayName?: string;
-    readonly currentOneLiner?: string;
-    readonly currentPhone?: string;
-  },
+  pictures: AcceptedDetailsDefaults,
 ) =>
   Effect.gen(function* () {
     let fullName = pictures.currentFullName;
@@ -354,22 +356,22 @@ const interactiveAcceptedDetails = (
     }
     const displayName = yield* Prompt.run(
       requiredText(
-        "Name printed on your badge",
+        "Nombre impreso en tu carnet",
         acceptedDetailsInputFields.fullName,
         pictures.currentDisplayName ?? fullName,
       ),
     );
     const oneLiner = yield* Prompt.run(
       requiredText(
-        "One-line description printed on your badge",
+        "Presentación de una línea para tu carnet",
         badgeRegenerationInputFields.oneLiner,
         pictures.currentOneLiner,
       ),
     );
     const details = yield* Prompt.run(
       Prompt.all({
-        phone: requiredText(
-          "Phone number",
+        phone: optionalText(
+          "Teléfono para WhatsApp (opcional)",
           acceptedDetailsInputFields.phone,
           pictures.currentPhone,
         ),
@@ -496,14 +498,7 @@ export const applicationDraftInput = (
 export const acceptedDetailsInput = (
   path: string | undefined,
   participationMode: "in_person" | "remote",
-  pictures: {
-    readonly clerkPictureUrl?: string;
-    readonly githubUrl?: string;
-    readonly currentFullName?: string;
-    readonly currentDisplayName?: string;
-    readonly currentOneLiner?: string;
-    readonly currentPhone?: string;
-  } = {},
+  pictures: AcceptedDetailsDefaults = {},
 ): Effect.Effect<AcceptedDetailsInput, CliError, PromptModule.Environment> =>
   inputOrInteractive(
     path,

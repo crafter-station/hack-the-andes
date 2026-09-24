@@ -34,6 +34,7 @@ import {
 import {
   type Candidate,
   type CandidateCounts,
+  type CandidateDecisionResult,
   type CandidateFilter,
   type CandidatePage,
   type CandidateRankingSort,
@@ -504,19 +505,6 @@ export interface CandidateDecisionInput {
   readonly decidedByClerkUserId: string;
 }
 
-export interface CandidateDecisionResult {
-  readonly candidate: Candidate;
-  readonly emailStatus: "not_requested" | "sent" | "failed";
-  readonly emailError?: string;
-  readonly badgeStatus:
-    | "not_requested"
-    | "pending"
-    | "running"
-    | "completed"
-    | "failed";
-  readonly badgeError?: string;
-}
-
 const sendDecisionEmail = async (
   candidate: Candidate,
   decision: CandidateDecisionInput["decision"],
@@ -631,7 +619,7 @@ export const decideCandidate = async (
       console.error("Acceptance badge generation could not start", error);
       badgeStatus = "failed";
       badgeError =
-        "The decision was saved, but badge generation could not start";
+        "La decisión se guardó, pero no se pudo iniciar la generación del carnet";
     }
   }
 

@@ -629,10 +629,11 @@ const CandidateDrawer = ({
   } else if (decisionMutation.data?.badgeStatus === "failed") {
     feedback =
       decisionMutation.data.badgeError ??
-      "Decision saved, but badge generation could not start.";
+      "La decisión se guardó, pero no se pudo iniciar la generación del carnet.";
   } else if (decisionMutation.data?.emailStatus === "sent") {
     if (decisionMutation.data.badgeStatus === "pending") {
-      feedback = "Decision saved, email sent, and badge generation started.";
+      feedback =
+        "Decisión guardada, correo enviado y generación del carnet iniciada.";
     } else {
       feedback = "Decision saved and email sent.";
     }
@@ -854,7 +855,7 @@ const CandidateDrawer = ({
                       disabled={decisionMutation.isPending}
                     >
                       <MailIcon />
-                      Retry acceptance delivery
+                      Reintentar entrega
                     </Button>
                   )}
                   {feedback && (

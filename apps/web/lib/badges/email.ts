@@ -32,6 +32,8 @@ export interface BadgeReadyEmailInput {
   readonly placement: string;
   /** Where the card itself hangs. */
   readonly badgePageUrl: string;
+  /** Whether this is the automatic badge sent at acceptance. */
+  readonly requiresConfirmation: boolean;
   /** Makes regenerated badge notifications independently deliverable. */
   readonly generationId: string;
 }
@@ -47,33 +49,57 @@ export const buildBadgeReadyEmail = (
 } => {
   const name = input.firstName.trim();
   const greeting = name ? `Hola ${name},` : "Hola,";
-  const introduction =
-    "Tu carnet predeterminado ya está hecho con el nombre, la foto y la presentación que teníamos al aceptar tu postulación.";
-  const ranked = input.placement !== "PARTICIPANT";
-  const congratulation = ranked
-    ? `¡Felicitaciones! Alcanzaste ${input.placement}; tu posición en el challenge también aparece en el carnet.`
-    : undefined;
-  const body =
-    "Ejecuta chofex confirm para cambiar el nombre del carnet, la foto o la presentación de una línea y generar uno nuevo. Completa el comando aunque quieras conservar este carnet: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si necesitamos coordinar contigo.";
+  let introduction =
+    "Tu nuevo carnet ya está listo con los cambios que elegiste.";
+  let body =
+    "Puedes volver a personalizar el nombre, la foto, la presentación de una línea o el enlace del QR con chofex badge regenerate.";
+  let terminalCommand = "chofex badge regenerate";
+  let terminalInstruction = "Personalizar y regenerar: chofex badge regenerate";
+  if (input.requiresConfirmation) {
+    introduction =
+      "Tu carnet predeterminado ya está hecho con el nombre, la foto y la presentación que teníamos al aceptar tu postulación.";
+    body =
+      "Ejecuta chofex confirm para cambiar el nombre del carnet, la foto o la presentación de una línea y generar uno nuevo. Completa el comando aunque quieras conservar este carnet: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si necesitamos coordinar contigo.";
+    terminalCommand = "chofex confirm";
+    terminalInstruction = "Confirmar, personalizar y regenerar: chofex confirm";
+  }
+  let congratulation: string | undefined;
+  if (input.placement.endsWith("· #01")) {
+    congratulation = `¡Felicitaciones! Alcanzaste ${input.placement}; tu primer lugar en el challenge también aparece en el carnet.`;
+  }
   const sharing =
     "Celebra este logro compartiendo tu carnet en LinkedIn e Instagram.";
 
-  const text = [
-    greeting,
-    "",
-    introduction,
-    ...(congratulation ? ["", congratulation] : []),
+  const textBlocks = [greeting, "", introduction];
+  if (congratulation) textBlocks.push("", congratulation);
+  textBlocks.push(
     "",
     body,
     "",
     sharing,
     "",
     `Ver mi carnet: ${input.badgePageUrl}`,
-    "Confirmar, personalizar y regenerar: chofex confirm",
+    terminalInstruction,
     "",
     "Nos vemos en la cima.",
     "— El equipo de Hack the Andes",
-  ].join("\n");
+  );
+  const text = textBlocks.join("\n");
+
+  const blocks = [
+    eyebrow("TU CARNET"),
+    heading("Ya tienes carnet."),
+    paragraph(greeting),
+    paragraph(introduction),
+  ];
+  if (congratulation) blocks.push(paragraph(congratulation));
+  blocks.push(
+    picture(input.badgeUrl, "Tu carnet de Hack the Andes"),
+    paragraph(body),
+    paragraph(sharing),
+    button("Ver mi carnet", input.badgePageUrl),
+    paragraph(`Desde tu terminal: ${terminalCommand}`),
+  );
 
   const html = emailShell({
     subject: SUBJECT,
@@ -85,18 +111,7 @@ export const buildBadgeReadyEmail = (
       asset rather than as a motif.
     */
     ridge: false,
-    blocks: [
-      eyebrow("TU CARNET"),
-      heading("Ya tienes carnet."),
-      paragraph(greeting),
-      paragraph(introduction),
-      ...(congratulation ? [paragraph(congratulation)] : []),
-      picture(input.badgeUrl, "Tu carnet de Hack the Andes"),
-      paragraph(body),
-      paragraph(sharing),
-      button("Ver mi carnet", input.badgePageUrl),
-      paragraph("Desde tu terminal: chofex confirm"),
-    ],
+    blocks,
   });
 
   return { subject: SUBJECT, text, html };

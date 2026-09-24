@@ -76,8 +76,9 @@ answers; press Enter to keep an answer or Ctrl+U to clear and replace it.
 Acceptance immediately creates a default badge from the name, one-line role,
 and picture visible to reviewers, including the participant's best exact
 challenge placement. `chofex confirm` can replace the badge name, one-liner,
-and picture while collecting the full legal name, ID, phone, and other required
-attendance details. Custom uploads accept JPEG, PNG, or WebP files up to 5 MB:
+and picture while collecting the full legal name, ID, and other required
+attendance details. A phone number is optional but encouraged for WhatsApp
+coordination. Custom uploads accept JPEG, PNG, or WebP files up to 5 MB:
 
 ```sh
 chofex confirm --input attendance.json --picture /path/to/picture.png

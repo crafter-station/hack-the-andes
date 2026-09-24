@@ -19,11 +19,12 @@ describe("badge-ready email", () => {
     const email = buildBadgeReadyEmail({
       firstName: "Ada",
       badgeUrl: "https://example.com/badge.png",
-      placement: "BLACK BOX · #07",
+      placement: "BLACK BOX · #01",
       badgePageUrl: "https://hacktheandes.com/badge",
+      requiresConfirmation: true,
     });
 
-    expect(email.text).toContain("BLACK BOX · #07");
+    expect(email.text).toContain("BLACK BOX · #01");
     expect(email.text).toContain("carnet predeterminado");
     expect(email.text).toContain("chofex confirm");
     expect(email.text).toContain("nombre");
@@ -33,7 +34,7 @@ describe("badge-ready email", () => {
     expect(email.text).toContain("WhatsApp");
     expect(email.text).toContain("LinkedIn");
     expect(email.text).toContain("Instagram");
-    expect(email.html).toContain("BLACK BOX · #07");
+    expect(email.html).toContain("BLACK BOX · #01");
   });
 
   test("does not claim an unranked participant has a ranking", () => {
@@ -42,9 +43,25 @@ describe("badge-ready email", () => {
       badgeUrl: "https://example.com/badge.png",
       placement: "PARTICIPANT",
       badgePageUrl: "https://hacktheandes.com/badge",
+      requiresConfirmation: true,
     });
 
     expect(email.text).not.toContain("posición en el challenge");
+  });
+
+  test("does not ask a participant to confirm again after regeneration", () => {
+    const email = buildBadgeReadyEmail({
+      firstName: "Grace",
+      badgeUrl: "https://example.com/badge.png",
+      placement: "BLACK BOX · #02",
+      badgePageUrl: "https://hacktheandes.com/badge",
+      requiresConfirmation: false,
+    });
+
+    expect(email.text).toContain("chofex badge regenerate");
+    expect(email.text).not.toContain("chofex confirm");
+    expect(email.text).not.toContain("carnet predeterminado");
+    expect(email.text).not.toContain("¡Felicitaciones!");
   });
 
   test("sends one idempotent, HTML-safe notification", async () => {
@@ -67,6 +84,7 @@ describe("badge-ready email", () => {
       badgeUrl: "https://example.com/badge.png?a=1&b=2",
       placement: "BLACK BOX · #07",
       badgePageUrl: "https://hacktheandes.com/badge",
+      requiresConfirmation: true,
       generationId: "run-456",
     });
 

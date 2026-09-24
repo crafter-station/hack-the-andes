@@ -132,3 +132,16 @@ export interface CandidatePage {
   readonly total: number;
   readonly totalPages: number;
 }
+
+export interface CandidateDecisionResult {
+  readonly candidate: Candidate;
+  readonly emailStatus: "not_requested" | "sent" | "failed";
+  readonly emailError?: string;
+  readonly badgeStatus:
+    | "not_requested"
+    | "pending"
+    | "running"
+    | "completed"
+    | "failed";
+  readonly badgeError?: string;
+}

@@ -1,11 +1,13 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import type {
-  Candidate,
+  CandidateDecisionResult,
   CandidateFilter,
   CandidatePage,
   CandidateRankingSort,
 } from "@/lib/admin/types";
+
+export type { CandidateDecisionResult } from "@/lib/admin/types";
 
 export interface CandidateFilters {
   readonly page: number;
@@ -25,19 +27,6 @@ export interface CandidateDecisionInput {
   readonly decision: "accepted" | "rejected";
   readonly message: string;
   readonly notify: boolean;
-}
-
-export interface CandidateDecisionResult {
-  readonly candidate: Candidate;
-  readonly emailStatus: "not_requested" | "sent" | "failed";
-  readonly emailError?: string;
-  readonly badgeStatus:
-    | "not_requested"
-    | "pending"
-    | "running"
-    | "completed"
-    | "failed";
-  readonly badgeError?: string;
 }
 
 export const candidateKeys = {

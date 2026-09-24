@@ -495,7 +495,7 @@ export const submitAcceptedDetails = async (
 
   const values = {
     fullName: input.fullName,
-    phone: input.phone,
+    phone: input.phone ?? null,
     dateOfBirth: DateTime.toDateUtc(
       DateTime.makeUnsafe(`${input.dateOfBirth}T00:00:00.000Z`),
     ),
@@ -515,15 +515,6 @@ export const submitAcceptedDetails = async (
       target: acceptanceDetails.applicationId,
       set: values,
     })
-    .returning();
-  const applicationUpdate = db
-    .update(applications)
-    .set({
-      pictureSource: input.pictureSource,
-      pictureUrl,
-      updatedAt: new Date(),
-    })
-    .where(eq(applications.id, current.application.id))
     .returning();
   const oneLiner =
     input.oneLiner ??
@@ -555,6 +546,27 @@ export const submitAcceptedDetails = async (
         updatedAt: new Date(),
       },
     })
+    .returning();
+  if (current.details?.completedAt) {
+    const [badgeRows, detailsRows] = await db.batch([
+      badgeUpdate,
+      detailsUpdate,
+    ]);
+    const [badge] = badgeRows;
+    const [details] = detailsRows;
+    if (!badge) throw new Error("Badge profile update returned no row");
+    if (!details) throw new Error("Acceptance details update returned no row");
+    return resultFor(current.application, details);
+  }
+
+  const applicationUpdate = db
+    .update(applications)
+    .set({
+      pictureSource: input.pictureSource,
+      pictureUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(applications.id, current.application.id))
     .returning();
   const [applicationRows, badgeRows, detailsRows] = await db.batch([
     applicationUpdate,

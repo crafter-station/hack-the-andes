@@ -60,6 +60,7 @@ describe("email shell", () => {
       badgeUrl: "https://blob.example/badge.png",
       placement: "BLACK BOX · #07",
       badgePageUrl: "https://hacktheandes.com/badge",
+      requiresConfirmation: true,
     });
 
     expect(email.html).toContain("https://blob.example/badge.png");
