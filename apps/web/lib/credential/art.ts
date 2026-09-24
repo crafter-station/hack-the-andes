@@ -28,16 +28,41 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
 /**
- * Resolved against this module, not the working directory.
+ * Every file named once, in full, and never built from a variable.
  *
- * The card is drawn from a Next route, where the working directory is the
- * app. The emailed badge is drawn from a Trigger worker and the tests run
- * from the repository root, and in both of those a path built from `cwd`
- * points at nothing — which surfaces as a badge with no ridge on it, or
- * as an ENOENT nobody sees until a participant is waiting for an email.
+ * These are resolved against this module rather than the working
+ * directory, because the card is drawn from a Next route where the
+ * working directory is the app while the emailed badge is drawn from a
+ * Trigger worker where it is something else.
+ *
+ * The literals are not style. A bundler reads `new URL(…, import.meta.url)`
+ * as an asset reference and rewrites it to wherever it emitted that file —
+ * which is a content-hashed name. Given a path built from a variable it
+ * cannot know which file is meant, so the rewrite does not line up and the
+ * name asked for at runtime matches nothing. That shipped: the card asked
+ * for `ridge.png`, got another mark in the drawing's place, and every
+ * credential carried a sponsor's logo across its lower half. It worked in
+ * every test and every local run, because nothing there is bundled.
  */
-const assetPath = (file: string): string =>
-  fileURLToPath(new URL(`../../public/credential/${file}`, import.meta.url));
+const ASSETS = {
+  "ridge.png": new URL("../../public/credential/ridge.png", import.meta.url),
+  "mountain.png": new URL(
+    "../../public/credential/mountain.png",
+    import.meta.url,
+  ),
+  "chofex.png": new URL("../../public/credential/chofex.png", import.meta.url),
+  "crafter-station.png": new URL(
+    "../../public/credential/crafter-station.png",
+    import.meta.url,
+  ),
+  "peru-tech-week.png": new URL(
+    "../../public/credential/peru-tech-week.png",
+    import.meta.url,
+  ),
+} as const;
+
+const assetPath = (file: keyof typeof ASSETS): string =>
+  fileURLToPath(ASSETS[file]);
 
 /**
  * Memoised by every argument that changes the bytes.

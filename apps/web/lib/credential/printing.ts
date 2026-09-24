@@ -58,16 +58,18 @@ export const RIDGE_BACK = 0.44;
 export const NOTCH_CAP = 0.74;
 
 /**
- * Resolved against this module, not the working directory.
+ * Both faces named in full, for the same reason the artwork is.
  *
- * The card is rendered from a Next route, where the working directory is
- * the app; the emailed image is rendered from a Trigger worker, where it
- * is whatever the worker was started in. A path built from `cwd` works
- * in one and throws in the other, and the one it throws in is the one
- * nobody watches.
+ * Resolved against this module because the card is rendered from a Next
+ * route and the emailed image from a Trigger worker, and the two have
+ * different working directories. Written as literals because a bundler
+ * rewrites `new URL(…, import.meta.url)` to a content-hashed name, and a
+ * path built from a variable cannot be rewritten to match.
  */
-const fontFile = (name: string): Promise<Buffer> =>
-  readFile(new URL(`../../app/fonts/${name}`, import.meta.url));
+const FONTS = {
+  bold: new URL("../../app/fonts/StackSansNotch-700.ttf", import.meta.url),
+  medium: new URL("../../app/fonts/StackSansNotch-500.ttf", import.meta.url),
+} as const;
 
 /**
  * The faces, as files, because satori takes bytes and not a CSS variable.
@@ -82,8 +84,8 @@ const fontFile = (name: string): Promise<Buffer> =>
  * different voice on a card whose back already speaks in Notch.
  */
 const [notchBold, notchMedium] = await Promise.all([
-  fontFile("StackSansNotch-700.ttf"),
-  fontFile("StackSansNotch-500.ttf"),
+  readFile(FONTS.bold),
+  readFile(FONTS.medium),
 ]);
 
 /** Ready to hand to satori, in the shape it wants. */
