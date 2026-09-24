@@ -114,6 +114,41 @@ describe("credential-card", () => {
     expect(card).not.toContain("<Image");
   });
 
+  test("never lets the model's own demo card be what somebody sees", async () => {
+    /*
+      `card.glb` ships with the face it was exported with — the demo card
+      the lanyard came from, with another product's name on it. The mesh
+      wears that until ours is uploaded, so the static card is only
+      allowed to step aside once the face has actually arrived.
+
+      This used to report ready when the WebGL context was created, which
+      is a good deal earlier, and the load had no error handler at all: an
+      expired session or a failed render left that demo card on a
+      participant's credential, silently, looking like it had worked.
+    */
+    const scene = await source("./credential-lanyard-3d.tsx");
+
+    expect(scene).toContain("faceReady");
+    // Ready is the conjunction, not the context alone.
+    expect(scene).toMatch(/contextReady && \(faceReady \|\| !faceUrl\)/);
+    // And the load reports failure by staying quiet rather than throwing.
+    expect(scene).not.toMatch(/onCreated=\{[^}]*onReady/);
+
+    /*
+      Showing the static card is only half of it: the scene draws over
+      that layer, so the canvas has to be invisible too until it has our
+      face. Transparent and not `display: none` — a hidden canvas stops
+      rendering, and then the face it is waiting for never arrives.
+    */
+    const css = await source("./credential.css");
+    const rule = css.slice(
+      css.indexOf('.credential-scene[data-live="false"] .credential-canvas'),
+    );
+
+    expect(rule).toContain("opacity: 0");
+    expect(rule.slice(0, 120)).not.toContain("display: none");
+  });
+
   test("introduces no colour outside the brand tokens", async () => {
     // Two colours and a drain. A stray hex is how a third hue gets in.
     //

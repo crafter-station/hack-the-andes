@@ -1,4 +1,12 @@
-import { brandColors, brandColorWithAlpha } from "@chofex/ui/lib/brand-theme";
+import {
+  button,
+  command,
+  emailShell,
+  eyebrow,
+  heading,
+  note,
+  paragraph,
+} from "@/lib/emails/layout";
 
 export type ApplicationDecision = "accepted" | "rejected";
 
@@ -14,68 +22,51 @@ export interface DecisionEmail {
   readonly html: string;
 }
 
-const emailColors = {
-  page: brandColors.light.paper,
-  surface: brandColors.light.surface,
-  border: brandColorWithAlpha(brandColors.light.ink, 0.18),
-  text: brandColors.light.ink,
-  muted: brandColors.light.muted,
-  action: brandColors.light.action,
-  status: brandColors.light.status,
-  well: brandColorWithAlpha(brandColors.light.ink, 0.06),
-  command: brandColors.dark.paper,
-  commandText: brandColors.dark.ink,
-  commandPrompt: brandColors.dark.action,
-} as const;
+/**
+ * Where an accepted participant is sent next.
+ *
+ * Confirming attendance is the one thing this email exists to get done,
+ * so it is the button as well as the command — the terminal is how this
+ * event expects to be talked to, but somebody reading on a phone at a bus
+ * stop needs somewhere to tap.
+ */
+const CONFIRM_URL =
+  "https://hacktheandes.com/welcome?utm_source=resend&utm_medium=email&utm_campaign=decision&utm_content=confirm";
 
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+const APPLY_URL =
+  "https://hacktheandes.com/?utm_source=resend&utm_medium=email&utm_campaign=decision&utm_content=reapply#apply";
 
 const decisionCopy = (decision: ApplicationDecision) => {
   if (decision === "accepted") {
     return {
-      subject: "You’re in — welcome to Hack the Andes",
+      subject: "Estás dentro — bienvenida a Hack the Andes",
       preheader:
-        "Your application was approved. Complete your attendance details to secure your place.",
-      eyebrow: "APPLICATION APPROVED",
-      heading: "You’re invited.",
+        "Tu postulación fue aprobada. Confirma tu asistencia para asegurar tu lugar.",
+      eyebrow: "POSTULACIÓN APROBADA",
+      heading: "Estás dentro.",
       introduction:
-        "We’re excited to offer you a place at Hack the Andes in Lima.",
-      nextStep:
-        "Complete your attendance details to secure your place. You can ask your coding agent to continue, or run:",
+        "Nos alegra ofrecerte un lugar en Hack the Andes, en Lima, el 17 y 18 de octubre.",
+      body: "Falta un paso: confirmar tu asistencia. Ahí nos dices tu talla, tu contacto de emergencia y con qué foto quieres que salga tu carnet. En cuanto lo hagas, te preparamos el carnet y te lo mandamos.",
+      action: "Confirmar mi asistencia",
+      url: CONFIRM_URL,
+      commandLabel: "O desde tu terminal:",
       command: "chofex confirm",
-      closing: "We can’t wait to see what you build.",
     };
   }
 
   return {
-    subject: "An update on your Hack the Andes application",
-    preheader: "Thank you for applying to Hack the Andes.",
-    eyebrow: "APPLICATION UPDATE",
-    heading: "Thank you for applying.",
+    subject: "Una actualización sobre tu postulación",
+    preheader: "Gracias por postular a Hack the Andes.",
+    eyebrow: "ACTUALIZACIÓN DE POSTULACIÓN",
+    heading: "Gracias por postular.",
     introduction:
-      "After careful review, we’re unable to offer you a place at Hack the Andes this time.",
-    nextStep:
-      "We appreciate the thought and effort you put into your application. You’re welcome to apply again with a new application.",
+      "Después de revisarla con cuidado, esta vez no podemos ofrecerte un lugar en Hack the Andes.",
+    body: "Valoramos el tiempo y el trabajo que le pusiste. Puedes volver a postular con una nueva postulación cuando quieras.",
+    action: "Volver a postular",
+    url: APPLY_URL,
+    commandLabel: "O desde tu terminal:",
     command: "chofex register",
-    closing: "We hope to see what you build next.",
   };
-};
-
-const textMessage = (message: string | undefined): ReadonlyArray<string> => {
-  if (!message) return [];
-  return ["", "A note from our review team:", message];
-};
-
-const htmlMessage = (message: string | undefined): string => {
-  if (!message) return "";
-
-  return `<tr><td style="padding:0 40px 28px"><div style="border-left:3px solid ${emailColors.status};padding:2px 0 2px 18px"><p style="margin:0 0 6px;color:${emailColors.muted};font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">A note from our review team</p><p style="margin:0;color:${emailColors.text};font-family:Arial,sans-serif;font-size:16px;line-height:1.6;white-space:pre-wrap">${escapeHtml(message)}</p></div></td></tr>`;
 };
 
 export const buildDecisionEmail = ({
@@ -84,22 +75,40 @@ export const buildDecisionEmail = ({
   message,
 }: DecisionEmailInput): DecisionEmail => {
   const copy = decisionCopy(decision);
-  const safeFirstName = escapeHtml(firstName);
+  const name = firstName.trim();
+  const greeting = name ? `Hola ${name},` : "Hola,";
+
   const text = [
-    `Hi ${firstName},`,
+    greeting,
     "",
     copy.introduction,
     "",
-    copy.nextStep,
-    copy.command,
-    ...textMessage(message),
+    copy.body,
     "",
-    copy.closing,
+    `${copy.action}: ${copy.url}`,
+    `${copy.commandLabel} ${copy.command}`,
+    ...(message ? ["", "Una nota del equipo de revisión:", message] : []),
     "",
-    "— The Hack the Andes team",
+    "Nos vemos en la cima.",
+    "— El equipo de Hack the Andes",
   ].join("\n");
 
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title></head><body style="margin:0;background:${emailColors.page};padding:0"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${copy.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${emailColors.page}"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:${emailColors.surface};border:1px solid ${emailColors.border};overflow:hidden"><tr><td style="background:${emailColors.text};padding:24px 40px;color:${emailColors.page};font-family:Arial,sans-serif;font-size:18px;font-weight:700">▲&nbsp;&nbsp;Hack the Andes</td></tr><tr><td style="padding:40px 40px 20px"><p style="margin:0 0 16px;color:${emailColors.action};font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.14em">${copy.eyebrow}</p><h1 style="margin:0 0 20px;color:${emailColors.text};font-family:Arial,sans-serif;font-size:36px;line-height:1.1;letter-spacing:-.03em;text-transform:uppercase">${copy.heading}</h1><p style="margin:0 0 16px;color:${emailColors.text};font-family:Arial,sans-serif;font-size:17px;line-height:1.6">Hi ${safeFirstName},</p><p style="margin:0;color:${emailColors.text};font-family:Arial,sans-serif;font-size:17px;line-height:1.6">${copy.introduction}</p></td></tr><tr><td style="padding:0 40px 28px"><div style="background:${emailColors.well};padding:20px"><p style="margin:0 0 14px;color:${emailColors.muted};font-family:Arial,sans-serif;font-size:15px;line-height:1.6">${copy.nextStep}</p><p style="margin:0;background:${emailColors.command};color:${emailColors.commandText};font-family:monospace;font-size:15px;padding:14px 16px"><span style="color:${emailColors.commandPrompt}">$</span>&nbsp; ${copy.command}</p></div></td></tr>${htmlMessage(message)}<tr><td style="padding:0 40px 40px"><p style="margin:0 0 24px;color:${emailColors.text};font-family:Arial,sans-serif;font-size:16px;line-height:1.6">${copy.closing}</p><p style="margin:0;color:${emailColors.muted};font-family:Arial,sans-serif;font-size:14px;line-height:1.6">— The Hack the Andes team</p></td></tr></table></td></tr></table></body></html>`;
+  const html = emailShell({
+    subject: copy.subject,
+    preheader: copy.preheader,
+    // Nothing more specific to stamp on a card nobody has yet.
+    stamp: "17–18 OCT 2026",
+    blocks: [
+      eyebrow(copy.eyebrow),
+      heading(copy.heading),
+      paragraph(greeting),
+      paragraph(copy.introduction),
+      paragraph(copy.body),
+      button(copy.action, copy.url),
+      command(copy.commandLabel, copy.command),
+      ...(message ? [note("Una nota del equipo de revisión", message)] : []),
+    ],
+  });
 
   return { subject: copy.subject, text, html };
 };

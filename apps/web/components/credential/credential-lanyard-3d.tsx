@@ -32,7 +32,7 @@ import {
   useSphericalJoint,
 } from "@react-three/rapier";
 import { MeshLineGeometry, MeshLineMaterial } from "meshline";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { MOUNTAIN_ASPECT, traceMountain } from "./mountain-mark";
@@ -255,9 +255,26 @@ const SELVEDGE_INK = "#0f0e13";
 const SELVEDGE = Math.round(BAND_ACROSS * 0.07);
 
 interface CredentialLanyard3DProps {
-  /** The card's face, as an image. Falls back to the model's baked texture. */
+  /**
+   * The card's face, as an image.
+   *
+   * Without one the mesh wears what `card.glb` was exported with, which is
+   * the demo card the model came from — someone else's product name on a
+   * participant's credential. Nothing in production omits this; the guard
+   * is that `onReady` waits for it.
+   */
   readonly faceUrl?: string;
-  /** Fired once the context exists, so the static layer knows to step aside. */
+  /**
+   * Fired once there is something of ours to look at, so the static layer
+   * knows to step aside.
+   *
+   * Not when the context is created. That is what it used to be, and the
+   * canvas exists a good deal earlier than the face does: the static card
+   * stepped aside on an empty scene and the baked demo texture showed
+   * through the gap. If the face never arrives this never fires, and the
+   * static card — which carries the same name, role and picture as real
+   * markup — is what stays.
+   */
   readonly onReady?: () => void;
 }
 
@@ -265,6 +282,24 @@ export function CredentialLanyard3D({
   faceUrl,
   onReady,
 }: CredentialLanyard3DProps) {
+  /*
+    Both have to be true before the static card is allowed to go. A
+    context with no face is the demo card; a face with no context is
+    nothing at all.
+  */
+  const [contextReady, setContextReady] = useState(false);
+  const [faceReady, setFaceReady] = useState(false);
+  /*
+    Stable, because the texture effect depends on it. An arrow written at
+    the call site is a new function every render, which would re-run that
+    effect and re-fetch a 1600x1475 face on each one.
+  */
+  const reportFaceReady = useCallback(() => setFaceReady(true), []);
+  useEffect(() => {
+    if (contextReady && (faceReady || !faceUrl)) {
+      onReady?.();
+    }
+  }, [contextReady, faceReady, faceUrl, onReady]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -292,7 +327,7 @@ export function CredentialLanyard3D({
         gl={{ alpha: true }}
         onCreated={({ gl }) => {
           gl.setClearAlpha(0);
-          onReady?.();
+          setContextReady(true);
         }}
       >
         {/*
@@ -306,7 +341,11 @@ export function CredentialLanyard3D({
         */}
         <ambientLight intensity={0.55} />
         <Physics gravity={[0, -40, 0]} timeStep={isMobile ? 1 / 30 : 1 / 60}>
-          <Band faceUrl={faceUrl} isMobile={isMobile} />
+          <Band
+            faceUrl={faceUrl}
+            isMobile={isMobile}
+            onFaceReady={reportFaceReady}
+          />
         </Physics>
         {/*
           A synthetic environment rather than an HDR file: four strip lights
@@ -358,10 +397,12 @@ const MIN_SPEED = 0;
 
 interface BandProps {
   readonly faceUrl?: string;
+  /** Called once the card is wearing our own face and not the model's. */
+  readonly onFaceReady: () => void;
   readonly isMobile: boolean;
 }
 
-function Band({ faceUrl, isMobile }: BandProps) {
+function Band({ faceUrl, isMobile, onFaceReady }: BandProps) {
   /*
     The real canvas, not a guess at it.
 
@@ -555,14 +596,16 @@ function Band({ faceUrl, isMobile }: BandProps) {
     }
     let live = true;
     const loader = new THREE.TextureLoader();
-    loader.load(faceUrl, (loaded) => {
-      if (!live) {
-        loaded.dispose();
-        return;
-      }
-      loaded.flipY = false;
-      loaded.colorSpace = THREE.SRGBColorSpace;
-      /*
+    loader.load(
+      faceUrl,
+      (loaded) => {
+        if (!live) {
+          loaded.dispose();
+          return;
+        }
+        loaded.flipY = false;
+        loaded.colorSpace = THREE.SRGBColorSpace;
+        /*
         The one it replaces is disposed here, not left to the collector.
 
         A GPU texture is not ordinary memory: dropping the last reference
@@ -571,15 +614,32 @@ function Band({ faceUrl, isMobile }: BandProps) {
         picker changes it every few hundred milliseconds — an afternoon of
         trying hairstyles would have leaked a 1600x1475 texture per try.
       */
-      setFace((previous) => {
-        previous?.dispose();
-        return loaded;
-      });
-    });
+        setFace((previous) => {
+          previous?.dispose();
+          return loaded;
+        });
+        onFaceReady();
+      },
+      undefined,
+      () => {
+        /*
+          A face that will not load leaves the mesh wearing the demo card
+          the model was exported with. Saying nothing here is what made
+          that possible: the load had no error handler at all, so a 401
+          from an expired session, or a render that five-hundred'd, ended
+          as somebody else's product name on a participant's credential —
+          silently, and looking like it had worked.
+
+          Reporting nothing is the fix. `onFaceReady` never fires, the
+          scene never claims to be live, and the static card underneath
+          stays where it is.
+        */
+      },
+    );
     return () => {
       live = false;
     };
-  }, [faceUrl]);
+  }, [faceUrl, onFaceReady]);
 
   const [curve] = useState(
     () =>

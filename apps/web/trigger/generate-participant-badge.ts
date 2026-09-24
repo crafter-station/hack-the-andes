@@ -14,6 +14,10 @@ import { roleFor } from "../lib/credential/printing";
 import { generateBadge } from "./generate-badge";
 import { generatePortrait } from "./generate-portrait";
 
+/** Where the email sends people to find the card itself. */
+const BADGE_PAGE_URL =
+  "https://hacktheandes.com/badge?utm_source=resend&utm_medium=email&utm_campaign=badge&utm_content=view";
+
 export interface GenerateParticipantBadgePayload {
   readonly applicationId: string;
 }
@@ -129,6 +133,8 @@ export const generateParticipantBadge = task<
       email,
       firstName: record.application.firstName ?? fullName,
       badgeUrl: badge.url,
+      number: credentialNumber(credentialName),
+      badgePageUrl: BADGE_PAGE_URL,
     });
     await db
       .update(participantBadges)

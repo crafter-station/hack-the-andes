@@ -33,6 +33,8 @@ describe("badge-ready email", () => {
       email: "ada@example.com",
       firstName: "Ada <Admin>",
       badgeUrl: "https://example.com/badge.png?a=1&b=2",
+      number: "911",
+      badgePageUrl: "https://hacktheandes.com/badge",
     });
 
     expect(headers.get("idempotency-key")).toBe(
@@ -42,5 +44,7 @@ describe("badge-ready email", () => {
     expect(body.reply_to).toBe("anthony@crafterstation.com");
     expect(body.html).toContain("Ada &lt;Admin&gt;");
     expect(body.html).toContain("a=1&amp;b=2");
+    // The face, and a way to the card — not a flattened picture of one.
+    expect(body.html).toContain("https://hacktheandes.com/badge");
   });
 });
