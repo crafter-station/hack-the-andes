@@ -19,6 +19,7 @@ import { redirect } from "next/navigation";
 import "@/components/credential/credential.css";
 import { BadgeDownload } from "@/components/credential/badge-download";
 import { CredentialCard } from "@/components/credential/credential-card";
+import { CredentialGround } from "@/components/credential/credential-ground";
 import { brandName } from "@/components/landing/content";
 import { CredentialStage } from "@/components/portrait/credential-stage";
 import { PageSweep } from "@/components/portrait/page-sweep";
@@ -101,6 +102,11 @@ export default async function BadgePage() {
 
   return (
     <BrandCenteredPage contentClassName="max-w-3xl text-center">
+      {/*
+        The landing's ground, held still and dimmed. The card is the
+        subject; this is the horizon it hangs in.
+      */}
+      <CredentialGround />
       {/*
         The curtain the page arrives out of. Mounted here rather than in
         the layout because this is the page it belongs to: an accepted
