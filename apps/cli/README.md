@@ -37,10 +37,10 @@ chofex badge regenerate
 `chofex update` and `chofex upgrade` are interchangeable; both update the CLI
 to the latest published version.
 
-Installed copies also check npm whenever `chofex` starts and install a newer
-published version before running the requested command. If npm or the network
-is temporarily unavailable, the current version continues to run. Set
-`CHOFEX_AUTO_UPDATE=0` to disable the startup check.
+Las copias instaladas también consultan npm cada vez que se inicia `chofex` e
+instalan una versión publicada más reciente antes de ejecutar el comando. Si
+npm o la red no están disponibles temporalmente, se continúa con la versión
+actual. Usa `CHOFEX_AUTO_UPDATE=0` para desactivar esta comprobación.
 
 `chofex register` collects and submits an application with full name, role,
 optional phone number, bio, portfolio URL, shipped project, LinkedIn and GitHub

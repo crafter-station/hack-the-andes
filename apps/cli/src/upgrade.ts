@@ -1,16 +1,16 @@
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
 
 export const cliPackageName = "chofex-cli";
 export const upgradeVersion = "latest";
 const npmRegistryUrl = `https://registry.npmjs.org/${cliPackageName}/latest`;
 
-const npmUpgradeArguments = (cacheDirectory: string) => [
+const npmUpgradeArguments = (cacheDirectory: string, version: string) => [
   "install",
   "--global",
-  `${cliPackageName}@${upgradeVersion}`,
+  `${cliPackageName}@${version}`,
   "--force",
   "--prefer-online",
   `--cache=${cacheDirectory}`,
@@ -18,6 +18,7 @@ const npmUpgradeArguments = (cacheDirectory: string) => [
 
 type ProcessResult = {
   readonly exitCode: number;
+  readonly stdout?: string;
   readonly stderr: string;
 };
 
@@ -27,17 +28,19 @@ export type NpmRunner = (
 
 export type InstallerRunner = (
   installDirectory: string,
+  version: string,
 ) => Promise<ProcessResult>;
 
 type UpgradeOptions = {
   readonly standalone?: boolean;
+  readonly version?: string;
   readonly npmRunner?: NpmRunner;
   readonly installerRunner?: InstallerRunner;
 };
 
 type AutoUpdateOptions = {
   readonly fetchLatestVersion?: () => Promise<string>;
-  readonly upgrade?: () => Promise<void>;
+  readonly upgrade?: (version: string) => Promise<void>;
 };
 
 export type AutoUpdateResult =
@@ -55,6 +58,8 @@ type AutoUpdateEligibility = {
   readonly arguments: ReadonlyArray<string>;
   readonly entryPath: string;
   readonly environmentValue: string | undefined;
+  readonly globalNodeModulesPath?: string;
+  readonly npmRunner?: NpmRunner;
   readonly standalone: boolean;
 };
 
@@ -66,23 +71,33 @@ const runProcess = (
   new Promise((resolve, reject) => {
     const stdin = input === undefined ? "ignore" : "pipe";
     const child = spawn(executable, arguments_, {
-      stdio: [stdin, "ignore", "pipe"],
+      stdio: [stdin, "pipe", "pipe"],
     });
+    let stdout = "";
     let stderr = "";
 
+    const stdoutStream = child.stdout;
     const stderrStream = child.stderr;
-    if (stderrStream === null) {
+    if (stdoutStream === null || stderrStream === null) {
       child.kill();
-      reject(new Error(`Could not capture stderr from ${executable}`));
+      reject(new Error(`Could not capture output from ${executable}`));
       return;
     }
+    stdoutStream.setEncoding("utf8");
+    stdoutStream.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
     stderrStream.setEncoding("utf8");
     stderrStream.on("data", (chunk: string) => {
       stderr += chunk;
     });
     child.on("error", reject);
     child.on("close", (exitCode) => {
-      resolve({ exitCode: exitCode ?? 1, stderr: stderr.trim() });
+      resolve({
+        exitCode: exitCode ?? 1,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+      });
     });
     if (input !== undefined) {
       const stdinStream = child.stdin;
@@ -102,7 +117,7 @@ const runNpm: NpmRunner = (arguments_) => {
 
 const installerUrl = "https://hacktheandes.com/install";
 
-const runInstaller: InstallerRunner = async (installDirectory) => {
+const runInstaller: InstallerRunner = async (installDirectory, version) => {
   const response = await fetch(installerUrl);
   if (!response.ok) {
     throw new Error(`installer download returned HTTP ${response.status}`);
@@ -111,6 +126,8 @@ const runInstaller: InstallerRunner = async (installDirectory) => {
   const arguments_ = [
     "-s",
     "--",
+    "--version",
+    version,
     "--install-dir",
     installDirectory,
     "--no-modify-path",
@@ -135,10 +152,11 @@ const assertSuccessful = (result: ProcessResult, program: string): void => {
 export const upgradeCli = async (
   options: UpgradeOptions = {},
 ): Promise<void> => {
+  const version = options.version ?? upgradeVersion;
   const standalone = options.standalone ?? isStandaloneExecutable();
   if (standalone) {
     const runner = options.installerRunner ?? runInstaller;
-    const result = await runner(dirname(process.execPath));
+    const result = await runner(dirname(process.execPath), version);
     assertSuccessful(result, "installer");
     return;
   }
@@ -146,7 +164,7 @@ export const upgradeCli = async (
   const runner = options.npmRunner ?? runNpm;
   const cacheDirectory = await mkdtemp(join(tmpdir(), "chofex-npm-cache-"));
   try {
-    const result = await runner(npmUpgradeArguments(cacheDirectory));
+    const result = await runner(npmUpgradeArguments(cacheDirectory, version));
     assertSuccessful(result, "npm");
   } finally {
     await rm(cacheDirectory, { recursive: true, force: true });
@@ -250,7 +268,8 @@ export const autoUpdateCli = async (
     return { status: "current", version: currentVersion };
   }
 
-  await (options.upgrade ?? upgradeCli)();
+  const upgrade = options.upgrade ?? ((version) => upgradeCli({ version }));
+  await upgrade(latestVersion);
   return {
     status: "updated",
     previousVersion: currentVersion,
@@ -258,17 +277,51 @@ export const autoUpdateCli = async (
   };
 };
 
-export const shouldAutoUpdateCli = ({
+const npmGlobalNodeModulesPath = async (
+  runner: NpmRunner = runNpm,
+): Promise<string> => {
+  const result = await runner(["root", "--global"]);
+  assertSuccessful(result, "npm");
+  if (!result.stdout) throw new Error("npm did not report its global root");
+  return result.stdout;
+};
+
+const pathIsInside = (parent: string, child: string): boolean => {
+  const pathFromParent = relative(parent, child);
+  return (
+    pathFromParent !== "" &&
+    pathFromParent !== ".." &&
+    !pathFromParent.startsWith(`..${sep}`) &&
+    !isAbsolute(pathFromParent)
+  );
+};
+
+export const shouldAutoUpdateCli = async ({
   arguments: arguments_,
   entryPath,
   environmentValue,
+  globalNodeModulesPath,
+  npmRunner,
   standalone,
-}: AutoUpdateEligibility): boolean => {
+}: AutoUpdateEligibility): Promise<boolean> => {
   if (environmentValue === "0" || environmentValue === "false") return false;
   if (arguments_.includes("update") || arguments_.includes("upgrade")) {
     return false;
   }
-  if (environmentValue === "1" || environmentValue === "true") return true;
   if (standalone) return true;
-  return entryPath.split(/[\\/]/).includes("node_modules");
+  if (!entryPath.split(/[\\/]/).includes("node_modules")) return false;
+
+  const npmRoot =
+    globalNodeModulesPath ?? (await npmGlobalNodeModulesPath(npmRunner));
+  return pathIsInside(join(npmRoot, cliPackageName), entryPath);
 };
+
+export const runUpdatedCli = (): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, process.argv.slice(1), {
+      env: { ...process.env, CHOFEX_AUTO_UPDATE: "0" },
+      stdio: "inherit",
+    });
+    child.on("error", reject);
+    child.on("close", (exitCode) => resolve(exitCode ?? 1));
+  });

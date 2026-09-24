@@ -12,6 +12,7 @@ import {
   autoUpdateCli,
   cliPackageName,
   isStandaloneExecutable,
+  runUpdatedCli,
   shouldAutoUpdateCli,
 } from "./upgrade.js";
 import { welcomeFormatter } from "./welcome.js";
@@ -118,30 +119,44 @@ const programForArguments = () => {
   return commandProgram;
 };
 
-const runAutomaticUpdate = async (): Promise<void> => {
-  const enabled = shouldAutoUpdateCli({
-    arguments: arguments_,
-    entryPath: fileURLToPath(import.meta.url),
-    environmentValue: process.env.CHOFEX_AUTO_UPDATE,
-    standalone: isStandaloneExecutable(),
-  });
-  if (!enabled) return;
-
+const runAutomaticUpdate = async (): Promise<boolean> => {
   try {
+    const standalone = isStandaloneExecutable();
+    const enabled = await shouldAutoUpdateCli({
+      arguments: arguments_,
+      entryPath: fileURLToPath(import.meta.url),
+      environmentValue: process.env.CHOFEX_AUTO_UPDATE,
+      standalone,
+    });
+    if (!enabled) return false;
+
     const result = await autoUpdateCli(cliVersion);
-    if (result.status === "current") return;
+    if (result.status === "current") return false;
     process.stderr.write(
-      `Updated ${cliPackageName} from ${result.previousVersion} to ${result.version}.\n`,
+      `${cliPackageName} se actualizó de ${result.previousVersion} a ${result.version}.\n`,
     );
+    if (standalone && process.platform === "win32") {
+      process.stderr.write(
+        "Ejecuta el comando de nuevo para usar la versión actualizada.\n",
+      );
+      return true;
+    }
+
+    process.exitCode = await runUpdatedCli();
+    return true;
   } catch (error) {
     process.stderr.write(
-      `Could not check for or install a ${cliPackageName} update; continuing with ${cliVersion}. ${String(error)}\n`,
+      `No se pudo comprobar o instalar una actualización de ${cliPackageName}; se continuará con ${cliVersion}. ${String(error)}\n`,
     );
+    return false;
   }
 };
 
 Effect.promise(runAutomaticUpdate).pipe(
-  Effect.andThen(programForArguments()),
+  Effect.flatMap((updated) => {
+    if (updated) return Effect.void;
+    return programForArguments();
+  }),
   Effect.provide(NodeServices.layer),
   (program) => NodeRuntime.runMain(program, { disableErrorReporting: true }),
 );
