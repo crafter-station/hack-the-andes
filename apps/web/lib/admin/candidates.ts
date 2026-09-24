@@ -558,7 +558,8 @@ export const decideCandidate = async (
   const [candidate] = await toCandidates([record]);
   if (!candidate) throw new Error("Candidate conversion returned no result");
 
-  if (!input.notify) {
+  const shouldNotify = input.notify || input.decision === "accepted";
+  if (!shouldNotify) {
     return { candidate, emailStatus: "not_requested" };
   }
 

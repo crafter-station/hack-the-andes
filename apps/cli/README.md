@@ -30,6 +30,8 @@ chofex challenge test --challenge broken-agent --source ./scheduler.js
 chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
 chofex challenge ranking --challenge broken-agent
 chofex confirm
+chofex badge
+chofex badge regenerate
 ```
 
 `chofex update` and `chofex upgrade` are interchangeable; both update the CLI
@@ -44,6 +46,9 @@ is temporarily unavailable, the current version continues to run. Set
 optional phone number, bio, portfolio URL, shipped project, LinkedIn and GitHub
 URLs, and Terms and Conditions. Use `--input` to submit a completed JSON
 application.
+After attendance confirmation, `chofex badge regenerate` updates the public
+badge name, one-line description, picture, and QR destination without changing
+the submitted application.
 The technical challenges do not block submission, but every challenge winner must submit
 an application before being accepted. Top results receive a direct pass; other
 scores give organizers another review metric.

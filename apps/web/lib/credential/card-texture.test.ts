@@ -89,8 +89,8 @@ describe("halftonePortrait", () => {
       // Sized by the window the model samples, not by the photograph —
       // and by a whole number of cells, so the screen ends where the
       // window does.
-      expect(meta.width).toBe(495);
-      expect(meta.height).toBe(572);
+      expect(meta.width).toBe(490);
+      expect(meta.height).toBe(567);
     } finally {
       server.stop(true);
     }

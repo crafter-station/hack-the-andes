@@ -12,7 +12,7 @@
  * becoming something only accepted participants have: the counts were
  * decoration, and a card that exists only for accepted people does not
  * need to announce that it is verified. The printed design shows a
- * number, a picture, a name and a role, and so does this.
+ * challenge placement, a picture, a name and a role, and so does this.
  */
 
 export interface Credential {
@@ -30,34 +30,11 @@ export interface Credential {
    * picture they did not pick.
    */
   readonly pictureUrl: string | null;
-  /** The seat number. */
-  readonly number: string;
+  /** Their best exact placement across current playable challenges. */
+  readonly placement: string;
+  /** The destination encoded in the QR. */
+  readonly linkUrl: string;
 }
-
-/**
- * FNV-1a over a string, as an unsigned 32-bit number.
- *
- * Exported because the seat number is not the only thing derived from a
- * name, and two implementations of the same hash would eventually
- * disagree about what a given person means.
- */
-export const fnv1a = (value: string): number => {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash;
-};
-
-/**
- * The seat number on the card.
- *
- * Deterministic across processes and deploys: the same person must always
- * print the same number, and nothing records one.
- */
-export const credentialNumber = (seed: string): string =>
-  String(fnv1a(seed) % 1000).padStart(3, "0");
 
 export const truncate = (value: string, max: number): string => {
   const trimmed = value.trim();

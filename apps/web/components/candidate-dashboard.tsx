@@ -604,7 +604,7 @@ const CandidateDrawer = ({
       candidateId: candidate.id,
       decision,
       message,
-      notify,
+      notify: decision === "accepted" || notify,
     });
   };
 
@@ -785,6 +785,10 @@ const CandidateDrawer = ({
                     />
                     Notify candidate by email
                   </label>
+                  <p className="text-xs text-muted-foreground">
+                    Acceptance always sends the confirmation instructions. This
+                    option controls decline notifications.
+                  </p>
                   <div className="space-y-1.5">
                     <label
                       htmlFor="candidate-message"

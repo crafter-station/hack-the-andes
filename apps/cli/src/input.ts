@@ -11,6 +11,9 @@ import {
   applicationInputFieldNames,
   applicationInputFields,
   applicationSemanticRequirements,
+  type BadgeProfile,
+  BadgeRegenerationInput,
+  badgeRegenerationInputFieldNames,
   dateOfBirthRequirement,
   joinFullName,
   type RegistrationView,
@@ -512,6 +515,75 @@ export const picturePathInput = (
   ).pipe(
     Effect.mapError(() =>
       cliError("PROMPT_CANCELLED", "Interactive input was cancelled"),
+    ),
+  );
+};
+
+export const badgeProfileInput = (
+  path: string | undefined,
+  defaults: BadgeProfile,
+  pictures: {
+    readonly clerkPictureUrl?: string;
+    readonly githubUrl?: string;
+  },
+): Effect.Effect<
+  BadgeRegenerationInput,
+  CliError,
+  PromptModule.Environment
+> => {
+  const interactive = Effect.gen(function* () {
+    const publicFields = yield* Prompt.run(
+      Prompt.all({
+        fullName: requiredText(
+          "Name printed on the badge",
+          Schema.Trim.pipe(
+            Schema.check(Schema.isMinLength(1), Schema.isMaxLength(200)),
+          ),
+          defaults.fullName,
+        ),
+        oneLiner: requiredText(
+          "One-line description",
+          Schema.Trim.pipe(
+            Schema.check(Schema.isMinLength(1), Schema.isMaxLength(120)),
+          ),
+          defaults.oneLiner,
+        ),
+        linkUrl: requiredText(
+          "QR destination",
+          Schema.Trim.pipe(
+            Schema.check(Schema.isMinLength(1), Schema.isMaxLength(2_048)),
+          ),
+          defaults.linkUrl,
+        ),
+      }),
+    );
+    const pictureChoices: Array<{
+      readonly title: string;
+      readonly value: "keep" | "clerk" | "github" | "upload";
+    }> = [{ title: "Keep my current picture", value: "keep" }];
+    if (pictures.clerkPictureUrl) {
+      pictureChoices.push({ title: "Use my Clerk picture", value: "clerk" });
+    }
+    if (pictures.githubUrl) {
+      pictureChoices.push({ title: "Use my GitHub picture", value: "github" });
+    }
+    pictureChoices.push({
+      title: "Upload a different picture",
+      value: "upload",
+    });
+    const pictureChoice = yield* Prompt.run(
+      Prompt.select({
+        message: "Picture printed on the badge",
+        choices: pictureChoices,
+      }),
+    );
+    if (pictureChoice === "keep") return publicFields;
+    return { ...publicFields, pictureSource: pictureChoice };
+  });
+
+  return inputOrInteractive(path, interactive).pipe(
+    Effect.flatMap((input) =>
+      decode(BadgeRegenerationInput, input, badgeRegenerationInputFieldNames),
     ),
   );
 };

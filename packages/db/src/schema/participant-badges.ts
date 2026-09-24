@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { applications } from "./applications";
 import { auditTimestamps } from "./common";
@@ -10,6 +10,10 @@ export const participantBadges = pgTable("participant_badges", {
     .references(() => applications.id, { onDelete: "cascade" }),
   status: badgeGenerationStatus("status").default("pending").notNull(),
   triggerRunId: text("trigger_run_id"),
+  displayName: varchar("display_name", { length: 200 }),
+  oneLiner: varchar("one_liner", { length: 120 }),
+  linkUrl: text("link_url"),
+  placement: varchar("placement", { length: 120 }),
   portraitUrl: text("portrait_url"),
   portraitPathname: text("portrait_pathname"),
   badgeUrl: text("badge_url"),

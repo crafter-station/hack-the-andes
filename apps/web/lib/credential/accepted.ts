@@ -37,11 +37,10 @@ import {
   participantBadges,
   participants,
 } from "@chofex/db/schema";
-import {
-  type Credential,
-  credentialNumber,
-} from "@/components/credential/credential-model";
+import type { Credential } from "@/components/credential/credential-model";
 import { AVATAR_PORTRAIT, githubAvatarUrl } from "@/lib/registration/pictures";
+import { roleFor } from "./printing";
+import { badgeLinkFor } from "./profile";
 
 export interface AcceptedParticipant {
   /** As they wrote it, not as any profile spells it. */
@@ -58,6 +57,8 @@ export interface AcceptedParticipant {
    * to its owner.
    */
   readonly githubUrl: string | null;
+  readonly linkUrl: string;
+  readonly placement: string;
 }
 
 export const fullNameOf = (
@@ -84,9 +85,19 @@ export const acceptedByClerkUser = async (
       organization: applications.organization,
       pictureUrl: applications.pictureUrl,
       githubUrl: applications.githubUrl,
+      linkedInUrl: applications.linkedInUrl,
+      portfolioUrl: applications.portfolioUrl,
+      displayName: participantBadges.displayName,
+      oneLiner: participantBadges.oneLiner,
+      badgeLinkUrl: participantBadges.linkUrl,
+      placement: participantBadges.placement,
     })
     .from(applications)
     .innerJoin(participants, eq(applications.participantId, participants.id))
+    .leftJoin(
+      participantBadges,
+      eq(participantBadges.applicationId, applications.id),
+    )
     .where(
       and(
         eq(participants.clerkUserId, clerkUserId),
@@ -99,19 +110,29 @@ export const acceptedByClerkUser = async (
     return null;
   }
 
-  const name = fullNameOf(row.firstName, row.lastName);
+  const applicationName = fullNameOf(row.firstName, row.lastName);
+  const name = row.displayName?.trim() || applicationName;
   if (name === "") {
     // Accepted but nameless is a data problem, not a credential: a card
     // with an empty name reads as broken rather than as incomplete.
     return null;
   }
+  const roleSource = row.oneLiner?.trim() || row.role?.trim() || null;
 
   return {
     name,
-    role: row.role?.trim() || null,
+    role: roleFor(roleSource),
     organization: row.organization?.trim() || null,
     pictureUrl: row.pictureUrl?.trim() || null,
     githubUrl: row.githubUrl?.trim() || null,
+    linkUrl:
+      row.badgeLinkUrl?.trim() ||
+      badgeLinkFor({
+        websiteUrl: row.portfolioUrl,
+        githubUrl: row.githubUrl,
+        linkedInUrl: row.linkedInUrl,
+      }),
+    placement: row.placement?.trim() || "PARTICIPANT",
   };
 };
 
@@ -151,9 +172,8 @@ export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   role: accepted.role,
   organization: accepted.organization,
   pictureUrl: portraitFor(accepted).url,
-  // Seeded from the name, which is the only identifier left that every
-  // accepted participant has.
-  number: credentialNumber(accepted.name),
+  placement: accepted.placement,
+  linkUrl: accepted.linkUrl,
 });
 
 /**

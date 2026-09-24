@@ -10,6 +10,7 @@ import {
   applicationDraftReplacementFrom,
   applicationRequirementsFor,
   applicationSemanticRequirements,
+  BadgeRegenerationInput,
   CurrentUserSchema,
   campaignAttributionFromOAuthState,
   campaignAttributionHandoffFromValue,
@@ -45,6 +46,24 @@ const registrationView = (
   updatedAt: "2026-09-01T12:00:00.000Z",
   challenges: [],
   ...overrides,
+});
+
+describe("badge regeneration", () => {
+  test("normalizes the public badge profile and accepts a picture change", () => {
+    const decoded = Schema.decodeUnknownSync(BadgeRegenerationInput)({
+      fullName: "  Ada Lovelace  ",
+      oneLiner: "  Computing pioneer  ",
+      linkUrl: "ada.dev",
+      pictureSource: "github",
+    });
+
+    expect(decoded).toEqual({
+      fullName: "Ada Lovelace",
+      oneLiner: "Computing pioneer",
+      linkUrl: "https://ada.dev",
+      pictureSource: "github",
+    });
+  });
 });
 
 describe("campaign attribution OAuth handoff", () => {

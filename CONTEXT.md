@@ -19,3 +19,11 @@ Personal and logistical information requested only after an application is accep
 ## Confirmed profile picture
 
 The picture an accepted participant explicitly chooses during attendance confirmation. It may come from Clerk, the application's GitHub profile, or a verified custom upload. Available images are not used until the participant confirms a source.
+
+## Badge profile
+
+The public presentation an accepted participant chooses for their badge: display name, one-line description, confirmed profile picture, and QR destination. It begins with application data but may be changed without rewriting the historical application.
+
+## Challenge placement
+
+A participant's best exact rank across the current playable challenge versions. It is recognition printed on the badge, not a claim that the challenge caused the participant's acceptance.

@@ -14,6 +14,8 @@ describe("buildDecisionEmail", () => {
     expect(email.subject).toBe("Estás dentro — bienvenida a Hack the Andes");
     expect(email.text).toContain("Hola Ada,");
     expect(email.text).toContain("chofex confirm");
+    expect(email.text).toContain("chofex badge regenerate");
+    expect(email.text).toContain("Clerk, GitHub");
     expect(email.html).toContain("POSTULACIÓN APROBADA");
     expect(email.html).toContain("Confirmar mi asistencia");
   });

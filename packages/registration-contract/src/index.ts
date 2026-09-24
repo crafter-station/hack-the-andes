@@ -670,12 +670,39 @@ export const BadgeStatus = Schema.Literals([
   "failed",
 ]);
 
+export const BadgeProfileSchema = Schema.Struct({
+  fullName: nonBlank(200),
+  oneLiner: nonBlank(120),
+  linkUrl: url,
+  placement: Schema.String,
+});
+
+export type BadgeProfile = typeof BadgeProfileSchema.Type;
+
 export const BadgeResultSchema = Schema.Struct({
   status: BadgeStatus,
   url: Schema.optional(Schema.String),
+  profile: Schema.optional(BadgeProfileSchema),
 });
 
 export type BadgeResult = typeof BadgeResultSchema.Type;
+
+export const badgeRegenerationInputFields = {
+  fullName: nonBlank(200),
+  oneLiner: nonBlank(120),
+  linkUrl: url,
+  pictureSource: Schema.optional(PictureSource),
+};
+
+export const BadgeRegenerationInput = Schema.Struct(
+  badgeRegenerationInputFields,
+);
+
+export const badgeRegenerationInputFieldNames = Object.keys(
+  badgeRegenerationInputFields,
+);
+
+export type BadgeRegenerationInput = typeof BadgeRegenerationInput.Type;
 
 export const PictureUploadSchema = Schema.Struct({
   url: Schema.String,

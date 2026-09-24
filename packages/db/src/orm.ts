@@ -7,6 +7,7 @@ export {
   gt,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lt,
   or,

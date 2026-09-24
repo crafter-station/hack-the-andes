@@ -142,5 +142,11 @@ export const requirementsOnlyText = (result: RegistrationResult): string =>
 
 export const badgeText = (result: BadgeResult): string => {
   if (result.url) return result.url;
+  if (result.status === "pending" || result.status === "running") {
+    return "Your badge is being generated.";
+  }
+  if (result.status === "failed") {
+    return "Badge generation failed. Run `chofex badge regenerate` to try again.";
+  }
   return "You don't have a badge yet.";
 };

@@ -4,7 +4,7 @@
  * The layer underneath the simulated lanyard: what a visitor without
  * JavaScript reads, and what the browser paints before hydration or when
  * WebGL is unavailable. It carries the same four things the printed
- * design does — a number, a picture, a name and a role — so the two
+ * design does — a placement, a picture, a name and a role — so the two
  * layers cannot say different things about the same person.
  *
  * The stats it used to show, and the state line under them, went with the
@@ -37,7 +37,7 @@ export function CredentialCard({ credential }: CredentialCardProps) {
 
       <header className="credential-card-head">
         <span className="credential-card-event">HACK THE ANDES</span>
-        <span className="credential-card-number">#{credential.number}</span>
+        <span className="credential-card-number">{credential.placement}</span>
       </header>
 
       <CredentialPortrait credential={credential} />
@@ -49,6 +49,7 @@ export function CredentialCard({ credential }: CredentialCardProps) {
 
       <footer className="credential-card-foot">
         <span className="credential-card-date">17–18 OCT 2026 · LIMA</span>
+        <span>HACKTHEANDES.COM</span>
       </footer>
     </article>
   );

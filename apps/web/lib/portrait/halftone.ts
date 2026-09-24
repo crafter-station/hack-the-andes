@@ -52,11 +52,11 @@ const MIN_RADIUS = 0.3;
  *
  * Above one, which darkens: a straight mapping put the whole face above
  * the radius at which neighbouring dots touch, so it printed as one
- * solid mass with no eyes in it. The design's face sits in the middle of
- * its range with open dots, and only a specular highlight closes — this
- * is the curve that keeps that headroom.
+ * solid mass with no eyes in it. 1.4 keeps that headroom while lifting
+ * the midtones enough for eyes and facial contours to survive the finer
+ * screen. At 1.6 those midtones disappeared into the card.
  */
-const GAMMA = 1.6;
+const GAMMA = 1.4;
 
 /**
  * The grid, read between its samples.

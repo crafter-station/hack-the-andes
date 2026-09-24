@@ -59,6 +59,9 @@ chofex confirm
 
 # Check background badge generation
 chofex badge
+
+# Change the badge name, one-liner, photo, or QR destination
+chofex badge regenerate
 ```
 
 Registration is for the on-site event in Lima. The application uses the
@@ -80,6 +83,12 @@ chofex confirm --input attendance.json --picture /path/to/picture.png
 
 For that non-interactive upload, set `pictureSource` to `upload` in
 `attendance.json`.
+
+After confirmation, the generated badge uses the participant's best exact
+challenge placement and a QR destination chosen from portfolio, GitHub, then
+LinkedIn. `chofex badge regenerate` can override the public name, one-line
+description, QR destination, and confirmed picture without changing the
+historical application.
 
 ### Technical challenges
 

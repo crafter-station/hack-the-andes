@@ -13,7 +13,8 @@ describe("renderShareBadge", () => {
     const png = await renderShareBadge({
       fullName: "Ada Lovelace",
       role: "PARTICIPANTE",
-      number: "009",
+      placement: "BLACK BOX · #09",
+      linkUrl: "https://ada.dev",
       portrait: null,
     });
     const meta = await read(png);
@@ -33,7 +34,8 @@ describe("renderShareBadge", () => {
     const png = await renderShareBadge({
       fullName: "Ada Lovelace",
       role: "PARTICIPANTE",
-      number: "009",
+      placement: "BLACK BOX · #09",
+      linkUrl: "https://ada.dev",
       portrait: null,
     });
 
@@ -46,7 +48,8 @@ describe("renderShareBadge", () => {
     const png = await renderShareBadge({
       fullName: "María Fernanda Rodríguez Quispe",
       role: "SOFTWARE DEVELOPER",
-      number: "123",
+      placement: "BROKEN AGENT · #03",
+      linkUrl: "https://example.com",
       portrait: null,
     });
     const meta = await read(png);

@@ -7,10 +7,10 @@ import {
 import { db } from "@chofex/db/worker";
 import { logger, task } from "@trigger.dev/sdk";
 
-import { credentialNumber } from "../components/credential/credential-model";
 import { sendBadgeReadyEmail } from "../lib/badges/email";
 import { fullNameOf } from "../lib/credential/accepted";
 import { roleFor } from "../lib/credential/printing";
+import { badgeLinkFor } from "../lib/credential/profile";
 import { generateBadge } from "./generate-badge";
 import { generatePortrait } from "./generate-portrait";
 
@@ -53,11 +53,19 @@ export const generateParticipantBadge = task<
   },
   run: async (payload: GenerateParticipantBadgePayload, { ctx }) => {
     const [record] = await db
-      .select({ application: applications, details: acceptanceDetails })
+      .select({
+        application: applications,
+        details: acceptanceDetails,
+        badge: participantBadges,
+      })
       .from(applications)
       .leftJoin(
         acceptanceDetails,
         eq(acceptanceDetails.applicationId, applications.id),
+      )
+      .leftJoin(
+        participantBadges,
+        eq(participantBadges.applicationId, applications.id),
       )
       .where(eq(applications.id, payload.applicationId))
       .limit(1);
@@ -71,17 +79,31 @@ export const generateParticipantBadge = task<
     const pictureUrl = record.application.pictureUrl;
     if (!pictureUrl) throw new Error("Participant has no confirmed picture");
     /*
-      The name the credential prints, which is the application's and not
-      the attendance form's. The card seeds its number from the same
-      string, so taking a different one here would email somebody a badge
-      numbered differently from the one on their own page.
+      Badge-profile choices win without rewriting the historical
+      application. Before somebody customizes the public name, the
+      application name remains the default.
     */
     const credentialName = fullNameOf(
       record.application.firstName,
       record.application.lastName,
     );
-    const fullName = credentialName || record.details?.fullName?.trim() || "";
+    const fullName =
+      record.badge?.displayName?.trim() ||
+      credentialName ||
+      record.details?.fullName?.trim() ||
+      "";
     if (!fullName) throw new Error("Participant has no name");
+    const oneLiner = roleFor(
+      record.badge?.oneLiner?.trim() || record.application.role,
+    );
+    const linkUrl =
+      record.badge?.linkUrl?.trim() ||
+      badgeLinkFor({
+        websiteUrl: record.application.portfolioUrl,
+        githubUrl: record.application.githubUrl,
+        linkedInUrl: record.application.linkedInUrl,
+      });
+    const placement = record.badge?.placement?.trim() || "PARTICIPANT";
     const email = record.application.email;
     if (!email) throw new Error("Participant has no email address");
 
@@ -115,9 +137,10 @@ export const generateParticipantBadge = task<
       .triggerAndWait(
         {
           applicationId: payload.applicationId,
-          fullName: credentialName,
-          role: roleFor(record.application.role),
-          number: credentialNumber(credentialName),
+          fullName,
+          role: oneLiner,
+          placement,
+          linkUrl,
           portraitUrl: portrait.url,
         },
         { idempotencyKey: `badge/${ctx.run.id}` },
@@ -133,8 +156,9 @@ export const generateParticipantBadge = task<
       email,
       firstName: record.application.firstName ?? fullName,
       badgeUrl: badge.url,
-      number: credentialNumber(credentialName),
+      placement,
       badgePageUrl: BADGE_PAGE_URL,
+      generationId: ctx.run.id,
     });
     await db
       .update(participantBadges)

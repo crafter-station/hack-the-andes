@@ -8,6 +8,7 @@ import {
   getBadge,
   getCurrentUser,
   getRegistration,
+  regenerateBadge,
 } from "../src/api-client.js";
 
 const originalFetch = globalThis.fetch;
@@ -137,6 +138,37 @@ describe("registration API client", () => {
 
     expect(url).toBe("https://hack.example/api/v1/badge");
     expect(response.data.url).toContain("badge.png");
+  });
+
+  test("updates the badge profile and starts regeneration", async () => {
+    let method = "";
+    let body: unknown;
+    globalThis.fetch = async (_input, init) => {
+      method = init?.method ?? "";
+      body = JSON.parse(String(init?.body));
+      return Response.json({
+        version: 1,
+        ok: true,
+        requestId: "request-regenerate",
+        data: { status: "pending" },
+      });
+    };
+
+    const response = await Effect.runPromise(
+      regenerateBadge(
+        { apiUrl: "https://hack.example", token: "oauth-token" },
+        {
+          fullName: "Ada Lovelace",
+          oneLiner: "Computing pioneer",
+          linkUrl: "https://ada.dev",
+          pictureSource: "github",
+        },
+      ),
+    );
+
+    expect(method).toBe("PATCH");
+    expect(body).toMatchObject({ linkUrl: "https://ada.dev" });
+    expect(response.data.status).toBe("pending");
   });
 
   test("preserves structured API errors", async () => {

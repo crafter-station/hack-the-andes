@@ -10,7 +10,8 @@ export interface GenerateBadgePayload {
   readonly applicationId: string;
   readonly fullName: string;
   readonly role: string;
-  readonly number: string;
+  readonly placement: string;
+  readonly linkUrl: string;
   readonly portraitUrl: string;
 }
 
@@ -33,7 +34,8 @@ export const generateBadge = task({
     const badge = await renderShareBadge({
       fullName: payload.fullName,
       role: payload.role,
-      number: payload.number,
+      placement: payload.placement,
+      linkUrl: payload.linkUrl,
       portrait,
     });
     const blob = await uploadPng(

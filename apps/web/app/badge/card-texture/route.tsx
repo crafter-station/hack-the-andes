@@ -13,7 +13,7 @@ import { renderCardTexture } from "@/lib/credential/card-texture";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET() {
   const authentication = await auth();
   if (!authentication.userId) {
     return new Response("Unauthorized", { status: 401 });
@@ -24,9 +24,7 @@ export async function GET(request: Request) {
     return new Response("Not found", { status: 404 });
   }
 
-  const response = await renderCardTexture(credentialFor(accepted), {
-    origin: new URL(request.url).origin,
-  });
+  const response = await renderCardTexture(credentialFor(accepted));
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

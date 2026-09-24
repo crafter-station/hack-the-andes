@@ -33,12 +33,13 @@ describe("badge-ready email", () => {
       email: "ada@example.com",
       firstName: "Ada <Admin>",
       badgeUrl: "https://example.com/badge.png?a=1&b=2",
-      number: "911",
+      placement: "BLACK BOX · #07",
       badgePageUrl: "https://hacktheandes.com/badge",
+      generationId: "run-456",
     });
 
     expect(headers.get("idempotency-key")).toBe(
-      "participant-badge/application-123",
+      "participant-badge/application-123/run-456",
     );
     expect(body.from).toBe("hackathons@crafterstation.com");
     expect(body.reply_to).toBe("anthony@crafterstation.com");
@@ -46,5 +47,6 @@ describe("badge-ready email", () => {
     expect(body.html).toContain("a=1&amp;b=2");
     // The face, and a way to the card — not a flattened picture of one.
     expect(body.html).toContain("https://hacktheandes.com/badge");
+    expect(body.html).toContain("chofex badge regenerate");
   });
 });

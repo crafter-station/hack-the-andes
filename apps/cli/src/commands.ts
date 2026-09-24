@@ -6,6 +6,7 @@ import {
   getBadge,
   getCurrentUser,
   getRegistration,
+  regenerateBadge,
   register,
 } from "./api-client.js";
 import { login as oauthLogin, logout as oauthLogout } from "./auth.js";
@@ -18,6 +19,7 @@ import {
   acceptedDetailsInput,
   applicationDefaultsFromRegistration,
   applicationInput,
+  badgeProfileInput,
   picturePathInput,
 } from "./input.js";
 import {
@@ -193,6 +195,63 @@ const requirementsCommand = Command.make(
   }),
 ).pipe(Command.withDescription("Show information you still need to provide"));
 
+const badgeRegenerateCommand = Command.make(
+  "regenerate",
+  {
+    input: inputFlag,
+    picture: Flag.string("picture").pipe(
+      Flag.optional,
+      Flag.withDescription("Path to a JPEG, PNG, or WebP picture (5 MB max)"),
+    ),
+  },
+  Effect.fn("badgeRegenerateCommand")(function* ({ input, picture }) {
+    const options = yield* root;
+    const operation = Effect.gen(function* () {
+      const token = Option.getOrUndefined(options.token);
+      const client = { apiUrl: options.apiUrl, token };
+      const badge = yield* getBadge(client);
+      if (!badge.data.profile) {
+        return yield* Effect.fail(
+          cliError(
+            "INVALID_APPLICATION_STATE",
+            "Confirm attendance before regenerating your badge",
+          ),
+        );
+      }
+      const [current, currentUser] = yield* Effect.all([
+        getRegistration(client),
+        getCurrentUser(client),
+      ]);
+      const body = yield* badgeProfileInput(
+        Option.getOrUndefined(input),
+        badge.data.profile,
+        {
+          clerkPictureUrl: currentUser.data.clerkPictureUrl,
+          githubUrl: current.data.registration.githubUrl,
+        },
+      );
+      const picturePath = Option.getOrUndefined(picture);
+      if (body.pictureSource === "upload") {
+        const path = yield* picturePathInput(picturePath);
+        yield* uploadPicture(client, path);
+      } else if (picturePath) {
+        return yield* Effect.fail(
+          cliError(
+            "UNEXPECTED_PICTURE_PATH",
+            "--picture can only be used when pictureSource is upload",
+          ),
+        );
+      }
+      return yield* regenerateBadge(client, body);
+    });
+    yield* execute(options.output, operation, badgeText);
+  }),
+).pipe(
+  Command.withDescription(
+    "Update the photo, name, one-liner and QR link, then regenerate the badge",
+  ),
+);
+
 const badgeCommand = Command.make(
   "badge",
   {},
@@ -202,7 +261,10 @@ const badgeCommand = Command.make(
     const operation = getBadge({ apiUrl: options.apiUrl, token });
     yield* execute(options.output, operation, badgeText);
   }),
-).pipe(Command.withDescription("Show your generated participant badge"));
+).pipe(
+  Command.withDescription("Show or regenerate your participant badge"),
+  Command.withSubcommands([badgeRegenerateCommand]),
+);
 
 const confirmCommand = Command.make(
   "confirm",

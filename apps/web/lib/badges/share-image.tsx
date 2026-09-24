@@ -15,8 +15,9 @@
 
 import { brandColors } from "@chofex/ui/lib/brand-theme";
 import { ImageResponse } from "next/og.js";
+import QRCode from "qrcode";
 
-import { mountainDataUri, ridgeDataUri } from "@/lib/credential/art";
+import { ridgeDataUri } from "@/lib/credential/art";
 import {
   HOLDER,
   notchFonts,
@@ -61,7 +62,6 @@ const capSize = (fraction: number): number =>
 const NAME_SIZE = capSize(0.065);
 const ROLE_SIZE = capSize(0.024);
 const NUMBER_SIZE = capSize(0.0185);
-const WORDMARK_SIZE = capSize(0.028);
 
 /** How tall the ridge stands behind the type. */
 const RIDGE_HEIGHT = Math.round(SHEET_WIDTH * 0.62);
@@ -71,15 +71,22 @@ export interface ShareBadgeInput {
   readonly role: string;
   /** Already screened into dots, as a data URI, or null for no picture. */
   readonly portrait: string | null;
-  readonly number: string;
+  readonly placement: string;
+  readonly linkUrl: string;
 }
 
 export const renderShareBadge = async (
   input: ShareBadgeInput,
 ): Promise<Buffer> => {
-  const [ridge, mountain] = await Promise.all([
+  const [ridge, qr] = await Promise.all([
     ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
-    mountainDataUri(Math.round(WORDMARK_SIZE * 0.9)),
+    QRCode.toBuffer(input.linkUrl, {
+      type: "png",
+      errorCorrectionLevel: "M",
+      margin: 2,
+      width: 220,
+      color: { dark: colors.ink, light: SHEET },
+    }).then((png) => `data:image/png;base64,${png.toString("base64")}`),
   ]);
 
   /*
@@ -90,16 +97,17 @@ export const renderShareBadge = async (
   */
   const blocks = [
     <div
-      key="number"
+      key="placement"
       style={{
         display: "flex",
         width: PORTRAIT_WIDTH,
         justifyContent: "flex-end",
         fontSize: NUMBER_SIZE,
+        letterSpacing: 1,
         color: colors.ink,
       }}
     >
-      {`#${input.number}`}
+      {input.placement}
     </div>,
     <div
       key="portrait"
@@ -111,6 +119,7 @@ export const renderShareBadge = async (
         height: PORTRAIT_HEIGHT,
         marginTop: 26,
         border: `1px solid ${WINDOW_EDGE}`,
+        background: SHEET,
       }}
     >
       {input.portrait ? (
@@ -133,7 +142,7 @@ export const renderShareBadge = async (
         flexDirection: "column",
         alignItems: "center",
         width: CONTENT_WIDTH,
-        marginTop: 46,
+        marginTop: 32,
       }}
     >
       {/*
@@ -169,29 +178,30 @@ export const renderShareBadge = async (
         {input.role}
       </div>
     </div>,
+    // biome-ignore lint/performance/noImgElement: next/image cannot run inside satori
+    <img
+      alt=""
+      height={100}
+      key="qr"
+      src={qr}
+      style={{ marginTop: 16 }}
+      width={100}
+    />,
     <div
-      key="wordmark"
+      key="website"
       style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         width: CONTENT_WIDTH,
-        marginTop: 52,
-        color: colors.ink,
+        marginTop: 10,
+        color: colors.muted,
+        fontSize: 20,
+        fontWeight: 700,
+        letterSpacing: 5,
       }}
     >
-      {/* biome-ignore lint/performance/noImgElement: next/image cannot run inside satori */}
-      <img alt="" src={mountain} width={Math.round(WORDMARK_SIZE * 0.9)} />
-      <div
-        style={{
-          marginLeft: 18,
-          fontSize: WORDMARK_SIZE,
-          fontWeight: 700,
-          letterSpacing: 1,
-        }}
-      >
-        HACK THE ANDES
-      </div>
+      HACKTHEANDES.COM
     </div>,
   ];
 
@@ -219,7 +229,7 @@ export const renderShareBadge = async (
           background: SHEET,
           fontFamily: "Stack Sans Notch",
           fontWeight: 500,
-          padding: `54px ${SHEET_PADDING_X}px 54px`,
+          padding: `42px ${SHEET_PADDING_X}px 36px`,
         }}
       >
         {/*

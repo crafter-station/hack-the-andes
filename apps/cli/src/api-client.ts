@@ -16,6 +16,7 @@ import {
   ApiFailureSchema,
   type ApiSuccess,
   ApiSuccessSchema,
+  type BadgeRegenerationInput,
   type BadgeResult,
   BadgeResultSchema,
   type CampaignAttributionHandoff,
@@ -265,6 +266,17 @@ export const getBadge = (
   options: ApiClientOptions,
 ): Effect.Effect<ApiSuccess<BadgeResult>, CliError> =>
   request(options, "/api/v1/badge", { method: "GET" }, decodeBadgeResult);
+
+export const regenerateBadge = (
+  options: ApiClientOptions,
+  input: BadgeRegenerationInput,
+): Effect.Effect<ApiSuccess<BadgeResult>, CliError> =>
+  request(
+    options,
+    "/api/v1/badge",
+    { method: "PATCH", body: JSON.stringify(input) },
+    decodeBadgeResult,
+  );
 
 export const confirmAttendance = (
   options: ApiClientOptions,

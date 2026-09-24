@@ -58,13 +58,13 @@ describe("email shell", () => {
     const email = buildBadgeReadyEmail({
       firstName: "Ada",
       badgeUrl: "https://blob.example/badge.png",
-      number: "911",
+      placement: "BLACK BOX · #07",
       badgePageUrl: "https://hacktheandes.com/badge",
     });
 
     expect(email.html).toContain("https://blob.example/badge.png");
     expect(email.html).toContain("https://hacktheandes.com/badge");
-    // Stamped with its own number, where a card carries one.
-    expect(email.html).toContain("#911");
+    // Stamped with the same exact placement the card carries.
+    expect(email.html).toContain("BLACK BOX · #07");
   });
 });

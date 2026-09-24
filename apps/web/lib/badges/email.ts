@@ -2,11 +2,11 @@
  * What arrives when somebody's credential is ready.
  *
  * It carries the badge — the face, but also the name, the role and the
- * number, which is what makes it theirs rather than a photograph. The
+ * challenge placement, which is what makes it theirs rather than a photograph. The
  * card is still a thing you pick up and swing, so the email sends people
  * to the page where it hangs; what it shows is the printed object.
  *
- * The number is stamped in the header as well, where a card carries its
+ * The placement is stamped in the header as well, where a card carries its
  * own, so the sheet the email is laid out as is stamped like the sheet
  * inside it.
  */
@@ -28,16 +28,18 @@ export interface BadgeReadyEmailInput {
   readonly firstName: string;
   /** The badge, already uploaded — a mail client cannot read a buffer. */
   readonly badgeUrl: string;
-  /** The credential's own number, stamped where a card carries one. */
-  readonly number: string;
+  /** Their best exact challenge placement, stamped where the card carries it. */
+  readonly placement: string;
   /** Where the card itself hangs. */
   readonly badgePageUrl: string;
+  /** Makes regenerated badge notifications independently deliverable. */
+  readonly generationId: string;
 }
 
 const SUBJECT = "Tu carnet de Hack the Andes está listo";
 
 export const buildBadgeReadyEmail = (
-  input: Omit<BadgeReadyEmailInput, "applicationId" | "email">,
+  input: Omit<BadgeReadyEmailInput, "applicationId" | "email" | "generationId">,
 ): {
   readonly subject: string;
   readonly text: string;
@@ -46,9 +48,9 @@ export const buildBadgeReadyEmail = (
   const name = input.firstName.trim();
   const greeting = name ? `Hola ${name},` : "Hola,";
   const introduction =
-    "Tu carnet ya está hecho: tu foto tramada, tu nombre, tu rol y tu número.";
+    "Tu carnet ya está hecho: tu foto tramada, tu nombre, tu presentación y tu mejor posición en los challenges.";
   const body =
-    "En el sitio está el carnet completo, colgando de su cordón: puedes tomarlo, moverlo y darle la vuelta para ver el dorso.";
+    "En el sitio está el carnet completo. Si quieres cambiar la foto, el nombre, la presentación o el enlace del QR, ejecuta chofex badge regenerate.";
 
   const text = [
     greeting,
@@ -58,6 +60,7 @@ export const buildBadgeReadyEmail = (
     body,
     "",
     `Ver mi carnet: ${input.badgePageUrl}`,
+    "Personalizar y regenerar: chofex badge regenerate",
     "",
     "Nos vemos en la cima.",
     "— El equipo de Hack the Andes",
@@ -66,7 +69,7 @@ export const buildBadgeReadyEmail = (
   const html = emailShell({
     subject: SUBJECT,
     preheader: "Tu foto está lista. El carnet completo te espera en el sitio.",
-    stamp: `#${input.number}`,
+    stamp: input.placement,
     /*
       No range at the foot: the badge in the body has one printed on it,
       and the same drawing twice down one column reads as a repeated
@@ -81,6 +84,7 @@ export const buildBadgeReadyEmail = (
       picture(input.badgeUrl, "Tu carnet de Hack the Andes"),
       paragraph(body),
       button("Ver mi carnet", input.badgePageUrl),
+      paragraph("Desde tu terminal: chofex badge regenerate"),
     ],
   });
 
@@ -98,7 +102,7 @@ export const sendBadgeReadyEmail = async (
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
-      "idempotency-key": `participant-badge/${input.applicationId}`,
+      "idempotency-key": `participant-badge/${input.applicationId}/${input.generationId}`,
     },
     body: JSON.stringify({
       from: badgeEmailFrom,

@@ -81,18 +81,18 @@ const PICTURE_TIMEOUT_MS = 2_500;
  * The halftone's pitch, in texture pixels.
  *
  * Measured off the design file rather than chosen: its portrait window
- * is about 33 dots across, and the window here is 490 output pixels, so
- * a dot every fifteen. Five — what this was — put 98 dots in the same
- * window, which at the 113px the window renders on screen is barely over
- * a pixel each and reads as grain rather than as a screen. That is what
- * "the halftone isn't noticeable" meant.
+ * is fine enough to preserve the eyes and mouth without dissolving into
+ * photographic grain. Eleven — what this was — put only 45 dots across
+ * the window, so highlights merged into coin-sized circles and broad facial
+ * features became abstract shapes. Seven puts 71 dots across the same
+ * window: the screen still reads, while the face remains recognizable.
  *
  * The ASCII grid that was considered for the same slot lands at 1.38px
  * per character and does not read at all — a dot carries one value, its
  * radius, while a character needs its shape distinguished, and a shape
  * needs several pixels to have one.
  */
-const HALFTONE_CELL = 11;
+const HALFTONE_CELL = 7;
 
 const colors = brandColors.dark;
 
@@ -255,18 +255,18 @@ export const halftonePortrait = async (
 /**
  * The card's own URL, as a QR.
  *
- * Drawn bone-on-nothing rather than the conventional black-on-white: a
- * white quiet zone on a black card is a bright rectangle, and phone
- * scanners have handled inverted codes for years.
+ * Drawn bone-on-sheet rather than the conventional black-on-white: the
+ * sheet-colored quiet zone keeps the mountain artwork out of the code
+ * without introducing a bright rectangle on the card.
  */
 const qrDataUri = async (url: string): Promise<string | null> => {
   try {
     const png = await QRCode.toBuffer(url, {
       type: "png",
       errorCorrectionLevel: "M",
-      margin: 0,
+      margin: 2,
       width: 220,
-      color: { dark: colors.ink, light: "#00000000" },
+      color: { dark: colors.ink, light: SHEET },
     });
     return `data:image/png;base64,${png.toString("base64")}`;
   } catch {
@@ -274,14 +274,8 @@ const qrDataUri = async (url: string): Promise<string | null> => {
   }
 };
 
-export interface CardTextureOptions {
-  /** Where the QR points. */
-  readonly origin: string;
-}
-
 export const renderCardTexture = async (
   credential: Credential,
-  { origin }: CardTextureOptions,
 ): Promise<Response> => {
   const [portrait, ridgeFront, ridgeBack, mountain, qr, sponsors] =
     await Promise.all([
@@ -289,7 +283,7 @@ export const renderCardTexture = async (
       ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_FRONT }),
       ridgeDataUri({ width: SHEET_WIDTH, opacity: RIDGE_BACK }),
       mountainDataUri(96),
-      qrDataUri(new URL("/badge", origin).href),
+      qrDataUri(credential.linkUrl),
       Promise.all(
         SPONSOR_WIDTHS.map(async ([sponsor, width]) => ({
           sponsor,
@@ -423,19 +417,20 @@ export const renderCardTexture = async (
       {/* Front: the left half of the atlas. */}
       {face(ridgeFront, RIDGE_HEIGHT_FRONT, [
         <div
-          key="number"
+          key="placement"
           style={{
             display: "flex",
             // Flush with the photo window's right edge, not the sheet's
-            // margin. Measured on the design: its number ends within six
+            // margin. Measured on the design: its stamp ends within six
             // pixels of the window's rule, which is close enough that
             // the two are meant to line up.
             width: PORTRAIT_WIDTH,
             justifyContent: "flex-end",
-            fontSize: 26,
+            fontSize: 22,
+            letterSpacing: 1,
           }}
         >
-          {`#${credential.number}`}
+          {credential.placement}
         </div>,
         // The photo window is a line and nothing else. Sampling the design
         // across its edge finds one pale pixel and then the card's own tone
@@ -450,6 +445,10 @@ export const renderCardTexture = async (
             height: PORTRAIT_HEIGHT,
             marginTop: 26,
             border: `1px solid ${WINDOW_EDGE}`,
+            // The portrait is a transparent cut-out. Give its window the
+            // printed sheet's own tone so the ridge behind the card cannot
+            // show through the erased background and climb into the photo.
+            background: SHEET,
           }}
         >
           {portraitNode}
@@ -530,6 +529,19 @@ export const renderCardTexture = async (
             {credential.organization ?? ""}
           </div>
         ),
+        <div
+          key="website"
+          style={{
+            display: "flex",
+            marginTop: 18,
+            color: colors.muted,
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: 4,
+          }}
+        >
+          HACKTHEANDES.COM
+        </div>,
       ])}
 
       {/*

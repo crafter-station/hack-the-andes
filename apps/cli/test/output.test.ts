@@ -111,7 +111,7 @@ describe("registration output", () => {
 describe("badge output", () => {
   test("explains that a pending badge is not available yet", () => {
     expect(badgeText({ status: "pending" })).toBe(
-      "You don't have a badge yet.",
+      "Your badge is being generated.",
     );
   });
 
