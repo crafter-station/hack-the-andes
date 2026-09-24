@@ -6,17 +6,18 @@ import {
   isChallengeRankingVisibleAt,
 } from "@chofex/challenges-contract";
 import { db } from "@chofex/db";
-import { and, desc, eq, inArray, sql } from "@chofex/db/orm";
+import { and, desc, eq, gt, inArray, sql } from "@chofex/db/orm";
 import {
   applications,
   challengeAttempts,
   challengeEvaluations,
+  participants,
 } from "@chofex/db/schema";
 import { HttpError } from "../registration/http";
 import { catalogItemFor } from "./catalog";
 import { challengesForceOpen, currentChallengeTime } from "./clock";
 import { currentChallengeVersionFor } from "./engine";
-import { rankingDisplayName } from "./names";
+import { publicProfileLinksFor, rankingDisplayName } from "./names";
 import {
   compareRankedChallengeEvaluations,
   competitionRanksForEvaluations,
@@ -44,6 +45,8 @@ export const rankedEvaluationsFor = async (
     .selectDistinctOn([applications.participantId], {
       participantId: applications.participantId,
       status: applications.status,
+      githubUrl: applications.githubUrl,
+      linkedInUrl: applications.linkedInUrl,
     })
     .from(applications)
     .orderBy(
@@ -52,6 +55,39 @@ export const rankedEvaluationsFor = async (
       desc(applications.id),
     )
     .as("ranking_latest_applications");
+  const linkedInIdentity = sql<string | null>`nullif(
+    lower(regexp_replace(trim(${latestApplications.linkedInUrl}), '/+$', '')),
+    ''
+  )`;
+  const githubIdentity = sql<string | null>`nullif(
+    lower(regexp_replace(trim(${latestApplications.githubUrl}), '/+$', '')),
+    ''
+  )`;
+  const eligibleApplications = database
+    .select({
+      participantId: latestApplications.participantId,
+      status: latestApplications.status,
+      linkedInRank: sql<number>`case
+        when ${linkedInIdentity} is null then 1
+        else row_number() over (
+          partition by ${linkedInIdentity}
+          order by ${participants.createdAt}, ${latestApplications.participantId}
+        )
+      end`.as("linkedin_rank"),
+      githubRank: sql<number>`case
+        when ${githubIdentity} is null then 1
+        else row_number() over (
+          partition by ${githubIdentity}
+          order by ${participants.createdAt}, ${latestApplications.participantId}
+        )
+      end`.as("github_rank"),
+    })
+    .from(latestApplications)
+    .innerJoin(
+      participants,
+      eq(participants.id, latestApplications.participantId),
+    )
+    .as("ranking_eligible_applications");
   const rows = await database
     .select({
       attemptId: challengeAttempts.id,
@@ -66,14 +102,17 @@ export const rankedEvaluationsFor = async (
       eq(challengeEvaluations.id, challengeAttempts.bestEvaluationId),
     )
     .innerJoin(
-      latestApplications,
-      eq(latestApplications.participantId, challengeAttempts.participantId),
+      eligibleApplications,
+      eq(eligibleApplications.participantId, challengeAttempts.participantId),
     )
     .where(
       and(
         eq(challengeAttempts.challengeSlug, slug),
         eq(challengeAttempts.challengeVersion, challengeVersion),
-        sql`${latestApplications.status} <> 'withdrawn'`,
+        sql`${eligibleApplications.status} <> 'withdrawn'`,
+        eq(eligibleApplications.linkedInRank, 1),
+        eq(eligibleApplications.githubRank, 1),
+        gt(challengeEvaluations.accuracy, 0.5),
       ),
     );
 
@@ -126,6 +165,8 @@ export const getChallengeRanking = async (
     {
       firstName: string | null;
       lastName: string | null;
+      githubUrl: string | null;
+      linkedInUrl: string | null;
     }
   >();
 
@@ -135,6 +176,8 @@ export const getChallengeRanking = async (
         participantId: applications.participantId,
         firstName: applications.firstName,
         lastName: applications.lastName,
+        githubUrl: applications.githubUrl,
+        linkedInUrl: applications.linkedInUrl,
       })
       .from(applications)
       .where(inArray(applications.participantId, participantIds))
@@ -145,6 +188,8 @@ export const getChallengeRanking = async (
       identityByParticipant.set(application.participantId, {
         firstName: application.firstName,
         lastName: application.lastName,
+        githubUrl: application.githubUrl,
+        linkedInUrl: application.linkedInUrl,
       });
     }
   }
@@ -154,12 +199,17 @@ export const getChallengeRanking = async (
   const entries: Array<ChallengeRankingEntry> = publicRanked.map(
     (row, index) => {
       const identity = identityByParticipant.get(row.participantId);
+      const profileLinks = publicProfileLinksFor({
+        githubUrl: identity?.githubUrl,
+        linkedInUrl: identity?.linkedInUrl,
+      });
       return {
         rank: ranks[index] ?? 1,
         displayName: rankingDisplayName({
           firstName: identity?.firstName,
           lastName: identity?.lastName,
         }),
+        ...profileLinks,
         shareCode: row.shareCode,
         accuracy: row.score.accuracy,
         exactCount: row.score.exactCount,

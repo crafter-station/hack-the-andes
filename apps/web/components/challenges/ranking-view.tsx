@@ -52,16 +52,37 @@ const RankingResults = ({
           {entries.map((entry) => (
             <tr
               className="border-[var(--hud-ink)]/10 border-t"
-              key={`${entry.shareCode}-${entry.rank}`}
+              key={`${entry.rank}-${entry.displayName}-${entry.evaluatedAt}`}
             >
               <td className="px-4 py-3 font-mono text-[var(--hud-action)]">
                 #{entry.rank}
               </td>
               <td className="px-4 py-3">
                 <div>{entry.displayName}</div>
-                <div className="landing-type-meta text-[var(--hud-muted)]">
-                  #{entry.shareCode}
-                </div>
+                {(entry.githubUrl || entry.linkedInUrl) && (
+                  <div className="landing-type-meta mt-1 flex gap-3 text-[var(--hud-muted)]">
+                    {entry.githubUrl && (
+                      <a
+                        className="underline-offset-4 hover:text-[var(--hud-ink)] hover:underline"
+                        href={entry.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        GitHub
+                      </a>
+                    )}
+                    {entry.linkedInUrl && (
+                      <a
+                        className="underline-offset-4 hover:text-[var(--hud-ink)] hover:underline"
+                        href={entry.linkedInUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        LinkedIn
+                      </a>
+                    )}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3 font-mono">
                 {formatChallengeScore(entry.accuracy)}
