@@ -4,8 +4,8 @@ import { challengeBySlug } from "@chofex/challenges-contract";
 import { catalogItemFor } from "./catalog";
 
 test("does not advertise an unimplemented challenge as open", () => {
-  const challenge = challengeBySlug("last-mile");
-  if (!challenge) throw new Error("missing last-mile");
+  const challenge = challengeBySlug("make-it-fast");
+  if (!challenge) throw new Error("missing make-it-fast");
 
   const item = catalogItemFor(
     challenge,

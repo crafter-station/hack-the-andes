@@ -164,10 +164,9 @@ describe("CLI JSON mode", () => {
     }
   });
 
-  test("creates the Broken Agent starter repository without overwriting work", async () => {
+  test("keeps the Broken Agent starter closed until its scheduled opening", async () => {
     const directory = await mkdtemp(join(tmpdir(), "chofex-broken-agent-"));
-    const challengeDirectory = join(directory, "broken-agent");
-    const solutionPath = join(challengeDirectory, "scheduler.js");
+    const solutionPath = join(directory, "broken-agent", "scheduler.js");
 
     try {
       const created = await runCliFrom(
@@ -178,32 +177,26 @@ describe("CLI JSON mode", () => {
         "broken-agent",
       );
 
-      expect(created.exitCode).toBe(0);
-      expect(created.stderr).toBe("");
-      expect(created.stdout).toContain("Created broken-agent");
-      expect(created.stdout).toContain("Everything passes");
-      expect(await readFile(solutionPath, "utf8")).toContain(
-        "function createScheduler",
-      );
-      expect(
-        await readFile(join(challengeDirectory, "README.md"), "utf8"),
-      ).toContain("Public contract");
-      expect(
-        await readFile(join(challengeDirectory, "scheduler.test.js"), "utf8"),
-      ).toContain('test("executes a due job"');
+      expect(created.exitCode).toBe(2);
+      expect(created.stdout).toBe("");
+      expect(created.stderr).toContain("CHALLENGE_NOT_OPEN");
+      expect(created.stderr).toContain("September 25, 2026");
+      expect(await Bun.file(solutionPath).exists()).toBe(false);
 
-      await writeFile(solutionPath, "// repaired by me\n", "utf8");
-      const repeated = await runCliFrom(
+      const json = await runCliFrom(
         directory,
+        "--output",
+        "json",
         "challenge",
         "init",
         "--challenge",
         "broken-agent",
       );
-
-      expect(repeated.exitCode).toBe(0);
-      expect(repeated.stdout).toContain("broken-agent already exists");
-      expect(await readFile(solutionPath, "utf8")).toBe("// repaired by me\n");
+      expect(json.stderr).toBe("");
+      expect(JSON.parse(json.stdout)).toMatchObject({
+        ok: false,
+        error: { code: "CHALLENGE_NOT_OPEN" },
+      });
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
