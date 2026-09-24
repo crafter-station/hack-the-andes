@@ -61,6 +61,19 @@ describe("challenge catalog", () => {
     ).toBe(true);
   });
 
+  test("opens Broken Agent on 24 September 2026 at 14:25 UTC-5", () => {
+    const challenge = challengeBySlug("broken-agent");
+    if (!challenge) throw new Error("missing broken-agent");
+
+    expect(challenge.opensAt).toBe("2026-09-24T19:25:00.000Z");
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-09-24T19:24:59.999Z")),
+    ).toBe(false);
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-09-24T19:25:00.000Z")),
+    ).toBe(true);
+  });
+
   test("reveals the Black Box ranking on 23 September 2026 at 15:00 UTC-5", () => {
     const challenge = challengeBySlug("black-box");
     if (!challenge) throw new Error("missing black-box");

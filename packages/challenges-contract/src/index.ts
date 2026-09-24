@@ -68,7 +68,7 @@ export const challengeCatalog: ReadonlyArray<ChallengeDefinition> = [
     coreSkill: "Production correctness & reliability",
     format: "accuracy",
     formatLabel: "Production readiness score",
-    opensAt: "2026-09-25T05:00:00.000Z",
+    opensAt: "2026-09-24T19:25:00.000Z",
     queryLimit: 0,
     evaluationLimit: 5,
     hiddenSampleSize: 100,

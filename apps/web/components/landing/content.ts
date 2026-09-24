@@ -168,7 +168,7 @@ export const qualifierChallengesCopy = {
   tracksBody: `Son ${trackCount} temas para construir en equipo durante 30 horas. Los eliges presencialmente en Lima.`,
   challengesLabel: "Challenges / antes del evento",
   challengesBody: `Resuelve una de las ${qualifierChallengeCount} pruebas, sube al ranking y compite por un pase directo al evento.`,
-  liveKicker: "Challenge 2 / nuevo",
+  liveKicker: "Challenge 2 / en vivo",
   liveTitle: "The Scheduler",
   liveBody:
     "Un agente dice que terminó un job scheduler. Todos los tests pasan. Haz que realmente esté listo para producción.",

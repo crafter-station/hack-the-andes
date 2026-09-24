@@ -99,7 +99,7 @@ export function ChallengeRankingView({
   if (brokenAgent) {
     cliHint = "chofex challenge init --challenge broken-agent";
   }
-  let challengeState = "Abierto";
+  let challengeState = "En vivo";
   if (challenge.closed) {
     challengeState = "Cerrado";
   } else if (!challenge.open) {

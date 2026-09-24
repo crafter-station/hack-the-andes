@@ -164,9 +164,10 @@ describe("CLI JSON mode", () => {
     }
   });
 
-  test("keeps the Broken Agent starter closed until its scheduled opening", async () => {
+  test("creates the live Broken Agent starter without overwriting work", async () => {
     const directory = await mkdtemp(join(tmpdir(), "chofex-broken-agent-"));
-    const solutionPath = join(directory, "broken-agent", "scheduler.js");
+    const challengeDirectory = join(directory, "broken-agent");
+    const solutionPath = join(challengeDirectory, "scheduler.js");
 
     try {
       const created = await runCliFrom(
@@ -177,26 +178,32 @@ describe("CLI JSON mode", () => {
         "broken-agent",
       );
 
-      expect(created.exitCode).toBe(2);
-      expect(created.stdout).toBe("");
-      expect(created.stderr).toContain("CHALLENGE_NOT_OPEN");
-      expect(created.stderr).toContain("September 25, 2026");
-      expect(await Bun.file(solutionPath).exists()).toBe(false);
+      expect(created.exitCode).toBe(0);
+      expect(created.stderr).toBe("");
+      expect(created.stdout).toContain("Created broken-agent");
+      expect(created.stdout).toContain("Everything passes");
+      expect(await Bun.file(solutionPath).text()).toContain(
+        "function createScheduler",
+      );
+      expect(
+        await Bun.file(join(challengeDirectory, "README.md")).text(),
+      ).toContain("Public contract");
+      expect(
+        await Bun.file(join(challengeDirectory, "scheduler.test.js")).text(),
+      ).toContain('test("executes a due job"');
 
-      const json = await runCliFrom(
+      await writeFile(solutionPath, "// repaired by me\n", "utf8");
+
+      const repeated = await runCliFrom(
         directory,
-        "--output",
-        "json",
         "challenge",
         "init",
         "--challenge",
         "broken-agent",
       );
-      expect(json.stderr).toBe("");
-      expect(JSON.parse(json.stdout)).toMatchObject({
-        ok: false,
-        error: { code: "CHALLENGE_NOT_OPEN" },
-      });
+      expect(repeated.exitCode).toBe(0);
+      expect(repeated.stdout).toContain("broken-agent already exists");
+      expect(await Bun.file(solutionPath).text()).toBe("// repaired by me\n");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

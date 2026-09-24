@@ -55,7 +55,7 @@ export function ChallengesIndex({
             let stateLabel = "programado";
             if (challenge.open) {
               stateClassName = "text-[var(--hud-action)]";
-              stateLabel = "abierto";
+              stateLabel = "en vivo";
             } else if (challenge.closed) {
               stateLabel = "cerrado";
             }
