@@ -51,6 +51,14 @@ test("the live challenge page includes the brief and CLI instructions", async ()
   expect(ranking).toContain("BlackBoxChallengeGuide");
 });
 
+test("a closed challenge keeps its ranking without participation instructions", async () => {
+  const ranking = await sourceFor("ranking-view.tsx");
+
+  expect(ranking).toContain('challengeState = "Cerrado"');
+  expect(ranking).toContain("&& !challenge.closed");
+  expect(ranking).toContain("chofex challenge ranking");
+});
+
 test("the public ranking does not reveal the hidden competitor count", async () => {
   const view = await sourceFor("ranking-view.tsx");
   const ranking = await Bun.file(

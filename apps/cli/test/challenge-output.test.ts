@@ -4,7 +4,9 @@ import {
   challengeEvaluateText,
   challengeLaunchNotice,
   challengeListText,
+  challengeParticipationNotice,
   challengeRankingText,
+  notebookTableText,
 } from "../src/challenge-output.js";
 
 describe("challenge output", () => {
@@ -48,7 +50,50 @@ describe("challenge output", () => {
         },
       ],
     });
-    expect(text).toContain("opens September 17, 2026 at 09:00 (UTC-5)");
+    expect(text).toContain("abre September 17, 2026 at 09:00 (UTC-5)");
+  });
+
+  test("labels a finished challenge as closed", () => {
+    const text = challengeListText({
+      challenges: [
+        {
+          slug: "black-box",
+          number: 1,
+          code: "01",
+          theme: "Black Box",
+          title: "The Shipping Machine",
+          summary: "Reverse engineer the machine.",
+          coreSkill: "Reverse engineering",
+          format: "accuracy",
+          formatLabel: "Accuracy score",
+          opensAt: "2026-09-17T14:00:00.000Z",
+          closesAt: "2026-09-24T17:20:00.000Z",
+          queryLimit: 25,
+          evaluationLimit: 3,
+          playable: true,
+          open: false,
+          closed: true,
+          rankingPath: "/challenges/black-box",
+        },
+      ],
+    });
+
+    expect(text).toContain("cerrado");
+    expect(text).not.toContain("abre September 17");
+    expect(text).not.toContain("Empieza el challenge abierto");
+    expect(text).toContain("No hay un challenge abierto");
+    expect(
+      challengeParticipationNotice(
+        "Black Box",
+        "2026-09-17T14:00:00.000Z",
+        "2026-09-24T17:20:00.000Z",
+        new Date("2026-09-24T17:20:00.000Z"),
+      ),
+    ).toContain("está cerrado");
+    const closedNotebook = notebookTableText([], true);
+    expect(closedNotebook).toContain("challenge está cerrado");
+    expect(closedNotebook).toContain("chofex challenge ranking");
+    expect(closedNotebook).not.toContain("chofex challenge query");
   });
 
   test("prints official evaluation score details and a share card", () => {

@@ -2,6 +2,7 @@ import {
   type ChallengeCatalogItem,
   type ChallengeDefinition,
   challengeCatalog,
+  isChallengeClosedAt,
   isChallengeOpenAt,
 } from "@chofex/challenges-contract";
 
@@ -14,6 +15,9 @@ export const catalogItemFor = (
   now: Date = currentChallengeTime(),
   forceOpen = challengesForceOpen(),
 ): ChallengeCatalogItem => {
+  const closed = !forceOpen && isChallengeClosedAt(challenge, now);
+  const open =
+    challenge.playable && isChallengeOpenAt(challenge, now, forceOpen);
   const item: ChallengeCatalogItem = {
     slug: challenge.slug,
     number: challenge.number,
@@ -28,13 +32,21 @@ export const catalogItemFor = (
     queryLimit: challenge.queryLimit,
     evaluationLimit: challenge.evaluationLimit,
     playable: challenge.playable,
-    open: isChallengeOpenAt(challenge, now, forceOpen),
+    open,
+    closed,
     rankingPath: rankingPathFor(challenge.slug),
   };
-  if (challenge.rankingVisibleAt) {
-    return { ...item, rankingVisibleAt: challenge.rankingVisibleAt };
+  let publicItem = item;
+  if (challenge.closesAt) {
+    publicItem = { ...publicItem, closesAt: challenge.closesAt };
   }
-  return item;
+  if (challenge.rankingVisibleAt) {
+    publicItem = {
+      ...publicItem,
+      rankingVisibleAt: challenge.rankingVisibleAt,
+    };
+  }
+  return publicItem;
 };
 
 export const publicChallengeCatalog = (

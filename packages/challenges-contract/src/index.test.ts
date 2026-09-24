@@ -41,6 +41,22 @@ describe("challenge catalog", () => {
     ).toBe(true);
   });
 
+  test("closes Black Box before Challenge 2 launches", () => {
+    const challenge = challengeBySlug("black-box");
+    if (!challenge) throw new Error("missing black-box");
+
+    expect(challenge.closesAt).toBe("2026-09-24T17:20:00.000Z");
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-09-24T17:19:59.999Z")),
+    ).toBe(true);
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-09-24T17:20:00.000Z")),
+    ).toBe(false);
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-09-24T17:20:00.000Z"), true),
+    ).toBe(true);
+  });
+
   test("reveals the Black Box ranking on 23 September 2026 at 15:00 UTC-5", () => {
     const challenge = challengeBySlug("black-box");
     if (!challenge) throw new Error("missing black-box");

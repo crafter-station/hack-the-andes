@@ -35,16 +35,32 @@ export const challengeLaunchNotice = (
   return challengeOpeningNotice(title, opensAt);
 };
 
+export const challengeParticipationNotice = (
+  title: string,
+  opensAt: string,
+  closesAt: string | undefined,
+  now: Date = new Date(),
+): string | undefined => {
+  if (closesAt && now.getTime() >= Date.parse(closesAt)) {
+    return `${title} está cerrado. Las consultas, pruebas locales y evaluaciones oficiales están deshabilitadas.`;
+  }
+  return challengeLaunchNotice(title, opensAt, now);
+};
+
 export const challengeListText = (
   catalog: ChallengeCatalogResponse,
 ): string => {
   const lines = [`${eventName} challenges`, ""];
   for (const challenge of catalog.challenges) {
-    let state = "open";
-    if (!challenge.open) {
-      state = `opens ${formatChallengeOpeningInPeru(challenge.opensAt)}`;
+    let state = `abre ${formatChallengeOpeningInPeru(challenge.opensAt)}`;
+    if (challenge.closed) {
+      state = "cerrado";
+    } else if (challenge.open && challenge.playable) {
+      state = "abierto";
+    } else if (!challenge.playable) {
+      state = "próximamente";
     }
-    const playable = challenge.playable ? "" : " (coming later)";
+    const playable = challenge.playable ? "" : " (próximamente)";
     lines.push(
       `${challenge.code}  ${challenge.theme} — ${challenge.title}${playable}`,
     );
@@ -54,7 +70,16 @@ export const challengeListText = (
     lines.push(`    Ranking: ${challenge.rankingPath}`);
     lines.push("");
   }
-  lines.push("Start the open challenge: chofex challenge");
+  const hasOpenChallenge = catalog.challenges.some(
+    (challenge) => challenge.open && challenge.playable,
+  );
+  if (hasOpenChallenge) {
+    lines.push("Empieza el challenge abierto: chofex challenge");
+  } else {
+    lines.push(
+      "No hay un challenge abierto. Los rankings finales siguen visibles.",
+    );
+  }
   return lines.join("\n");
 };
 
@@ -68,6 +93,7 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
   let caseStatus = "AWAITING FIRST CLUE";
   if (attempt.observations.length > 0) caseStatus = "INVESTIGATING";
   if (attempt.latestEvaluation !== undefined) caseStatus = "EVALUATED";
+  if (challenge.closed) caseStatus = "CERRADO";
   const lines = [
     `${challenge.title.toUpperCase()} — CASE #${challenge.code}`,
     challenge.summary,
@@ -87,6 +113,16 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
     if (progress.rank !== undefined)
       lines.push(`Rank           #${progress.rank}`);
     if (progress.shareCode) lines.push(`Share code     #${progress.shareCode}`);
+  }
+  if (challenge.closed) {
+    lines.push(
+      "",
+      "SIGUIENTE PASO",
+      "Revisa tu historial y el ranking final.",
+      "  chofex challenge notebook",
+      "  chofex challenge ranking",
+    );
+    return lines.join("\n");
   }
   lines.push("", "YOUR NEXT MOVE");
   if (attempt.observations.length === 0) {
@@ -174,8 +210,17 @@ const shipmentCells = (
 
 export const notebookTableText = (
   observations: ReadonlyArray<ChallengeObservation>,
+  challengeClosed = false,
 ): string => {
   if (observations.length === 0) {
+    if (challengeClosed) {
+      return [
+        "CASE FILE: no observations",
+        "El challenge está cerrado. Revisa el ranking final.",
+        "",
+        "Siguiente: chofex challenge ranking",
+      ].join("\n");
+    }
     return [
       "CASE FILE: no observations yet",
       "The machine has not revealed anything. Start with one ordinary shipment.",
@@ -207,6 +252,13 @@ export const notebookTableText = (
     ].join("");
   });
   const lines = [`CASE FILE: ${observationLabel}`, "", header, ...rows, ""];
+  if (challengeClosed) {
+    lines.push(
+      "El challenge está cerrado. Este cuaderno queda disponible como historial.",
+      "Siguiente: chofex challenge ranking",
+    );
+    return lines.join("\n");
+  }
   if (observations.length === 1) {
     lines.push(
       "One answer is a clue, not a rule.",

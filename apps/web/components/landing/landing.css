@@ -1,51 +1,3 @@
-.landing-live-banner {
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  display: block;
-  overflow: hidden;
-  border-bottom: 1px solid rgb(5 4 6 / 35%);
-  background: var(--hud-status);
-  color: var(--hud-paper);
-  font-family: var(--font-hta-mono), ui-monospace, monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.landing-live-banner-track {
-  display: flex;
-  width: max-content;
-  animation: landing-live-banner-scroll 24s linear infinite;
-}
-
-.landing-live-banner-group {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.landing-live-banner-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.85rem 1.2rem;
-  white-space: nowrap;
-}
-
-.landing-live-banner-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: currentColor;
-  box-shadow: 0 0 0.75rem currentColor;
-}
-
-.landing-live-banner:is(:hover, :focus-visible) .landing-live-banner-track {
-  animation-play-state: paused;
-}
-
 .landing-hero-floor-fade {
   background: linear-gradient(
     to top,
@@ -75,12 +27,6 @@
 
 .landing-hero-facts {
   background-color: color-mix(in srgb, var(--hud-paper) 88%, transparent);
-}
-
-@keyframes landing-live-banner-scroll {
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 @keyframes landing-scan {
@@ -148,15 +94,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-live-banner-track {
-    animation: none;
-  }
-
-  .landing-live-banner-group:nth-child(2),
-  .landing-live-banner-item:not(:first-child) {
-    display: none;
-  }
-
   .landing-scan-beam {
     animation: none;
     opacity: 0.28;

@@ -17,8 +17,10 @@ const challengeCandidateStatuses = new Set([
 export const needsFunnelReminder = (
   stage: FunnelReminderStage,
   progress: FunnelProgress,
+  challengeOpen = true,
 ): boolean => {
   if (stage === "registration") return !progress.applicationSubmitted;
+  if (!challengeOpen) return false;
 
   const isActiveCandidate =
     progress.applicationSubmitted &&

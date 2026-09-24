@@ -11,6 +11,7 @@ import {
 import { db } from "@chofex/db/worker";
 import { logger, task, wait } from "@trigger.dev/sdk";
 
+import { isBlackBoxParticipationOpen } from "../lib/challenges/availability";
 import { currentChallengeVersion } from "../lib/challenges/engine";
 import {
   type FunnelProgress,
@@ -284,7 +285,13 @@ export const sendFunnelReminder = task<
   },
   run: async (payload: FunnelReminderPayload, { ctx }) => {
     const reminder = await loadSettledReminderContext(payload);
-    if (!needsFunnelReminder(payload.stage, reminder.progress)) {
+    if (
+      !needsFunnelReminder(
+        payload.stage,
+        reminder.progress,
+        isBlackBoxParticipationOpen(),
+      )
+    ) {
       logger.info("Skipping stale funnel reminder", {
         clerkUserId: payload.clerkUserId,
         stage: payload.stage,

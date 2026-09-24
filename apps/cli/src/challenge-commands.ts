@@ -1,4 +1,8 @@
-import { challengeBySlug } from "@chofex/challenges-contract";
+import {
+  challengeBySlug,
+  isChallengeClosedAt,
+  isChallengeOpenAt,
+} from "@chofex/challenges-contract";
 import { Console, Effect, Option } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 
@@ -17,8 +21,8 @@ import {
 } from "./challenge-input.js";
 import {
   challengeEvaluateText,
-  challengeLaunchNotice,
   challengeListText,
+  challengeParticipationNotice,
   challengeQueryText,
   challengeRankingText,
   challengeShowText,
@@ -31,6 +35,7 @@ import {
   createChallengeScaffold,
 } from "./challenge-scaffold.js";
 import { root } from "./cli-root.js";
+import { cliError } from "./errors.js";
 import { execute, printJson } from "./output.js";
 
 const challengeQuickstart = {
@@ -104,12 +109,38 @@ const challengeQuickstart = {
 const launchNoticeFor = (slug: string): string | undefined => {
   const challenge = challengeBySlug(slug);
   if (!challenge) return undefined;
-  return challengeLaunchNotice(challenge.theme, challenge.opensAt);
+  return challengeParticipationNotice(
+    challenge.theme,
+    challenge.opensAt,
+    challenge.closesAt,
+  );
 };
 
-const challengeQuickstartText = (launchNotice?: string): string => {
+type ChallengeParticipationState = "scheduled" | "open" | "closed";
+
+const participationStateFor = (slug: string): ChallengeParticipationState => {
+  const challenge = challengeBySlug(slug);
+  if (!challenge) return "scheduled";
+  const now = new Date();
+  if (isChallengeClosedAt(challenge, now)) return "closed";
+  if (isChallengeOpenAt(challenge, now)) return "open";
+  return "scheduled";
+};
+
+const challengeQuickstartText = (
+  participationState: ChallengeParticipationState,
+  launchNotice?: string,
+): string => {
   const lines: Array<string> = [challengeQuickstart.title];
   if (launchNotice) lines.push("", "LAUNCH NOTICE", launchNotice);
+  if (participationState === "closed") {
+    lines.push("", "RANKING FINAL", "  chofex challenge ranking");
+    return lines.join("\n");
+  }
+  if (participationState === "scheduled") {
+    lines.push("", "PRÓXIMAMENTE", "  chofex challenge list");
+    return lines.join("\n");
+  }
   lines.push(
     "",
     ...challengeQuickstart.story,
@@ -215,6 +246,20 @@ const initCommand = Command.make(
   {},
   Effect.fn("challengeInitCommand")(function* () {
     const options = yield* root;
+    const participationState = participationStateFor(defaultChallengeSlug);
+    if (participationState !== "open") {
+      const message =
+        launchNoticeFor(defaultChallengeSlug) ??
+        "El challenge todavía no está disponible.";
+      let code = "CHALLENGE_NOT_OPEN";
+      if (participationState === "closed") code = "CHALLENGE_CLOSED";
+      yield* execute(
+        options.output,
+        Effect.fail(cliError(code, message)),
+        challengeInitText,
+      );
+      return;
+    }
     const operation = createChallengeScaffold().pipe(
       Effect.map((data) => ({
         version: 1 as const,
@@ -337,7 +382,10 @@ const notebookCommand = Command.make(
       if (format === "json") {
         return JSON.stringify(attempt.observations, null, 2);
       }
-      return notebookTableText(attempt.observations);
+      return notebookTableText(
+        attempt.observations,
+        Boolean(attempt.challenge.closed),
+      );
     });
   }),
 ).pipe(
@@ -444,10 +492,50 @@ export const challengeCommand = Command.make(
   {},
   Effect.fn("challengeQuickstartCommand")(function* () {
     const options = yield* root;
+    const participationState = participationStateFor(defaultChallengeSlug);
+    const participationOpen = participationState === "open";
     const launchNotice = launchNoticeFor(defaultChallengeSlug);
     if (options.output === "json") {
-      const data: typeof challengeQuickstart & { notice?: string } = {
+      let workflow: ReadonlyArray<
+        (typeof challengeQuickstart.workflow)[number]
+      > = challengeQuickstart.workflow;
+      let helpCommand: string = challengeQuickstart.helpCommand;
+      let story: ReadonlyArray<string> = challengeQuickstart.story;
+      let mission: string = challengeQuickstart.mission;
+      let rules: ReadonlyArray<string> = challengeQuickstart.rules;
+      if (participationState === "closed") {
+        const rankingStep = challengeQuickstart.workflow.at(-1);
+        workflow = rankingStep ? [rankingStep] : [];
+        helpCommand = "chofex challenge ranking --help";
+        story = [];
+        mission = "El Challenge 1 terminó. El ranking final sigue disponible.";
+        rules = [];
+      } else if (participationState === "scheduled") {
+        workflow = [];
+        helpCommand = "chofex challenge list --help";
+        story = [];
+        mission = "El challenge todavía no está disponible.";
+        rules = [];
+      }
+      const data: {
+        readonly title: string;
+        readonly story: typeof story;
+        readonly mission: string;
+        readonly rules: typeof rules;
+        readonly workflow: typeof workflow;
+        readonly helpCommand: string;
+        readonly open: boolean;
+        readonly state: ChallengeParticipationState;
+        notice?: string;
+      } = {
         ...challengeQuickstart,
+        story,
+        mission,
+        rules,
+        workflow,
+        helpCommand,
+        open: participationOpen,
+        state: participationState,
       };
       if (launchNotice) data.notice = launchNotice;
       yield* printJson({
@@ -458,7 +546,9 @@ export const challengeCommand = Command.make(
       });
       return;
     }
-    yield* Console.log(challengeQuickstartText(launchNotice));
+    yield* Console.log(
+      challengeQuickstartText(participationState, launchNotice),
+    );
   }),
 ).pipe(
   Command.withDescription(

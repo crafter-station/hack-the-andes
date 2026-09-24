@@ -148,7 +148,7 @@ export function LandingHero() {
                       className:
                         "pointer-events-auto w-full whitespace-nowrap sm:w-auto",
                     })}
-                    href="/challenges/black-box"
+                    href="/challenges"
                   >
                     <span>{heroCopy.challengeCta}</span>
                   </Link>

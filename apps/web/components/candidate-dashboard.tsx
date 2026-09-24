@@ -369,6 +369,7 @@ const ChallengeStatusBadge = ({
 
 const challengeAvailability = (challenge: ChallengeProgress): string => {
   if (!challenge.playable) return "Coming later";
+  if (challenge.closed) return "Cerrado";
   if (challenge.open) return "Open";
   return "Not open yet";
 };

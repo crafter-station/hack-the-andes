@@ -26,6 +26,7 @@ export interface ChallengeDefinition {
   readonly format: ChallengeFormat;
   readonly formatLabel: string;
   readonly opensAt: string;
+  readonly closesAt?: string;
   readonly rankingVisibleAt?: string;
   readonly queryLimit: number;
   readonly evaluationLimit: number;
@@ -47,6 +48,7 @@ export const challengeCatalog: ReadonlyArray<ChallengeDefinition> = [
     format: "accuracy",
     formatLabel: "Accuracy score",
     opensAt: "2026-09-17T14:00:00.000Z",
+    closesAt: "2026-09-24T17:20:00.000Z",
     rankingVisibleAt: "2026-09-23T20:00:00.000Z",
     queryLimit: 25,
     evaluationLimit: 3,
@@ -143,7 +145,16 @@ export const isChallengeOpenAt = (
   forceOpen = false,
 ): boolean => {
   if (forceOpen && challenge.playable) return true;
-  return now.getTime() >= Date.parse(challenge.opensAt);
+  if (now.getTime() < Date.parse(challenge.opensAt)) return false;
+  return !isChallengeClosedAt(challenge, now);
+};
+
+export const isChallengeClosedAt = (
+  challenge: { readonly closesAt?: string },
+  now: Date,
+): boolean => {
+  if (!challenge.closesAt) return false;
+  return now.getTime() >= Date.parse(challenge.closesAt);
 };
 
 export const isChallengeRankingVisibleAt = (
@@ -259,6 +270,7 @@ export const ParticipantChallengeProgressSchema = Schema.Struct({
   theme: Schema.String,
   status: ChallengeProgressStatus,
   open: Schema.Boolean,
+  closed: Schema.optional(Schema.Boolean),
   playable: Schema.Boolean,
   queriesUsed: Schema.Number,
   queriesLimit: Schema.Number,
@@ -301,11 +313,13 @@ export const ChallengeCatalogItemSchema = Schema.Struct({
   ]),
   formatLabel: Schema.String,
   opensAt: Schema.String,
+  closesAt: Schema.optional(Schema.String),
   rankingVisibleAt: Schema.optional(Schema.String),
   queryLimit: Schema.Number,
   evaluationLimit: Schema.Number,
   playable: Schema.Boolean,
   open: Schema.Boolean,
+  closed: Schema.optional(Schema.Boolean),
   rankingPath: Schema.String,
 });
 

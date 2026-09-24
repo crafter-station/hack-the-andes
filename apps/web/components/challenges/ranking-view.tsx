@@ -84,11 +84,15 @@ export function ChallengeRankingView({
   const { challenge, entries } = ranking;
   const rankingVisible = isChallengeRankingVisibleAt(challenge, new Date(now));
   let cliHint = "chofex challenge list";
-  if (challenge.playable) {
+  if (challenge.closed) {
+    cliHint = `chofex challenge ranking --challenge ${challenge.slug}`;
+  } else if (challenge.playable) {
     cliHint = `chofex challenge query --challenge ${challenge.slug}`;
   }
   let challengeState = "Abierto";
-  if (!challenge.open) {
+  if (challenge.closed) {
+    challengeState = "Cerrado";
+  } else if (!challenge.open) {
     challengeState = `Abre ${challenge.opensAt.slice(0, 10)}`;
   }
   let rankingContent = <RankingResults entries={entries} />;
@@ -101,7 +105,7 @@ export function ChallengeRankingView({
     );
   }
   let challengeGuide = null;
-  if (challenge.slug === blackBoxChallengeSlug) {
+  if (challenge.slug === blackBoxChallengeSlug && !challenge.closed) {
     challengeGuide = <BlackBoxChallengeGuide />;
   }
 

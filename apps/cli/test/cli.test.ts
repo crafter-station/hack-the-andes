@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -96,37 +96,19 @@ describe("CLI JSON mode", () => {
     expect(help.stdout).toContain("Play mini technical challenges");
   });
 
-  test("turns the bare challenge command into a guided quickstart", async () => {
+  test("sends a closed challenge to its final ranking", async () => {
     const result = await runCli("challenge");
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("THE SHIPPING MACHINE");
-    expect(result.stdout).toContain(
-      "A delivery company is about to retire the service",
-    );
-    expect(result.stdout).toContain("YOUR MISSION");
-    expect(result.stdout).toContain("five controls");
-    expect(result.stdout).toContain("25 oracle queries");
-    expect(result.stdout).toContain("Accuracy wins");
-    expect(result.stdout).toContain("1. Sign in");
-    expect(result.stdout).toContain("chofex login");
-    expect(result.stdout).toContain("chofex challenge init");
-    expect(result.stdout).toContain("chofex challenge show");
-    expect(result.stdout).toContain("chofex challenge query");
-    expect(result.stdout).toContain("chofex challenge notebook");
-    expect(result.stdout).toContain(
-      "chofex challenge test --source ./shipping.js",
-    );
-    expect(result.stdout).toContain(
-      "chofex challenge evaluate --source ./shipping.js",
-    );
-    expect(result.stdout).toContain("Official evaluations are limited");
+    expect(result.stdout).toContain("está cerrado");
     expect(result.stdout).toContain("chofex challenge ranking");
-    expect(result.stdout).toContain("chofex challenge query --help");
+    expect(result.stdout).not.toContain("chofex challenge query");
+    expect(result.stdout).not.toContain("chofex challenge evaluate");
   });
 
-  test("returns the challenge quickstart as one JSON document", async () => {
+  test("returns the closed challenge status as one JSON document", async () => {
     const result = await runCli("--output", "json", "challenge");
 
     expect(result.exitCode).toBe(0);
@@ -138,47 +120,31 @@ describe("CLI JSON mode", () => {
       ok: true,
       data: {
         title: "THE SHIPPING MACHINE",
+        open: false,
+        state: "closed",
       },
     });
     expect(document.data.workflow[0]).toMatchObject({
-      step: 1,
-      command: "chofex login",
+      step: 8,
+      command: "chofex challenge ranking",
     });
-    expect(document.data.workflow[1]).toMatchObject({
-      step: 2,
-      command: "chofex challenge init",
-    });
-    expect(document.data.workflow[2]).toMatchObject({
-      step: 3,
-      command: "chofex challenge show",
-    });
-    expect(document.data.workflow).toHaveLength(8);
+    expect(document.data.workflow).toHaveLength(1);
+    expect(document.data.story).toEqual([]);
+    expect(document.data.rules).toEqual([]);
   });
 
-  test("creates a documented solution file without overwriting work", async () => {
+  test("does not initialize files for a closed challenge", async () => {
     const directory = await mkdtemp(join(tmpdir(), "chofex-challenge-"));
     const solutionPath = join(directory, "shipping.js");
 
     try {
-      const created = await runCliFrom(directory, "challenge", "init");
+      const result = await runCliFrom(directory, "challenge", "init");
 
-      expect(created.exitCode).toBe(0);
-      expect(created.stderr).toBe("");
-      expect(created.stdout).toContain("Created shipping.js");
-      expect(created.stdout).toContain("Next: probe the machine");
-
-      const source = await readFile(solutionPath, "utf8");
-      expect(source).toContain("The Shipping Machine");
-      expect(source).toContain("distanceKm");
-      expect(source).toContain("function calculateShipping(input)");
-      expect(source).toContain("return 0;");
-
-      await writeFile(solutionPath, "// my solution\n", "utf8");
-      const repeated = await runCliFrom(directory, "challenge", "init");
-
-      expect(repeated.exitCode).toBe(0);
-      expect(repeated.stdout).toContain("shipping.js already exists");
-      expect(await readFile(solutionPath, "utf8")).toBe("// my solution\n");
+      expect(result.exitCode).toBe(2);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("CHALLENGE_CLOSED");
+      expect(result.stderr).toContain("está cerrado");
+      expect(await Bun.file(solutionPath).exists()).toBe(false);
 
       const json = await runCliFrom(
         directory,
@@ -190,8 +156,8 @@ describe("CLI JSON mode", () => {
       expect(json.stderr).toBe("");
       expect(json.stdout.trim().split("\n")).toHaveLength(1);
       expect(JSON.parse(json.stdout)).toMatchObject({
-        ok: true,
-        data: { path: "shipping.js", status: "exists" },
+        ok: false,
+        error: { code: "CHALLENGE_CLOSED" },
       });
     } finally {
       await rm(directory, { recursive: true, force: true });

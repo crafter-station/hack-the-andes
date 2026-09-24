@@ -6,7 +6,6 @@ import { LandingFaq } from "@/components/landing/faq";
 import { LandingFooter } from "@/components/landing/footer";
 import { LandingHero } from "@/components/landing/hero";
 import { HERO_POSTER_PRELOAD } from "@/components/landing/hero-poster";
-import { LiveChallengeBanner } from "@/components/landing/live-challenge-banner";
 import { LandingPeople } from "@/components/landing/people";
 import { LandingPrizes } from "@/components/landing/prizes";
 import { LandingQualifierChallenges } from "@/components/landing/qualifier-challenges";
@@ -42,7 +41,6 @@ export default function Home() {
       />
       <LandingSkipLinks />
       <main id="contenido">
-        <LiveChallengeBanner />
         <LandingHero />
         <LandingEvent />
         <LandingPrizes />

@@ -83,4 +83,23 @@ describe("funnel reminder eligibility", () => {
       }),
     ).toBe(false);
   });
+
+  test("does not send participation nudges after the challenge closes", () => {
+    const activeCandidate = {
+      ...progress,
+      applicationStatus: "submitted",
+      applicationSubmitted: true,
+    };
+
+    expect(needsFunnelReminder("challenge_start", activeCandidate, false)).toBe(
+      false,
+    );
+    expect(
+      needsFunnelReminder(
+        "challenge_finish",
+        { ...activeCandidate, challengeStarted: true },
+        false,
+      ),
+    ).toBe(false);
+  });
 });

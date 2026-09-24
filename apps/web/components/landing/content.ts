@@ -99,7 +99,7 @@ export const heroCopy = {
   metaDate: "17–18 oct 2026",
   metaLocation: "Lima, Perú",
   cta: "Postular",
-  challengeCta: "Resolver challenge",
+  challengeCta: "Ver challenges",
   admission:
     "Registrarte no reserva un cupo. Envía tu postulación para poder ser aceptado; los mejores resultados en los challenges ganan pase directo.",
   organizer: "Organiza: Crafter Station",
@@ -168,12 +168,12 @@ export const qualifierChallengesCopy = {
   tracksBody: `Son ${trackCount} temas para construir en equipo durante 30 horas. Los eliges presencialmente en Lima.`,
   challengesLabel: "Challenges / antes del evento",
   challengesBody: `Resuelve una de las ${qualifierChallengeCount} pruebas, sube al ranking y compite por un pase directo al evento.`,
-  liveKicker: "Challenge 1 / live",
+  liveKicker: "Challenge 1 / cerrado",
   liveTitle: "The Shipping Machine",
   liveBody:
-    "Investiga una máquina de precios sin documentación, descubre sus reglas y construye un reemplazo compatible.",
-  liveMeta: "25 queries · 3 evaluaciones oficiales · AI permitida",
-  liveCta: "Competir por un pase →",
+    "El primer challenge puso a prueba cómo investigar una máquina de precios, descubrir sus reglas y construir un reemplazo compatible.",
+  liveMeta: "Ranking final · Top 17",
+  liveCta: "Ver ranking →",
 } as const;
 
 export const peopleCopy = {

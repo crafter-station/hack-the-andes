@@ -42,10 +42,9 @@ export function ChallengesIndex({
         >
           <p className="max-w-2xl text-lg leading-relaxed text-[var(--hud-ink)]/75">
             Registrarte no reserva un cupo: envía tu postulación para poder ser
-            aceptado. Con la postulación enviada, compite aquí por un pase
-            directo; los mejores resultados de cada challenge entran al evento.
-            Estos {challenges.length} challenges ocurren antes de la hackathon,
-            se resuelven por la CLI y tienen ranking público.
+            aceptado. Aquí puedes seguir el estado de cada challenge y revisar
+            sus rankings públicos. Los mejores resultados obtienen un pase
+            directo al evento.
           </p>
         </BrandSectionHeader>
         <div className="grid gap-4 md:grid-cols-2">
@@ -53,8 +52,12 @@ export function ChallengesIndex({
             const sealGeometry =
               CHALLENGE_SEAL_GEOMETRIES[index] ?? CHALLENGE_SEAL_GEOMETRIES[0];
             let stateClassName = "text-[var(--hud-muted)]";
+            let stateLabel = "programado";
             if (challenge.open) {
               stateClassName = "text-[var(--hud-action)]";
+              stateLabel = "abierto";
+            } else if (challenge.closed) {
+              stateLabel = "cerrado";
             }
 
             return (
@@ -75,7 +78,7 @@ export function ChallengesIndex({
                       {challenge.code} / {challenge.theme}
                     </BrandKicker>
                     <BrandKicker className={stateClassName}>
-                      {challenge.open ? "abierto" : "programado"}
+                      {stateLabel}
                     </BrandKicker>
                   </div>
 

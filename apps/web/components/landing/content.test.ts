@@ -427,24 +427,17 @@ test("labels track cards as tracks", async () => {
   expect(source).not.toContain("Challenge {seat.index}");
 });
 
-test("announces the live qualifier in a sticky moving banner", async () => {
-  const [bannerSource, heroSource] = await Promise.all([
-    Bun.file(new URL("./live-challenge-banner.tsx", import.meta.url)).text(),
+test("stops advertising Challenge 1 as live after it closes", async () => {
+  const [homeSource, heroSource] = await Promise.all([
+    Bun.file(new URL("../../app/page.tsx", import.meta.url)).text(),
     Bun.file(new URL("./hero.tsx", import.meta.url)).text(),
   ]);
-  const styles = await Bun.file(
-    new URL("./landing.css", import.meta.url),
-  ).text();
 
-  expect(bannerSource).toContain('href="/challenges/black-box"');
-  expect(bannerSource).toMatch(/Challenge 1.*live/i);
-  expect(bannerSource).toMatch(/pase directo/i);
-  expect(bannerSource).toContain("landing-live-banner-track");
-  expect(heroSource).toContain('href="/challenges/black-box"');
+  expect(homeSource).not.toContain("LiveChallengeBanner");
+  expect(heroSource).toContain('href="/challenges"');
   expect(heroSource).toContain("heroCopy.challengeCta");
-  expect(styles).toContain("position: sticky");
-  expect(styles).toContain("@keyframes landing-live-banner-scroll");
-  expect(styles).toContain("prefers-reduced-motion: reduce");
+  expect(qualifierChallengesCopy.liveKicker).toMatch(/cerrado/i);
+  expect(qualifierChallengesCopy.liveCta).toMatch(/ranking/i);
 });
 
 test("exposes skip links and section jumps for keyboard users", async () => {

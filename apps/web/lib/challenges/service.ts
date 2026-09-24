@@ -10,9 +10,7 @@ import {
   ChallengeSolutionSchema,
   challengeBySlug,
   challengeCatalog,
-  challengeOpeningNotice,
   compareChallengeScores,
-  isChallengeOpenAt,
   isChallengeRankingVisibleAt,
   type ParticipantChallengeMilestone,
   type ParticipantChallengeProgress,
@@ -39,6 +37,7 @@ import {
   currentChallengeVersion,
 } from "./engine";
 import { isConfirmedSolutionExecutionFailure } from "./failure-policy";
+import { requireChallengeParticipationOpen } from "./participation-policy";
 import {
   challengeCompletionDurationMs,
   challengeProgressStatus,
@@ -120,23 +119,11 @@ const requirePlayableChallenge = (
   now: Date,
 ): ChallengeDefinition => {
   const challenge = requireChallenge(slug);
-  if (!challenge.playable) {
-    throw new HttpError(
-      404,
-      "CHALLENGE_NOT_AVAILABLE",
-      `${challenge.title} is not available yet`,
-    );
-  }
-  if (!isChallengeOpenAt(challenge, now, challengesForceOpen())) {
-    throw new HttpError(
-      403,
-      "CHALLENGE_NOT_OPEN",
-      challengeOpeningNotice(challenge.title, challenge.opensAt),
-      false,
-      { opensAt: challenge.opensAt },
-    );
-  }
-  return challenge;
+  return requireChallengeParticipationOpen(
+    challenge,
+    now,
+    challengesForceOpen(),
+  );
 };
 
 const requireImplementedChallenge = (
@@ -257,6 +244,7 @@ const progressFrom = (
   theme: challenge.theme,
   status: progressStatus(attempt, evaluation),
   open: item.open,
+  closed: item.closed,
   playable: challenge.playable,
   queriesUsed: attempt?.queriesUsed ?? 0,
   queriesLimit: attempt?.queriesLimit ?? challenge.queryLimit,
