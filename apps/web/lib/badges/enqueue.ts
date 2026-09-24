@@ -49,8 +49,7 @@ export const enqueueBadgeGeneration = async (
       },
     });
 
-  let idempotencyKey = `participant-badge/${applicationId}`;
-  if (options.force) idempotencyKey = `${idempotencyKey}/${generationId}`;
+  const idempotencyKey = `participant-badge/${applicationId}/${generationId}`;
 
   const handle = await tasks.trigger<typeof generateParticipantBadge>(
     "generate-participant-badge",

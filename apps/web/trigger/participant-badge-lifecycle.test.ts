@@ -19,6 +19,9 @@ describe("participant badge generation lifecycle", () => {
     const enqueue = await source("../lib/badges/enqueue.ts");
     expect(enqueue).toContain("generationId = crypto.randomUUID()");
     expect(enqueue).toContain("{ applicationId, generationId }");
+    expect(enqueue).toMatch(
+      /participant-badge\/\$\{applicationId\}\/\$\{generationId\}/,
+    );
     expect(parent).toContain("badge?.generationId !== payload.generationId");
     expect(parent).toContain(
       "eq(participantBadges.generationId, payload.generationId)",
@@ -29,6 +32,13 @@ describe("participant badge generation lifecycle", () => {
     expect(portrait).toContain(
       "eq(participantBadges.generationId, payload.generationId)",
     );
+  });
+
+  test("only exposes badge profiles after attendance confirmation", async () => {
+    const service = await source("../lib/badges/service.ts");
+
+    expect(service).toContain('eq(applications.status, "accepted")');
+    expect(service).toContain("isNotNull(acceptanceDetails.completedAt)");
   });
 
   test("reports notification failure instead of exposing stale success", async () => {

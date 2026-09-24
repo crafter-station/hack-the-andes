@@ -1,9 +1,9 @@
 /**
  * The accepted participant behind a session.
  *
- * The credential is for people who were accepted, and everything it
- * prints comes from their own application: the name they gave, the one-liner
- * they described themselves with, and the picture they confirmed.
+ * The credential is for people who were accepted. Its defaults come from
+ * their application, while its public name, one-liner, link and confirmed
+ * picture may be changed later through the independent badge profile.
  *
  * There is no lookup by GitHub handle any more, and its absence is the
  * design rather than an omission. A public route keyed on a handle could
@@ -42,7 +42,7 @@ import { AVATAR_PORTRAIT, githubAvatarUrl } from "@/lib/registration/pictures";
 import { resolveBadgeProfile } from "./profile";
 
 export interface AcceptedParticipant {
-  /** As they wrote it, not as any profile spells it. */
+  /** Their public badge name, defaulting to the accepted application. */
   readonly name: string;
   /** Their public description. The design's line under the name. */
   readonly oneLiner: string;

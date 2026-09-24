@@ -1,10 +1,9 @@
 /**
  * What a credential is.
  *
- * Every field comes from the holder's own accepted application, which is
- * the whole shape of the feature now: the badge is for people who were
- * accepted, so there is one source of truth and no second, weaker one to
- * fall back to.
+ * Every field comes from the holder's accepted application plus its
+ * independent badge profile. The application supplies defaults; the badge
+ * profile carries later public personalization without rewriting history.
  *
  * It used to carry a GitHub profile as well — a bio, a location, a join
  * year, repository and follower counts — and a `state` saying whether the
@@ -16,7 +15,7 @@
  */
 
 export interface Credential {
-  /** As they wrote it on the form. */
+  /** Their public badge name. */
   readonly name: string;
   /** The participant's public description. The line under the name. */
   readonly oneLiner: string;
