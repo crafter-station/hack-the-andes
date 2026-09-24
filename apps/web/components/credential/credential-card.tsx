@@ -64,7 +64,7 @@ export async function CredentialCard({ credential }: CredentialCardProps) {
 
       <footer className="credential-card-foot">
         <span className="credential-card-date">17–18 OCT 2026 · LIMA</span>
-        <span>HACKTHEANDES.COM</span>
+        <span className="credential-card-wordmark">HACKTHEANDES.COM</span>
       </footer>
     </article>
   );

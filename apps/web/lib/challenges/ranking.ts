@@ -3,7 +3,6 @@ import {
   type ChallengeRankingEntry,
   type ChallengeScore,
   challengeBySlug,
-  compareChallengeScores,
   isChallengeRankingVisibleAt,
 } from "@chofex/challenges-contract";
 import { db } from "@chofex/db";
@@ -19,6 +18,7 @@ import { challengesForceOpen, currentChallengeTime } from "./clock";
 import { currentChallengeVersionFor } from "./engine";
 import { rankingDisplayName } from "./names";
 import {
+  compareRankedChallengeEvaluations,
   competitionRanksForEvaluations,
   publicRankingEntries,
 } from "./ranking-policy";
@@ -31,15 +31,6 @@ export interface RankedEvaluation {
   readonly score: ChallengeScore;
   readonly evaluatedAt: Date;
 }
-
-const compareRanked = (
-  left: RankedEvaluation,
-  right: RankedEvaluation,
-): number => {
-  const scoreOrder = compareChallengeScores(left.score, right.score);
-  if (scoreOrder !== 0) return scoreOrder;
-  return left.evaluatedAt.getTime() - right.evaluatedAt.getTime();
-};
 
 export const rankedEvaluationsFor = async (
   slug: string,
@@ -77,7 +68,7 @@ export const rankedEvaluationsFor = async (
       },
       evaluatedAt: row.evaluation.createdAt,
     }))
-    .sort(compareRanked);
+    .sort(compareRankedChallengeEvaluations);
 };
 
 export const rankForAttempt = (

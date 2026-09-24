@@ -196,9 +196,9 @@ export const renderShareBadge = async (
         width: CONTENT_WIDTH,
         marginTop: 10,
         color: colors.muted,
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 700,
-        letterSpacing: 5,
+        letterSpacing: 1,
       }}
     >
       HACKTHEANDES.COM

@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { ChallengeScoreBreakdown } from "@chofex/challenges-contract";
 
 import {
+  compareRankedChallengeEvaluations,
   competitionRanksForEvaluations,
   type EvaluatedChallengeScore,
 } from "./ranking-policy";
@@ -56,5 +57,21 @@ describe("challenge ranking", () => {
     ];
 
     expect(competitionRanksForEvaluations(ranked)).toEqual([1, 1]);
+  });
+
+  test("breaks Black Box ties by runtime", () => {
+    const ranked = [
+      evaluation("2026-09-25T15:01:00.000Z", {
+        breakdown: undefined,
+        runtimeMs: 70,
+      }),
+      evaluation("2026-09-25T15:00:00.000Z", {
+        breakdown: undefined,
+        runtimeMs: 50,
+      }),
+    ].sort(compareRankedChallengeEvaluations);
+
+    expect(ranked.map((entry) => entry.score.runtimeMs)).toEqual([50, 70]);
+    expect(competitionRanksForEvaluations(ranked)).toEqual([1, 2]);
   });
 });

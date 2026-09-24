@@ -535,9 +535,9 @@ export const renderCardTexture = async (
             display: "flex",
             marginTop: 18,
             color: colors.muted,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
-            letterSpacing: 4,
+            letterSpacing: 1,
           }}
         >
           HACKTHEANDES.COM

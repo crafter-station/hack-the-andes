@@ -39,12 +39,15 @@ export interface EvaluatedChallengeScore {
   readonly evaluatedAt: Date;
 }
 
-const compareEvaluatedChallengeScores = (
+export const compareRankedChallengeEvaluations = (
   left: EvaluatedChallengeScore,
   right: EvaluatedChallengeScore,
 ): number => {
   const scoreOrder = compareChallengeScores(left.score, right.score);
   if (scoreOrder !== 0) return scoreOrder;
+  if (left.score.runtimeMs !== right.score.runtimeMs) {
+    return left.score.runtimeMs - right.score.runtimeMs;
+  }
   if (left.score.breakdown && right.score.breakdown) {
     return left.evaluatedAt.getTime() - right.evaluatedAt.getTime();
   }
@@ -53,4 +56,5 @@ const compareEvaluatedChallengeScores = (
 
 export const competitionRanksForEvaluations = (
   ranked: ReadonlyArray<EvaluatedChallengeScore>,
-): Array<number> => competitionRanksBy(ranked, compareEvaluatedChallengeScores);
+): Array<number> =>
+  competitionRanksBy(ranked, compareRankedChallengeEvaluations);
