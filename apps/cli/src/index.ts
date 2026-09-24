@@ -1,12 +1,19 @@
 #!/usr/bin/env node
 
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { NodeRuntime, NodeServices } from "@effect/platform-node";
 import { Console, Effect } from "effect";
 import { CliOutput, Command } from "effect/unstable/cli";
 
 import { command } from "./commands.js";
 import { printJson } from "./output.js";
+import {
+  autoUpdateCli,
+  cliPackageName,
+  isStandaloneExecutable,
+  shouldAutoUpdateCli,
+} from "./upgrade.js";
 import { welcomeFormatter } from "./welcome.js";
 
 declare const CHOFEX_VERSION: string | undefined;
@@ -111,6 +118,30 @@ const programForArguments = () => {
   return commandProgram;
 };
 
-programForArguments().pipe(Effect.provide(NodeServices.layer), (program) =>
-  NodeRuntime.runMain(program, { disableErrorReporting: true }),
+const runAutomaticUpdate = async (): Promise<void> => {
+  const enabled = shouldAutoUpdateCli({
+    arguments: arguments_,
+    entryPath: fileURLToPath(import.meta.url),
+    environmentValue: process.env.CHOFEX_AUTO_UPDATE,
+    standalone: isStandaloneExecutable(),
+  });
+  if (!enabled) return;
+
+  try {
+    const result = await autoUpdateCli(cliVersion);
+    if (result.status === "current") return;
+    process.stderr.write(
+      `Updated ${cliPackageName} from ${result.previousVersion} to ${result.version}.\n`,
+    );
+  } catch (error) {
+    process.stderr.write(
+      `Could not check for or install a ${cliPackageName} update; continuing with ${cliVersion}. ${String(error)}\n`,
+    );
+  }
+};
+
+Effect.promise(runAutomaticUpdate).pipe(
+  Effect.andThen(programForArguments()),
+  Effect.provide(NodeServices.layer),
+  (program) => NodeRuntime.runMain(program, { disableErrorReporting: true }),
 );

@@ -35,6 +35,11 @@ chofex confirm
 `chofex update` and `chofex upgrade` are interchangeable; both update the CLI
 to the latest published version.
 
+Installed copies also check npm whenever `chofex` starts and install a newer
+published version before running the requested command. If npm or the network
+is temporarily unavailable, the current version continues to run. Set
+`CHOFEX_AUTO_UPDATE=0` to disable the startup check.
+
 `chofex register` collects and submits an application with full name, role,
 optional phone number, bio, portfolio URL, shipped project, LinkedIn and GitHub
 URLs, and Terms and Conditions. Use `--input` to submit a completed JSON
