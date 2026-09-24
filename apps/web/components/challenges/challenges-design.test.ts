@@ -76,6 +76,8 @@ test("the Broken Agent page publishes the contract without hidden cases", async 
 
   expect(guide).toContain("Everything passes");
   expect(guide).toContain("5 evaluaciones oficiales");
+  expect(guide).toContain("concurrencia 20");
+  expect(guide).toContain("menos evaluaciones");
   expect(guide).toContain("createScheduler");
   expect(guide).toContain("npm test");
   expect(guide).toContain("--challenge broken-agent");

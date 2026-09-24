@@ -121,7 +121,17 @@ executing a job.
 The hidden evaluator checks the published contract under deterministic
 concurrency, restart, failure, idempotency, compatibility, and load scenarios.
 It reports capability-level scores, not individual hidden-test failures.
-Score ranks first; runtime is used only after correctness.
+
+- Core behavior: 10 points
+- Persistence: 15 points
+- Concurrency: 20 points
+- Failure recovery: 20 points
+- Idempotency: 15 points
+- Regression safety: 15 points
+- Performance: 5 points, available only when the load jobs complete correctly
+
+Ranking order is total score, fewer official evaluations used, runtime, then
+official submission time. Submission time is only the final tie-breaker.
 `;
 
 export const brokenAgentPublicTestSource = `const test = require("node:test");

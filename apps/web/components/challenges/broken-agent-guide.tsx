@@ -58,6 +58,12 @@ export function BrokenAgentChallengeGuide() {
           arbitrarios. Puedes usar Claude Code, Codex, Cursor o cualquier otra
           AI.
         </p>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
+          Puntaje: comportamiento base 10, persistencia 15, concurrencia 20,
+          recuperación 20, idempotencia 15, seguridad contra regresiones 15 y
+          rendimiento 5. Los empates se resuelven por menos evaluaciones
+          oficiales, runtime y, al final, hora de envío.
+        </p>
 
         <dl className="mt-8 grid gap-px bg-[var(--hud-ink)]/10 sm:grid-cols-3">
           <div className="bg-[var(--hud-card)] p-5">

@@ -127,7 +127,7 @@ export function ChallengeRankingView({
     "Ranking público de solo lectura: accuracy, empates por predicciones exactas y menos queries. Las implementaciones no se publican.";
   if (brokenAgent) {
     rankingDescription =
-      "Ranking público de solo lectura: score de producción primero y runtime después de la corrección. Los casos ocultos y las implementaciones no se publican.";
+      "Ranking público de solo lectura: score de producción, menos evaluaciones oficiales, runtime y, al final, hora de envío. Los casos ocultos y las implementaciones no se publican.";
   }
 
   return (
