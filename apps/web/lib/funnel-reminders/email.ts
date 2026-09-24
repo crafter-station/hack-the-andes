@@ -1,4 +1,11 @@
-import { brandColors, brandColorWithAlpha } from "@chofex/ui/lib/brand-theme";
+import {
+  button,
+  command,
+  emailShell,
+  eyebrow,
+  heading,
+  paragraph,
+} from "@/lib/emails/layout";
 
 import { badgeEmailFrom, badgeEmailReplyTo } from "../badges/config";
 import type { FunnelReminderRecipient, FunnelReminderStage } from "./types";
@@ -17,24 +24,6 @@ interface SendFunnelReminderEmailInput extends FunnelReminderEmailInput {
   readonly clerkUserId: string;
   readonly deliveryScope: string;
 }
-
-const colors = {
-  page: brandColors.light.paper,
-  surface: brandColors.light.surface,
-  border: brandColorWithAlpha(brandColors.light.ink, 0.18),
-  text: brandColors.light.ink,
-  muted: brandColors.light.muted,
-  action: brandColors.light.action,
-  well: brandColorWithAlpha(brandColors.light.ink, 0.06),
-} as const;
-
-const escapeHtml = (value: string): string =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 
 const copyFor = (stage: FunnelReminderStage) => {
   if (stage === "registration") {
@@ -88,9 +77,6 @@ export const buildFunnelReminderEmail = (
   const copy = copyFor(input.stage);
   const firstName = input.firstName.trim();
   const greeting = firstName ? `Hola ${firstName},` : "Hola,";
-  const safeGreeting = escapeHtml(greeting);
-  const safeUrl = escapeHtml(copy.url);
-  const safeSubject = escapeHtml(copy.subject);
   const text = [
     greeting,
     "",
@@ -105,7 +91,21 @@ export const buildFunnelReminderEmail = (
     "— El equipo de Hack the Andes",
   ].join("\n");
 
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeSubject}</title></head><body style="margin:0;background:${colors.page};padding:0"><div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(copy.preheader)}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${colors.page}"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:${colors.surface};border:1px solid ${colors.border};overflow:hidden"><tr><td style="background:${colors.text};padding:24px 40px;color:${colors.page};font-family:Arial,sans-serif;font-size:18px;font-weight:700">▲&nbsp;&nbsp;Hack the Andes</td></tr><tr><td style="padding:40px 40px 20px"><p style="margin:0 0 16px;color:${colors.action};font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.14em">${copy.eyebrow}</p><h1 style="margin:0 0 20px;color:${colors.text};font-family:Arial,sans-serif;font-size:36px;line-height:1.1;letter-spacing:-.03em;text-transform:uppercase">${copy.heading}</h1><p style="margin:0 0 16px;color:${colors.text};font-family:Arial,sans-serif;font-size:17px;line-height:1.6">${safeGreeting}</p><p style="margin:0;color:${colors.text};font-family:Arial,sans-serif;font-size:17px;line-height:1.6">${copy.introduction}</p></td></tr><tr><td style="padding:0 40px 28px"><div style="background:${colors.well};padding:20px"><p style="margin:0;color:${colors.text};font-family:Arial,sans-serif;font-size:16px;line-height:1.6">${experience}</p></div></td></tr><tr><td style="padding:0 40px 18px"><a href="${safeUrl}" style="display:inline-block;background:${colors.action};color:${colors.surface};font-family:Arial,sans-serif;font-size:16px;font-weight:700;text-decoration:none;padding:14px 20px">${copy.action}</a></td></tr><tr><td style="padding:0 40px 36px"><p style="margin:0 0 8px;color:${colors.muted};font-family:Arial,sans-serif;font-size:13px">O desde tu terminal:</p><p style="margin:0;background:${colors.text};color:${colors.page};font-family:monospace;font-size:14px;padding:14px 16px"><span style="color:${colors.action}">$</span>&nbsp; ${copy.command}</p></td></tr><tr><td style="border-top:1px solid ${colors.border};padding:24px 40px;color:${colors.muted};font-family:Arial,sans-serif;font-size:13px;line-height:1.5">Nos vemos en la cima.<br>El equipo de Hack the Andes</td></tr></table></td></tr></table></body></html>`;
+  const html = emailShell({
+    subject: copy.subject,
+    preheader: copy.preheader,
+    // Nothing to stamp on somebody who has no card yet.
+    stamp: "17–18 OCT 2026",
+    blocks: [
+      eyebrow(copy.eyebrow),
+      heading(copy.heading),
+      paragraph(greeting),
+      paragraph(copy.introduction),
+      paragraph(experience),
+      button(copy.action, copy.url),
+      command("O desde tu terminal", copy.command),
+    ],
+  });
 
   return { subject: copy.subject, text, html };
 };
