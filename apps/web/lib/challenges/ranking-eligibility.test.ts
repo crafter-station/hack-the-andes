@@ -19,6 +19,12 @@ describe("challenge ranking eligibility", () => {
         id uuid primary key,
         participant_id uuid not null,
         status text not null,
+        github_url text,
+        linkedin_url text,
+        created_at timestamptz not null
+      );
+      create table participants (
+        id uuid primary key,
         created_at timestamptz not null
       );
       create table challenge_attempts (
@@ -52,24 +58,36 @@ describe("challenge ranking eligibility", () => {
     await client.close();
   });
 
-  test("ranks only participants represented in the admin dashboard", async () => {
+  test("ranks one eligible account per person only above 50 percent", async () => {
+    const scores = [0.437, 0.8, 0.7, 0.6, 1, 0.5, 0.51, 0.65, 0.95];
     const participantIds = Array.from(
-      { length: 4 },
+      { length: scores.length },
       (_, index) =>
         `00000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`,
     );
     const attemptIds = Array.from(
-      { length: 4 },
+      { length: scores.length },
       (_, index) =>
         `10000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`,
     );
     const evaluationIds = Array.from(
-      { length: 4 },
+      { length: scores.length },
       (_, index) =>
         `20000000-0000-0000-0000-${String(index + 1).padStart(12, "0")}`,
     );
     const version = currentChallengeVersionFor("black-box");
     if (!version) throw new Error("Black Box version is required");
+
+    for (const [index, participantId] of participantIds.entries()) {
+      await client.query(
+        `insert into participants (id, created_at)
+         values ($1, $2)`,
+        [
+          participantId,
+          `2026-09-${String(index + 10).padStart(2, "0")}T12:00:00Z`,
+        ],
+      );
+    }
 
     for (const [index, participantId] of participantIds.entries()) {
       await client.query(
@@ -91,29 +109,56 @@ describe("challenge ranking eligibility", () => {
           sample_size, mean_error, queries_used, runtime_ms, created_at,
           updated_at
         ) values ($1, $2, 'javascript_source', '{}', $3, $4, 1000, 0, 25, 50, now(), now())`,
-        [evaluationIds[index], attemptIds[index], 1 - index / 10, 1000 - index],
+        [
+          evaluationIds[index],
+          attemptIds[index],
+          scores[index],
+          Math.round((scores[index] ?? 0) * 1_000),
+        ],
       );
     }
 
     await client.query(
-      `insert into applications (id, participant_id, status, created_at) values
-        (gen_random_uuid(), $1, 'submitted', '2026-09-18T12:00:00Z'),
-        (gen_random_uuid(), $2, 'submitted', '2026-09-18T12:00:00Z'),
-        (gen_random_uuid(), $2, 'withdrawn', '2026-09-19T12:00:00Z'),
-        (gen_random_uuid(), $3, 'rejected', '2026-09-18T12:00:00Z')`,
-      participantIds.slice(0, 3),
+      `insert into applications (
+        id, participant_id, status, github_url, linkedin_url, created_at
+      ) values
+        (gen_random_uuid(), $1, 'submitted', null, 'https://www.linkedin.com/in/same-person/?trk=first', '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $2, 'submitted', null, null, '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $2, 'withdrawn', null, null, '2026-09-19T12:00:00Z'),
+        (gen_random_uuid(), $3, 'rejected', null, null, '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $4, 'submitted', null, 'https://pe.linkedin.com/in/SAME-PERSON', '2026-09-22T12:00:00Z'),
+        (gen_random_uuid(), $5, 'submitted', null, null, '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $6, 'submitted', null, null, '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $7, 'submitted', 'https://github.com/shared-github', null, '2026-09-18T12:00:00Z'),
+        (gen_random_uuid(), $8, 'submitted', 'https://www.github.com/SHARED-GITHUB/?tab=repositories', null, '2026-09-18T12:00:00Z')`,
+      [
+        participantIds[0],
+        participantIds[1],
+        participantIds[2],
+        participantIds[4],
+        participantIds[5],
+        participantIds[6],
+        participantIds[7],
+        participantIds[8],
+      ],
     );
 
     const ranked = await rankedEvaluationsFor("black-box", database);
-    const activeParticipantId = participantIds[0];
     const rejectedParticipantId = participantIds[2];
-    if (!activeParticipantId || !rejectedParticipantId) {
+    const aboveThresholdParticipantId = participantIds[6];
+    const firstGitHubParticipantId = participantIds[7];
+    if (
+      !rejectedParticipantId ||
+      !aboveThresholdParticipantId ||
+      !firstGitHubParticipantId
+    ) {
       throw new Error("Ranking fixtures are required");
     }
 
     expect(ranked.map((entry) => entry.participantId)).toEqual([
-      activeParticipantId,
       rejectedParticipantId,
+      firstGitHubParticipantId,
+      aboveThresholdParticipantId,
     ]);
   });
 });
