@@ -170,6 +170,7 @@ export const getChallengeRanking = async (
     {
       firstName: string | null;
       lastName: string | null;
+      name: string | null;
       githubUrl: string | null;
       linkedInUrl: string | null;
     }
@@ -181,10 +182,12 @@ export const getChallengeRanking = async (
         participantId: applications.participantId,
         firstName: applications.firstName,
         lastName: applications.lastName,
+        name: participants.name,
         githubUrl: applications.githubUrl,
         linkedInUrl: applications.linkedInUrl,
       })
       .from(applications)
+      .innerJoin(participants, eq(participants.id, applications.participantId))
       .where(inArray(applications.participantId, participantIds))
       .orderBy(desc(applications.createdAt), desc(applications.id));
 
@@ -193,6 +196,7 @@ export const getChallengeRanking = async (
       identityByParticipant.set(application.participantId, {
         firstName: application.firstName,
         lastName: application.lastName,
+        name: application.name,
         githubUrl: application.githubUrl,
         linkedInUrl: application.linkedInUrl,
       });
@@ -211,6 +215,7 @@ export const getChallengeRanking = async (
       return {
         rank: ranks[index] ?? 1,
         displayName: rankingDisplayName({
+          name: identity?.name,
           firstName: identity?.firstName,
           lastName: identity?.lastName,
         }),

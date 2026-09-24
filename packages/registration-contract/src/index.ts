@@ -256,7 +256,7 @@ export type ApplicationPartId = typeof ApplicationPartId.Type;
 
 export const acceptedDetailsInputFields = {
   fullName: nonBlank(200),
-  displayName: Schema.optional(nonBlank(200)),
+  name: Schema.optional(nonBlank(200)),
   oneLiner: Schema.optional(nonBlank(30)),
   phone: Schema.optional(phone),
   dateOfBirth: Schema.String.pipe(

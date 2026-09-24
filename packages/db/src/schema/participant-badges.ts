@@ -18,7 +18,6 @@ export const participantBadges = pgTable("participant_badges", {
   status: badgeGenerationStatus("status").default("pending").notNull(),
   generationId: text("generation_id"),
   triggerRunId: text("trigger_run_id"),
-  displayName: varchar("display_name", { length: 200 }),
   oneLiner: varchar("one_liner", { length: 120 }),
   linkUrl: text("link_url"),
   placement: varchar("placement", { length: 120 }),

@@ -40,6 +40,7 @@ type AcceptanceDetailsRecord = typeof acceptanceDetails.$inferSelect;
 interface RegistrationIdentity {
   readonly clerkUserId: string;
   readonly email: string;
+  readonly name?: string;
   readonly clerkPictureUrl?: string;
 }
 
@@ -240,11 +241,16 @@ const latestApplicationRecord = async (
   | {
       application: ApplicationRecord;
       details?: AcceptanceDetailsRecord;
+      participantName?: string;
     }
   | undefined
 > => {
   const [record] = await db
-    .select({ application: applications, details: acceptanceDetails })
+    .select({
+      application: applications,
+      details: acceptanceDetails,
+      participantName: participants.name,
+    })
     .from(participants)
     .innerJoin(applications, eq(applications.participantId, participants.id))
     .leftJoin(
@@ -258,6 +264,7 @@ const latestApplicationRecord = async (
   return {
     application: record.application,
     details: record.details ?? undefined,
+    participantName: optional(record.participantName),
   };
 };
 
@@ -269,7 +276,10 @@ export const saveRegistrationDraft = async (
   if (input.fullName !== undefined) {
     assertNoRequirements(fullNameColumnRequirements(input.fullName));
   }
-  const participantId = await participantIdFor(identity.clerkUserId);
+  const participantId = await participantIdFor(
+    identity.clerkUserId,
+    identity.name,
+  );
   const now = new Date();
   const columns = draftColumnsFrom(input, identity, now);
   const current = await latestApplicationRecord(identity.clerkUserId);
@@ -429,6 +439,7 @@ const latestApplicationFor = async (
 ): Promise<{
   application: ApplicationRecord;
   details?: AcceptanceDetailsRecord;
+  participantName?: string;
 }> => {
   const current = await latestApplicationRecord(clerkUserId);
   if (!current) {
@@ -520,6 +531,12 @@ export const submitAcceptedDetails = async (
     input.oneLiner ??
     currentBadge?.oneLiner ??
     badgeOneLinerFor(current.application.role);
+  const name =
+    input.name ??
+    current.participantName ??
+    [current.application.firstName, current.application.lastName]
+      .filter(Boolean)
+      .join(" ");
   const badgeUpdate = db
     .insert(participantBadges)
     .values({
@@ -527,7 +544,6 @@ export const submitAcceptedDetails = async (
       status: "pending",
       generationId: null,
       triggerRunId: null,
-      displayName: input.displayName ?? input.fullName,
       oneLiner,
       pictureSource: input.pictureSource,
       pictureUrl,
@@ -538,7 +554,6 @@ export const submitAcceptedDetails = async (
         status: "pending",
         generationId: null,
         triggerRunId: null,
-        displayName: input.displayName ?? input.fullName,
         oneLiner,
         pictureSource: input.pictureSource,
         pictureUrl,
@@ -547,13 +562,22 @@ export const submitAcceptedDetails = async (
       },
     })
     .returning();
+  const participantUpdate = db
+    .update(participants)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(participants.id, current.application.participantId))
+    .returning();
   if (current.details?.completedAt) {
-    const [badgeRows, detailsRows] = await db.batch([
+    const [participantRows, badgeRows, detailsRows] = await db.batch([
+      participantUpdate,
       badgeUpdate,
       detailsUpdate,
     ]);
+    const [participant] = participantRows;
     const [badge] = badgeRows;
     const [details] = detailsRows;
+    if (!participant)
+      throw new Error("Participant name update returned no row");
     if (!badge) throw new Error("Badge profile update returned no row");
     if (!details) throw new Error("Acceptance details update returned no row");
     return resultFor(current.application, details);
@@ -568,16 +592,20 @@ export const submitAcceptedDetails = async (
     })
     .where(eq(applications.id, current.application.id))
     .returning();
-  const [applicationRows, badgeRows, detailsRows] = await db.batch([
-    applicationUpdate,
-    badgeUpdate,
-    detailsUpdate,
-  ]);
+  const [applicationRows, participantRows, badgeRows, detailsRows] =
+    await db.batch([
+      applicationUpdate,
+      participantUpdate,
+      badgeUpdate,
+      detailsUpdate,
+    ]);
   const [application] = applicationRows;
+  const [participant] = participantRows;
   const [badge] = badgeRows;
   const [details] = detailsRows;
   if (!application)
     throw new Error("Application picture update returned no row");
+  if (!participant) throw new Error("Participant name update returned no row");
   if (!badge) throw new Error("Badge profile update returned no row");
   if (!details) throw new Error("Acceptance details update returned no row");
   return resultFor(application, details);

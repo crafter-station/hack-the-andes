@@ -4,17 +4,27 @@ import { participants } from "@chofex/db/schema";
 
 export const participantIdFor = async (
   clerkUserId: string,
+  defaultName?: string,
 ): Promise<string> => {
   const [existing] = await db
-    .select({ id: participants.id })
+    .select({ id: participants.id, name: participants.name })
     .from(participants)
     .where(eq(participants.clerkUserId, clerkUserId))
     .limit(1);
-  if (existing) return existing.id;
+  const name = defaultName?.trim() || undefined;
+  if (existing) {
+    if (!existing.name && name) {
+      await db
+        .update(participants)
+        .set({ name, updatedAt: new Date() })
+        .where(eq(participants.id, existing.id));
+    }
+    return existing.id;
+  }
 
   const [created] = await db
     .insert(participants)
-    .values({ clerkUserId })
+    .values({ clerkUserId, name })
     .onConflictDoNothing()
     .returning({ id: participants.id });
   if (created) return created.id;

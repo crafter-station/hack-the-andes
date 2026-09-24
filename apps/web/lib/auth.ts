@@ -89,6 +89,7 @@ export interface AuthenticatedParticipantProfile
   extends AuthenticatedParticipant {
   readonly email: string;
   readonly firstName: string;
+  readonly name: string;
   readonly canReviewApplications: boolean;
   readonly clerkPictureUrl?: string;
 }
@@ -200,6 +201,7 @@ export const requireAuthenticatedParticipantProfile = async (
     ...authentication,
     email: emailAddress.emailAddress.trim().toLowerCase(),
     firstName: user.firstName ?? "",
+    name: [user.firstName, user.lastName].filter(Boolean).join(" "),
     canReviewApplications: userGrantsApplicationReviewAccess({
       clerkUserId: authentication.clerkUserId,
       configuredAdminIds: configuredAdminIdsFrom(

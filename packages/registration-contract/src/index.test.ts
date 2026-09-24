@@ -285,7 +285,7 @@ describe("registration contract", () => {
   test("accepts an optional one-line badge description during confirmation", () => {
     const details = Schema.decodeUnknownSync(AcceptedDetailsInput)({
       fullName: "Ada Lovelace",
-      displayName: "Ada L.",
+      name: "Ada L.",
       oneLiner: "Computing pioneer",
       dateOfBirth: "1990-01-01",
       nationalIdNumber: "AB123456",
@@ -294,7 +294,7 @@ describe("registration contract", () => {
       pictureSource: "clerk",
     });
 
-    expect(details.displayName).toBe("Ada L.");
+    expect(details.name).toBe("Ada L.");
     expect(details.oneLiner).toBe("Computing pioneer");
     expect(details.phone).toBeUndefined();
   });

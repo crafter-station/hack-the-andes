@@ -311,7 +311,7 @@ const confirmCommand = Command.make(
           clerkPictureUrl: currentUser.data.clerkPictureUrl,
           githubUrl: current.data.registration.githubUrl,
           currentPhone: current.data.registration.phone,
-          currentDisplayName: currentBadge.data.profile?.fullName,
+          currentName: currentBadge.data.profile?.fullName,
           currentOneLiner:
             currentBadge.data.profile?.oneLiner ??
             current.data.registration.role,
@@ -522,7 +522,7 @@ const applicationTemplate = {
 
 const acceptanceTemplate = {
   fullName: "Ada Lovelace",
-  displayName: "Ada L.",
+  name: "Ada L.",
   oneLiner: "Computing pioneer",
   phone: "+44 20 0000 0000",
   dateOfBirth: "1990-01-01",

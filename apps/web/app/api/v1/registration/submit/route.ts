@@ -12,6 +12,7 @@ export const POST = (request: Request): Promise<Response> =>
     const result = await submitRegistration({
       clerkUserId: participant.clerkUserId,
       email: participant.email,
+      name: participant.name,
     });
     const challengeAlreadyStarted = result.registration.challenges.some(
       (challenge) => challenge.playable && challenge.status === "in_progress",

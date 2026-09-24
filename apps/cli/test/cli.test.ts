@@ -589,7 +589,7 @@ describe("CLI JSON mode", () => {
     expect(Object.keys(template).sort()).toEqual(
       [...acceptedDetailsInputFieldNames].sort(),
     );
-    expect(template).toHaveProperty("displayName");
+    expect(template).toHaveProperty("name");
     expect(template).toHaveProperty("oneLiner");
   });
 

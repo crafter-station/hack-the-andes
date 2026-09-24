@@ -4,6 +4,10 @@
 
 A person identified by a Clerk user account who may apply to join the hackathon.
 
+## Participant name
+
+The participant's public name used in the admin dashboard, challenge rankings, and badge. It begins with their Clerk name and may be changed during attendance confirmation without changing their legal full name.
+
 ## Application
 
 One attempt by a participant to enter the hackathon. A rejected or withdrawn application remains part of the participant's history; either outcome permits the participant to create a new application.
@@ -14,7 +18,7 @@ An application that is being drafted, awaiting a decision, or has been accepted.
 
 ## Acceptance details
 
-Personal and logistical information requested only after an application is accepted. The details are complete only when completion has been recorded and every detail required for the participation mode is present. They may still be updated after completion.
+Personal and logistical information requested only after an application is accepted. This includes the legal full name used for venue access, which is distinct from the participant name. The details are complete only when completion has been recorded and every detail required for the participation mode is present. They may still be updated after completion.
 
 ## Confirmed profile picture
 

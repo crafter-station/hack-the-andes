@@ -71,7 +71,11 @@ export const acceptedByClerkUser = async (
   clerkUserId: string,
 ): Promise<AcceptedParticipant | null> => {
   const [row] = await db
-    .select({ application: applications, badge: participantBadges })
+    .select({
+      application: applications,
+      badge: participantBadges,
+      participantName: participants.name,
+    })
     .from(applications)
     .innerJoin(participants, eq(applications.participantId, participants.id))
     .leftJoin(
@@ -93,6 +97,7 @@ export const acceptedByClerkUser = async (
   const profile = resolveBadgeProfile(
     {
       ...row.application,
+      name: row.participantName,
       websiteUrl: row.application.portfolioUrl,
     },
     row.badge,

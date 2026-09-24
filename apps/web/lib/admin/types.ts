@@ -56,10 +56,12 @@ export const reviewableCandidateStatuses: ReadonlyArray<CandidateStatus> = [
 export interface Candidate {
   readonly id: string;
   readonly participantId: string;
+  readonly name: string;
   readonly firstName: string;
   readonly lastName: string;
   readonly email: string;
   readonly avatarUrl?: string;
+  readonly badgePictureUrl?: string;
   readonly pronouns?: string;
   readonly countryCode?: string;
   readonly city?: string;

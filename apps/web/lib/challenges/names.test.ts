@@ -8,6 +8,16 @@ import {
 } from "./names";
 
 describe("ranking display names", () => {
+  test("prefers the participant's editable public name", () => {
+    expect(
+      rankingDisplayName({
+        name: "Ada L.",
+        firstName: "Ada",
+        lastName: "Lovelace",
+      }),
+    ).toBe("Ada L.");
+  });
+
   test("uses the same full application name as the admin dashboard", () => {
     expect(
       rankingDisplayName({

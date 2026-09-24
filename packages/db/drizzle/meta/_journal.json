@@ -141,6 +141,20 @@
       "when": 1790285807395,
       "tag": "0019_friendly_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790286234625,
+      "tag": "0020_violet_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1790286305582,
+      "tag": "0021_grey_shocker",
+      "breakpoints": true
     }
   ]
 }

@@ -46,9 +46,9 @@ actual. Usa `CHOFEX_AUTO_UPDATE=0` para desactivar esta comprobación.
 optional phone number, bio, portfolio URL, shipped project, LinkedIn and GitHub
 URLs, and Terms and Conditions. Use `--input` to submit a completed JSON
 application.
-Acceptance creates a default badge from the profile visible to reviewers.
-`chofex confirm` updates its public name, one-line description, and picture
-while collecting the venue details required for attendance. After confirmation,
+Acceptance creates a default badge from the Clerk profile visible to reviewers.
+`chofex confirm` updates the public name, one-line description, and picture
+while separately collecting the legal full name and venue details required for attendance. After confirmation,
 `chofex badge regenerate` can also update those public fields and the QR
 destination without changing the submitted application.
 The technical challenges do not block submission, but every challenge winner must submit

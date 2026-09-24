@@ -3,6 +3,7 @@ import {
   acceptanceDetails,
   applications,
   participantBadges,
+  participants,
 } from "@chofex/db/schema";
 import { db } from "@chofex/db/worker";
 import { logger, task } from "@trigger.dev/sdk";
@@ -63,8 +64,10 @@ export const generateParticipantBadge = task<
         application: applications,
         details: acceptanceDetails,
         badge: participantBadges,
+        participantName: participants.name,
       })
       .from(applications)
+      .innerJoin(participants, eq(participants.id, applications.participantId))
       .leftJoin(
         acceptanceDetails,
         eq(acceptanceDetails.applicationId, applications.id),
@@ -82,6 +85,7 @@ export const generateParticipantBadge = task<
     const profile = resolveBadgeProfile(
       {
         ...record.application,
+        name: record.participantName,
         websiteUrl: record.application.portfolioUrl,
       },
       record.badge,

@@ -70,7 +70,6 @@ export const updateBadgeProfile = async (
 
   const values: typeof participantBadges.$inferInsert = {
     applicationId: record.application.id,
-    displayName: input.fullName,
     oneLiner: input.oneLiner,
     linkUrl: input.linkUrl,
     status: "pending",
@@ -78,7 +77,6 @@ export const updateBadgeProfile = async (
     triggerRunId: null,
   };
   const updates: Partial<typeof participantBadges.$inferInsert> = {
-    displayName: input.fullName,
     oneLiner: input.oneLiner,
     linkUrl: input.linkUrl,
     status: "pending",
@@ -99,10 +97,18 @@ export const updateBadgeProfile = async (
     updates.pictureUrl = pictureUrl;
   }
 
-  await db.insert(participantBadges).values(values).onConflictDoUpdate({
-    target: participantBadges.applicationId,
-    set: updates,
-  });
+  const badgeUpdate = db
+    .insert(participantBadges)
+    .values(values)
+    .onConflictDoUpdate({
+      target: participantBadges.applicationId,
+      set: updates,
+    });
+  const participantUpdate = db
+    .update(participants)
+    .set({ name: input.fullName, updatedAt: new Date() })
+    .where(eq(participants.id, record.application.participantId));
+  await db.batch([participantUpdate, badgeUpdate]);
 
   return record.application.id;
 };

@@ -30,7 +30,7 @@ interface AcceptedDetailsDefaults {
   readonly clerkPictureUrl?: string;
   readonly githubUrl?: string;
   readonly currentFullName?: string;
-  readonly currentDisplayName?: string;
+  readonly currentName?: string;
   readonly currentOneLiner?: string;
   readonly currentPhone?: string;
 }
@@ -330,10 +330,10 @@ const shirtSizePrompt = (
 
 const interactiveAcceptedDetails = (
   participationMode: "in_person" | "remote",
-  pictures: AcceptedDetailsDefaults,
+  defaults: AcceptedDetailsDefaults,
 ) =>
   Effect.gen(function* () {
-    let fullName = pictures.currentFullName;
+    let fullName = defaults.currentFullName;
     if (fullName) {
       const nameChoice = yield* Prompt.run(
         Prompt.select({
@@ -354,18 +354,18 @@ const interactiveAcceptedDetails = (
         ),
       );
     }
-    const displayName = yield* Prompt.run(
+    const name = yield* Prompt.run(
       requiredText(
         "Nombre impreso en tu carnet",
         acceptedDetailsInputFields.fullName,
-        pictures.currentDisplayName ?? fullName,
+        defaults.currentName ?? fullName,
       ),
     );
     const oneLiner = yield* Prompt.run(
       requiredText(
         "Presentación de una línea para tu carnet",
         badgeRegenerationInputFields.oneLiner,
-        pictures.currentOneLiner,
+        defaults.currentOneLiner,
       ),
     );
     const details = yield* Prompt.run(
@@ -373,7 +373,7 @@ const interactiveAcceptedDetails = (
         phone: optionalText(
           "Teléfono para WhatsApp (opcional)",
           acceptedDetailsInputFields.phone,
-          pictures.currentPhone,
+          defaults.currentPhone,
         ),
         dateOfBirth: dateOfBirthPrompt(),
         nationalIdNumber: requiredText(
@@ -406,15 +406,15 @@ const interactiveAcceptedDetails = (
       readonly title: string;
       readonly value: "clerk" | "github" | "upload";
     }> = [];
-    if (pictures.clerkPictureUrl) {
+    if (defaults.clerkPictureUrl) {
       pictureChoices.push({
-        title: `Use my Clerk picture (${pictures.clerkPictureUrl})`,
+        title: `Use my Clerk picture (${defaults.clerkPictureUrl})`,
         value: "clerk",
       });
     }
-    if (pictures.githubUrl) {
+    if (defaults.githubUrl) {
       pictureChoices.push({
-        title: `Use my GitHub picture (${pictures.githubUrl})`,
+        title: `Use my GitHub picture (${defaults.githubUrl})`,
         value: "github",
       });
     }
@@ -430,7 +430,7 @@ const interactiveAcceptedDetails = (
     );
     return withoutEmptyStrings({
       fullName,
-      displayName,
+      name,
       oneLiner,
       ...details,
       pictureSource,
@@ -498,11 +498,11 @@ export const applicationDraftInput = (
 export const acceptedDetailsInput = (
   path: string | undefined,
   participationMode: "in_person" | "remote",
-  pictures: AcceptedDetailsDefaults = {},
+  defaults: AcceptedDetailsDefaults = {},
 ): Effect.Effect<AcceptedDetailsInput, CliError, PromptModule.Environment> =>
   inputOrInteractive(
     path,
-    interactiveAcceptedDetails(participationMode, pictures),
+    interactiveAcceptedDetails(participationMode, defaults),
   ).pipe(
     Effect.flatMap((input) =>
       decode(AcceptedDetailsInput, input, acceptedDetailsInputFieldNames),

@@ -45,6 +45,7 @@ describe("badge profile", () => {
     expect(
       resolveBadgeProfile(
         {
+          name: "Ada L.",
           firstName: "Ada",
           lastName: "Lovelace",
           role: "Mathematician",
@@ -52,7 +53,6 @@ describe("badge profile", () => {
           pictureUrl: "https://images.example/original.png",
         },
         {
-          displayName: "Ada L.",
           oneLiner: "Computing pioneer",
           pictureUrl: "https://images.example/badge.png",
         },
@@ -75,15 +75,12 @@ describe("badge profile", () => {
   test("captures the reviewer-visible dashboard profile as acceptance defaults", () => {
     expect(
       acceptanceBadgeProfileFor({
-        firstName: "Ada",
-        lastName: "Lovelace",
         role: "A description that is much too long for the badge",
-        avatarUrl: "https://github.com/ada.png?size=112",
+        avatarUrl: "https://github.com/ada.png?size=460",
         githubUrl: "https://github.com/ada",
         linkedInUrl: "https://linkedin.com/in/ada",
       }),
     ).toEqual({
-      displayName: "Ada Lovelace",
       oneLiner: "A description that is much…",
       linkUrl: "https://github.com/ada",
       pictureUrl: "https://github.com/ada.png?size=460",

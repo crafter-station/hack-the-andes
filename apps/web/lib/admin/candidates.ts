@@ -23,7 +23,7 @@ import { enqueueBadgeGeneration } from "@/lib/badges/enqueue";
 import { HttpError } from "@/lib/registration/http";
 import { rankedEvaluationsFor } from "../challenges/ranking";
 import { challengeActivityForParticipants } from "../challenges/service";
-import { candidateAvatarUrl } from "./avatars";
+import { candidateAvatarUrl, candidateBadgePictureUrl } from "./avatars";
 import { sortCandidatesByChallengeRanking } from "./candidate-ranking";
 import { type ApplicationDecision, buildDecisionEmail } from "./decision-email";
 import {
@@ -82,6 +82,7 @@ type CandidateRecord = {
   readonly details: typeof acceptanceDetails.$inferSelect | null;
   readonly badge: typeof participantBadges.$inferSelect | null;
   readonly clerkUserId: string;
+  readonly participantName: string | null;
   readonly participantCreatedAt: Date;
   readonly attemptNumber: number;
   readonly applicationHistory: ReadonlyArray<ApplicationHistoryRecord>;
@@ -141,10 +142,19 @@ const toCandidate = (
   return {
     id: application.id,
     participantId: application.participantId,
+    name:
+      record.participantName ??
+      clerkNames.get(record.clerkUserId) ??
+      [application.firstName, application.lastName].filter(Boolean).join(" "),
     firstName: application.firstName ?? "Unknown",
     lastName: application.lastName ?? "participant",
     email: application.email ?? "",
     avatarUrl: candidateAvatarUrl(
+      optional(application.pictureUrl),
+      clerkPictureUrl,
+      application.githubUrl,
+    ),
+    badgePictureUrl: candidateBadgePictureUrl(
       optional(application.pictureUrl),
       clerkPictureUrl,
       application.githubUrl,
@@ -321,6 +331,7 @@ const candidateRecordById = async (
       details: acceptanceDetails,
       badge: participantBadges,
       clerkUserId: participants.clerkUserId,
+      participantName: participants.name,
       participantCreatedAt: participants.createdAt,
     })
     .from(applications)
@@ -367,6 +378,7 @@ export const listCandidates = async (
     searchCondition = or(
       ilike(applications.firstName, `%${search}%`),
       ilike(applications.lastName, `%${search}%`),
+      ilike(participants.name, `%${search}%`),
       ilike(applications.email, `%${search}%`),
       ilike(applications.organization, `%${search}%`),
     );
@@ -388,6 +400,7 @@ export const listCandidates = async (
     .select({ status: funnelStatus.as("status") })
     .from(applications)
     .innerJoin(latestApplications, eq(latestApplications.id, applications.id))
+    .innerJoin(participants, eq(participants.id, applications.participantId))
     .where(and(visibleInFunnel, searchCondition))
     .as("funnel_summary");
   const whereCondition = and(visibleInFunnel, searchCondition, statusCondition);
@@ -400,6 +413,10 @@ export const listCandidates = async (
         .innerJoin(
           latestApplications,
           eq(latestApplications.id, applications.id),
+        )
+        .innerJoin(
+          participants,
+          eq(participants.id, applications.participantId),
         )
         .where(whereCondition),
       db
@@ -419,6 +436,7 @@ export const listCandidates = async (
         details: acceptanceDetails,
         badge: participantBadges,
         clerkUserId: participants.clerkUserId,
+        participantName: participants.name,
         participantCreatedAt: participants.createdAt,
       })
       .from(applications)
@@ -450,6 +468,10 @@ export const listCandidates = async (
         .innerJoin(
           latestApplications,
           eq(latestApplications.id, applications.id),
+        )
+        .innerJoin(
+          participants,
+          eq(participants.id, applications.participantId),
         )
         .where(whereCondition)
         .orderBy(desc(applications.createdAt)),

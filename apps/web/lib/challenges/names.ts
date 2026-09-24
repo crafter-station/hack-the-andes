@@ -7,13 +7,17 @@ export const participantDisplayName = (identity: ParticipantName): string =>
   `${identity.firstName} ${identity.lastName}`.trim();
 
 export const rankingDisplayName = (identity: {
+  readonly name?: string | null;
   readonly firstName?: string | null;
   readonly lastName?: string | null;
-}): string =>
-  participantDisplayName({
+}): string => {
+  const name = identity.name?.trim();
+  if (name) return name;
+  return participantDisplayName({
     firstName: identity.firstName ?? "Unknown",
     lastName: identity.lastName ?? "participant",
   });
+};
 
 export interface PublicProfileLinks {
   readonly githubUrl?: string;

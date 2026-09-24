@@ -208,7 +208,7 @@ const filterStatuses: ReadonlyArray<{
 ];
 
 const displayName = (candidate: Candidate): string =>
-  participantDisplayName(candidate);
+  candidate.name || participantDisplayName(candidate);
 
 const WhatsAppIcon = ({ className }: { readonly className?: string }) => (
   <svg

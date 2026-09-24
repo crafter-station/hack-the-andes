@@ -11,9 +11,14 @@ import { resolveBadgeProfile } from "@/lib/credential/profile";
 const profileFor = (
   application: typeof applications.$inferSelect,
   badge: typeof participantBadges.$inferSelect | null,
+  participantName: string | null,
 ): BadgeProfile => {
   const resolved = resolveBadgeProfile(
-    { ...application, websiteUrl: application.portfolioUrl },
+    {
+      ...application,
+      name: participantName,
+      websiteUrl: application.portfolioUrl,
+    },
     badge,
   );
   return {
@@ -28,7 +33,11 @@ export const getParticipantBadge = async (
   clerkUserId: string,
 ): Promise<BadgeResult> => {
   const [record] = await db
-    .select({ application: applications, badge: participantBadges })
+    .select({
+      application: applications,
+      badge: participantBadges,
+      participantName: participants.name,
+    })
     .from(participants)
     .innerJoin(applications, eq(applications.participantId, participants.id))
     .leftJoin(
@@ -45,7 +54,11 @@ export const getParticipantBadge = async (
     .limit(1);
 
   if (!record) return { status: "not_started" };
-  const profile = profileFor(record.application, record.badge);
+  const profile = profileFor(
+    record.application,
+    record.badge,
+    record.participantName,
+  );
   if (!record.badge) return { status: "not_started", profile };
   if (record.badge.status === "completed" && record.badge.badgeUrl) {
     return { status: "completed", url: record.badge.badgeUrl, profile };
