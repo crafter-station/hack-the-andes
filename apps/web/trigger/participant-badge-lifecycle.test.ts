@@ -66,7 +66,7 @@ describe("participant badge generation lifecycle", () => {
   test("marks a generation failed when Trigger dispatch fails", async () => {
     const enqueue = await source("../lib/badges/enqueue.ts");
 
-    expect(enqueue).toContain("Could not dispatch badge generation");
+    expect(enqueue).toContain("Could not enqueue badge generation");
     expect(enqueue).toContain('status: "failed"');
   });
 

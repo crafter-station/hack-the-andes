@@ -27,17 +27,13 @@ export const enqueueBadgeGeneration = async (
   if (badge?.status === "completed" && !options.force) return;
 
   const generationId = crypto.randomUUID();
-  const placement = await challengePlacementForParticipant(
-    application.participantId,
-  );
   await db
     .insert(participantBadges)
-    .values({ applicationId, status: "pending", placement, generationId })
+    .values({ applicationId, status: "pending", generationId })
     .onConflictDoUpdate({
       target: participantBadges.applicationId,
       set: {
         status: "pending",
-        placement,
         generationId,
         triggerRunId: null,
         error: null,
@@ -54,6 +50,18 @@ export const enqueueBadgeGeneration = async (
 
   let handle: { readonly id: string };
   try {
+    const placement = await challengePlacementForParticipant(
+      application.participantId,
+    );
+    await db
+      .update(participantBadges)
+      .set({ placement, updatedAt: new Date() })
+      .where(
+        and(
+          eq(participantBadges.applicationId, applicationId),
+          eq(participantBadges.generationId, generationId),
+        ),
+      );
     handle = await tasks.trigger<typeof generateParticipantBadge>(
       "generate-participant-badge",
       { applicationId, generationId },
@@ -68,7 +76,7 @@ export const enqueueBadgeGeneration = async (
       .update(participantBadges)
       .set({
         status: "failed",
-        error: `Could not dispatch badge generation: ${String(error)}`.slice(
+        error: `Could not enqueue badge generation: ${String(error)}`.slice(
           0,
           4_000,
         ),
