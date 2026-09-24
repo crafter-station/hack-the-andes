@@ -160,6 +160,6 @@ export const getChallengeRanking = async (
   return {
     challenge: challengeItem,
     entries,
-    competitorCount: ranked.length,
+    competitorCount: entries.length,
   };
 };

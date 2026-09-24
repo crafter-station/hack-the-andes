@@ -137,4 +137,48 @@ describe("challenge output", () => {
     );
     expect(text).not.toContain("0 official evaluations");
   });
+
+  test("does not reveal the hidden competitor count", () => {
+    const text = challengeRankingText(
+      {
+        challenge: {
+          slug: "black-box",
+          number: 1,
+          code: "01",
+          theme: "Black Box",
+          title: "The Shipping Machine",
+          summary: "Reverse engineer the machine.",
+          coreSkill: "Reverse engineering",
+          format: "accuracy",
+          formatLabel: "Accuracy score",
+          opensAt: "2026-09-17T14:00:00.000Z",
+          rankingVisibleAt: "2026-09-23T20:00:00.000Z",
+          queryLimit: 25,
+          evaluationLimit: 3,
+          playable: true,
+          open: true,
+          rankingPath: "/challenges/black-box",
+        },
+        entries: [
+          {
+            rank: 1,
+            displayName: "Winner",
+            shareCode: "ABCD",
+            accuracy: 1,
+            exactCount: 1_000,
+            sampleSize: 1_000,
+            meanError: 0,
+            queriesUsed: 25,
+            runtimeMs: 10,
+            evaluatedAt: "2026-09-23T20:00:00.000Z",
+          },
+        ],
+        competitorCount: 58,
+      },
+      new Date("2026-09-24T00:00:00.000Z"),
+    );
+
+    expect(text).toContain("Winner");
+    expect(text).not.toContain("58 official evaluations");
+  });
 });

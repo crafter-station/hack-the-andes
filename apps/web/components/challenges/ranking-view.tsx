@@ -81,7 +81,7 @@ export function ChallengeRankingView({
   readonly now: string;
   readonly ranking: ChallengeRanking;
 }) {
-  const { challenge, entries, competitorCount } = ranking;
+  const { challenge, entries } = ranking;
   const rankingVisible = isChallengeRankingVisibleAt(challenge, new Date(now));
   let cliHint = "chofex challenge list";
   if (challenge.playable) {
@@ -131,16 +131,8 @@ export function ChallengeRankingView({
         </BrandSectionHeader>
 
         <div
-          className={`mb-8 grid gap-3 p-5 sm:grid-cols-3 ${brandFrameClassName}`}
+          className={`mb-8 grid gap-3 p-5 sm:grid-cols-2 ${brandFrameClassName}`}
         >
-          <div>
-            <BrandKicker className="text-[var(--hud-muted)]">
-              Participantes
-            </BrandKicker>
-            <p className="mt-2 font-display text-4xl">
-              {rankingVisible ? competitorCount : "—"}
-            </p>
-          </div>
           <div>
             <BrandKicker className="text-[var(--hud-muted)]">
               Estado

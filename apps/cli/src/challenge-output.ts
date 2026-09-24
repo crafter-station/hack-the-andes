@@ -331,7 +331,7 @@ export const challengeRankingText = (
     );
     return lines.join("\n");
   }
-  lines.push(`${ranking.competitorCount} official evaluations`, "");
+  lines.push("");
   if (ranking.entries.length === 0) {
     lines.push("No official evaluations yet.");
     return lines.join("\n");

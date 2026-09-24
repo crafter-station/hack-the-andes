@@ -51,6 +51,17 @@ test("the live challenge page includes the brief and CLI instructions", async ()
   expect(ranking).toContain("BlackBoxChallengeGuide");
 });
 
+test("the public ranking does not reveal the hidden competitor count", async () => {
+  const view = await sourceFor("ranking-view.tsx");
+  const ranking = await Bun.file(
+    new URL("../../lib/challenges/ranking.ts", import.meta.url),
+  ).text();
+
+  expect(view).not.toContain("Participantes");
+  expect(view).not.toContain("competitorCount");
+  expect(ranking).toContain("competitorCount: entries.length");
+});
+
 test("reviewer guidance recognizes challenge direct-pass winners", async () => {
   const dashboard = await sourceFor("../candidate-dashboard.tsx");
 
