@@ -534,6 +534,7 @@ export const submitAcceptedDetails = async (
   const name =
     input.name ??
     current.participantName ??
+    identity.name ??
     [current.application.firstName, current.application.lastName]
       .filter(Boolean)
       .join(" ");

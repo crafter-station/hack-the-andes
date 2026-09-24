@@ -65,6 +65,7 @@ describe("participant badge generation lifecycle", () => {
 
     expect(registration).toContain("currentBadge?.customPictureUrl");
     expect(registration).toContain("input.name ??");
+    expect(registration).toContain("identity.name ??");
     expect(registration).toContain(".update(participants)");
     expect(registration).toContain("oneLiner");
     expect(attendanceRoute).toContain(

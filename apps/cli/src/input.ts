@@ -408,18 +408,18 @@ const interactiveAcceptedDetails = (
     }> = [];
     if (defaults.clerkPictureUrl) {
       pictureChoices.push({
-        title: `Use my Clerk picture (${defaults.clerkPictureUrl})`,
+        title: `Usar mi foto de Clerk (${defaults.clerkPictureUrl})`,
         value: "clerk",
       });
     }
     if (defaults.githubUrl) {
       pictureChoices.push({
-        title: `Use my GitHub picture (${defaults.githubUrl})`,
+        title: `Usar mi foto de GitHub (${defaults.githubUrl})`,
         value: "github",
       });
     }
     pictureChoices.push({
-      title: "Upload a different picture",
+      title: "Subir una foto diferente",
       value: "upload",
     });
     const pictureSource = yield* Prompt.run(

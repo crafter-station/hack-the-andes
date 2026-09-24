@@ -6,6 +6,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   or,
   type SQL,
   sql,
@@ -92,6 +93,7 @@ type CandidateRecord = {
 const toCandidate = (
   record: CandidateRecord,
   clerkPictureUrl: string | undefined,
+  clerkName: string | undefined,
   clerkCreatedAt: string | undefined,
   approvedBy: string | undefined,
   clerkNames: ReadonlyMap<string, string>,
@@ -144,7 +146,7 @@ const toCandidate = (
     participantId: application.participantId,
     name:
       record.participantName ??
-      clerkNames.get(record.clerkUserId) ??
+      clerkName ??
       [application.firstName, application.lastName].filter(Boolean).join(" "),
     firstName: application.firstName ?? "Unknown",
     lastName: application.lastName ?? "participant",
@@ -240,6 +242,7 @@ const toCandidates = async (
   const clerkPictures = new Map<string, string>();
   const clerkCreatedAt = new Map<string, string>();
   const clerkNames = new Map<string, string>();
+  const clerkProfileNames = new Map<string, string>();
 
   await Promise.all(
     allClerkUserIds.map(async (clerkUserId) => {
@@ -248,6 +251,7 @@ const toCandidates = async (
         if (user.hasImage) clerkPictures.set(clerkUserId, user.imageUrl);
         clerkCreatedAt.set(clerkUserId, new Date(user.createdAt).toISOString());
         const name = [user.firstName, user.lastName].filter(Boolean).join(" ");
+        if (name) clerkProfileNames.set(clerkUserId, name);
         const primaryEmail = user.emailAddresses.find(
           (email) => email.id === user.primaryEmailAddressId,
         )?.emailAddress;
@@ -255,6 +259,25 @@ const toCandidates = async (
       } catch {
         // A missing Clerk user should not prevent admins from reviewing applications.
       }
+    }),
+  );
+
+  await Promise.all(
+    records.flatMap((record) => {
+      if (record.participantName) return [];
+      const name = clerkProfileNames.get(record.clerkUserId);
+      if (!name) return [];
+      return [
+        db
+          .update(participants)
+          .set({ name, updatedAt: new Date() })
+          .where(
+            and(
+              eq(participants.id, record.application.participantId),
+              isNull(participants.name),
+            ),
+          ),
+      ];
     }),
   );
 
@@ -268,6 +291,7 @@ const toCandidates = async (
     return toCandidate(
       record,
       clerkPictures.get(record.clerkUserId),
+      clerkProfileNames.get(record.clerkUserId),
       clerkCreatedAt.get(record.clerkUserId),
       approvedBy,
       clerkNames,

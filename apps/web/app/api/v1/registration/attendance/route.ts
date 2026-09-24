@@ -13,6 +13,7 @@ export const PUT = (request: Request): Promise<Response> =>
       {
         clerkUserId: participant.clerkUserId,
         email: participant.email,
+        name: participant.name,
         clerkPictureUrl: participant.clerkPictureUrl,
       },
       await readJson(request),

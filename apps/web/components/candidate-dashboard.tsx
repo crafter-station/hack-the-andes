@@ -229,8 +229,9 @@ const WhatsAppLink = ({
   readonly adminFirstName?: string;
 }) => {
   const phone = candidate.phone ?? candidate.applicationPhone;
+  const [publicFirstName] = candidate.name.trim().split(/\s+/);
   const message = whatsappMessage({
-    participantFirstName: candidate.firstName,
+    participantFirstName: publicFirstName || candidate.firstName,
     adminFirstName,
     funnelStatus: candidate.funnelStatus,
     attendanceCompleted: Boolean(candidate.attendanceCompletedAt),
@@ -253,8 +254,15 @@ const WhatsAppLink = ({
   );
 };
 
-const initials = (candidate: Candidate): string =>
-  `${candidate.firstName.charAt(0)}${candidate.lastName.charAt(0)}`.toUpperCase();
+const initials = (candidate: Candidate): string => {
+  const words = candidate.name.trim().split(/\s+/).filter(Boolean);
+  const [first, second] = words;
+  if (!first) {
+    return `${candidate.firstName.charAt(0)}${candidate.lastName.charAt(0)}`.toUpperCase();
+  }
+  if (second) return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase();
+  return first.slice(0, 2).toUpperCase();
+};
 
 const CandidateAvatar = ({
   candidate,
@@ -635,7 +643,7 @@ const CandidateDrawer = ({
       feedback =
         "Decisión guardada, correo enviado y generación del carnet iniciada.";
     } else {
-      feedback = "Decision saved and email sent.";
+      feedback = "Decisión guardada y correo enviado.";
     }
   } else if (decisionMutation.data?.emailStatus === "not_requested") {
     feedback = "Decision saved.";
