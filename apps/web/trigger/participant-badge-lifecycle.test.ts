@@ -41,6 +41,35 @@ describe("participant badge generation lifecycle", () => {
     expect(service).toContain("isNotNull(acceptanceDetails.completedAt)");
   });
 
+  test("invalidates old generations before changing the badge profile", async () => {
+    const profile = await source("../lib/badges/profile.ts");
+    const registration = await source("../lib/registration/service.ts");
+
+    expect(profile).toContain("generationId: null");
+    expect(registration).toContain("generationId: null");
+  });
+
+  test("regenerates after an updated attendance confirmation", async () => {
+    const registration = await source("../lib/registration/service.ts");
+    const attendanceRoute = await source(
+      "../app/api/v1/registration/attendance/route.ts",
+    );
+
+    expect(registration).toContain(
+      "uploadedPictureUrl = badge?.customPictureUrl ?? null",
+    );
+    expect(attendanceRoute).toContain(
+      "enqueueBadgeGeneration(result.registration.id, { force: true })",
+    );
+  });
+
+  test("marks a generation failed when Trigger dispatch fails", async () => {
+    const enqueue = await source("../lib/badges/enqueue.ts");
+
+    expect(enqueue).toContain("Could not dispatch badge generation");
+    expect(enqueue).toContain('status: "failed"');
+  });
+
   test("reports notification failure instead of exposing stale success", async () => {
     const parent = await source("./generate-participant-badge.ts");
 

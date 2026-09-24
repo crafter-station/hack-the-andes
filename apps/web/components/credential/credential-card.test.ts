@@ -59,6 +59,12 @@ describe("credential-card", () => {
     expect(texture).toContain("credential.pictureUrl");
     expect(texture).not.toContain("clerkPictureUrl");
     expect(texture).not.toContain("githubAvatarUrl");
+
+    const accepted = await Bun.file(
+      new URL("../../lib/credential/accepted.ts", import.meta.url),
+    ).text();
+    expect(accepted).toContain("pictureUrl: accepted.pictureUrl");
+    expect(accepted).not.toContain("pictureUrl: portraitFor(accepted).url");
   });
 
   test("shows no picture the participant did not confirm", async () => {

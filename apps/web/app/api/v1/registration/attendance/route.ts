@@ -17,7 +17,7 @@ export const PUT = (request: Request): Promise<Response> =>
       },
       await readJson(request),
     );
-    await enqueueBadgeGeneration(result.registration.id);
+    await enqueueBadgeGeneration(result.registration.id, { force: true });
     await captureProductEvent({
       distinctId: participant.clerkUserId,
       event: "attendance_confirmed",

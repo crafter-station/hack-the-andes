@@ -39,6 +39,7 @@ export const enqueueBadgeGeneration = async (
         status: "pending",
         placement,
         generationId,
+        triggerRunId: null,
         error: null,
         notificationSentAt: null,
         portraitUrl: null,
@@ -51,15 +52,36 @@ export const enqueueBadgeGeneration = async (
 
   const idempotencyKey = `participant-badge/${applicationId}/${generationId}`;
 
-  const handle = await tasks.trigger<typeof generateParticipantBadge>(
-    "generate-participant-badge",
-    { applicationId, generationId },
-    {
-      idempotencyKey,
-      idempotencyKeyTTL: "1h",
-      tags: [`application_${applicationId}`],
-    },
-  );
+  let handle: { readonly id: string };
+  try {
+    handle = await tasks.trigger<typeof generateParticipantBadge>(
+      "generate-participant-badge",
+      { applicationId, generationId },
+      {
+        idempotencyKey,
+        idempotencyKeyTTL: "1h",
+        tags: [`application_${applicationId}`],
+      },
+    );
+  } catch (error) {
+    await db
+      .update(participantBadges)
+      .set({
+        status: "failed",
+        error: `Could not dispatch badge generation: ${String(error)}`.slice(
+          0,
+          4_000,
+        ),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(participantBadges.applicationId, applicationId),
+          eq(participantBadges.generationId, generationId),
+        ),
+      );
+    throw error;
+  }
 
   await db
     .update(participantBadges)

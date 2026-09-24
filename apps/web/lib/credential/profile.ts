@@ -5,7 +5,7 @@ const ONE_LINER_LIMIT = 30;
 export const badgeOneLinerFor = (oneLiner: string | null): string => {
   const source = (oneLiner ?? "PARTICIPANTE").trim();
   if (source.length <= ONE_LINER_LIMIT) return source;
-  const clipped = source.slice(0, ONE_LINER_LIMIT);
+  const clipped = source.slice(0, ONE_LINER_LIMIT - 1);
   const lastSpace = clipped.lastIndexOf(" ");
   return `${lastSpace > 12 ? clipped.slice(0, lastSpace) : clipped}…`;
 };

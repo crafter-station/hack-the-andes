@@ -74,12 +74,16 @@ export const updateBadgeProfile = async (
     oneLiner: input.oneLiner,
     linkUrl: input.linkUrl,
     status: "pending",
+    generationId: null,
+    triggerRunId: null,
   };
   const updates: Partial<typeof participantBadges.$inferInsert> = {
     displayName: input.fullName,
     oneLiner: input.oneLiner,
     linkUrl: input.linkUrl,
     status: "pending",
+    generationId: null,
+    triggerRunId: null,
     error: null,
     updatedAt: new Date(),
   };

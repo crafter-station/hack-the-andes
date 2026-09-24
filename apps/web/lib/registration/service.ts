@@ -476,20 +476,20 @@ export const submitAcceptedDetails = async (
     ),
   );
 
+  let uploadedPictureUrl = current.application.customPictureUrl;
+  if (current.details?.completedAt) {
+    const [badge] = await db
+      .select({ customPictureUrl: participantBadges.customPictureUrl })
+      .from(participantBadges)
+      .where(eq(participantBadges.applicationId, current.application.id))
+      .limit(1);
+    uploadedPictureUrl = badge?.customPictureUrl ?? null;
+  }
   const pictureUrl = confirmedPictureUrl(input.pictureSource, {
     clerkPictureUrl: identity.clerkPictureUrl,
     githubUrl: current.application.githubUrl,
-    uploadedPictureUrl: current.application.customPictureUrl,
+    uploadedPictureUrl,
   });
-  const applicationUpdate = db
-    .update(applications)
-    .set({
-      pictureSource: input.pictureSource,
-      pictureUrl,
-      updatedAt: new Date(),
-    })
-    .where(eq(applications.id, current.application.id))
-    .returning();
 
   const values = {
     fullName: input.fullName,
@@ -513,6 +513,57 @@ export const submitAcceptedDetails = async (
       target: acceptanceDetails.applicationId,
       set: values,
     })
+    .returning();
+  if (current.details?.completedAt) {
+    const badgeUpdate = db
+      .insert(participantBadges)
+      .values({
+        applicationId: current.application.id,
+        status: "pending",
+        generationId: null,
+        triggerRunId: null,
+        pictureSource: input.pictureSource,
+        pictureUrl,
+      })
+      .onConflictDoUpdate({
+        target: participantBadges.applicationId,
+        set: {
+          status: "pending",
+          generationId: null,
+          triggerRunId: null,
+          pictureSource: input.pictureSource,
+          pictureUrl,
+          error: null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    const [badgeRows, detailsRows] = await db.batch([
+      badgeUpdate,
+      detailsUpdate,
+    ]);
+    const [badge] = badgeRows;
+    const [details] = detailsRows;
+    if (!badge) throw new Error("Badge picture update returned no row");
+    if (!details) throw new Error("Acceptance details update returned no row");
+    return resultFor(
+      {
+        ...current.application,
+        pictureSource: input.pictureSource,
+        pictureUrl,
+      },
+      details,
+    );
+  }
+
+  const applicationUpdate = db
+    .update(applications)
+    .set({
+      pictureSource: input.pictureSource,
+      pictureUrl,
+      updatedAt: new Date(),
+    })
+    .where(eq(applications.id, current.application.id))
     .returning();
   const [applicationRows, detailsRows] = await db.batch([
     applicationUpdate,
@@ -583,6 +634,8 @@ export const changePictureSource = async (
     .values({
       applicationId: current.application.id,
       status: "pending",
+      generationId: null,
+      triggerRunId: null,
       pictureSource,
       pictureUrl,
     })
@@ -592,6 +645,9 @@ export const changePictureSource = async (
         pictureSource,
         pictureUrl,
         status: "pending",
+        generationId: null,
+        triggerRunId: null,
+        error: null,
         updatedAt: new Date(),
       },
     });

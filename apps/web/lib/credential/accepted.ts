@@ -144,16 +144,15 @@ export const portraitFor = (accepted: AcceptedParticipant): PortraitChoice => {
 /**
  * The same participant, as the thing the card prints.
  *
- * Draws the proposal when nothing is confirmed, so somebody sees their
- * own face the first time they open the page rather than their initials
- * and no explanation. Whether it is settled is a separate question, and
- * `portraitFor` is where the page asks it.
+ * Draws only the confirmed picture. The separate picker may preview a
+ * GitHub proposal, but the credential itself stays on initials until its
+ * owner explicitly selects a source.
  */
 export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   name: accepted.name,
   oneLiner: accepted.oneLiner,
   organization: accepted.organization,
-  pictureUrl: portraitFor(accepted).url,
+  pictureUrl: accepted.pictureUrl,
   portraitUrl: accepted.portraitUrl,
   placement: accepted.placement,
   linkUrl: accepted.linkUrl,

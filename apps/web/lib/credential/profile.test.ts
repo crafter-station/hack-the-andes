@@ -64,8 +64,10 @@ describe("badge profile", () => {
       pictureUrl: "https://images.example/badge.png",
       portraitUrl: null,
     });
-    expect(
-      badgeOneLinerFor("A description that cannot fit on one line"),
-    ).toEndWith("…");
+    const oneLiner = badgeOneLinerFor(
+      "A description that cannot fit on one line",
+    );
+    expect(oneLiner).toEndWith("…");
+    expect(oneLiner.length).toBeLessThanOrEqual(30);
   });
 });
