@@ -3,6 +3,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
 
+import { rootValueFlagNames } from "./cli-root.js";
+
 export const cliPackageName = "chofex-cli";
 export const upgradeVersion = "latest";
 const npmRegistryUrl = `https://registry.npmjs.org/${cliPackageName}/latest`;
@@ -296,7 +298,9 @@ const pathIsInside = (parent: string, child: string): boolean => {
   );
 };
 
-const rootFlagsWithValues = new Set(["--api-url", "--output", "--token"]);
+const rootFlagsWithValues = new Set(
+  Object.values(rootValueFlagNames).map((name) => `--${name}`),
+);
 
 const requestedCommand = (
   arguments_: ReadonlyArray<string>,
