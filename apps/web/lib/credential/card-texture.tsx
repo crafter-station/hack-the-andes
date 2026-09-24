@@ -17,7 +17,7 @@
  */
 
 import { brandColors } from "@chofex/ui/lib/brand-theme";
-import { ImageResponse } from "next/og";
+import { ImageResponse } from "next/og.js";
 import QRCode from "qrcode";
 import {
   type Credential,
