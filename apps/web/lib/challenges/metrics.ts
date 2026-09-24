@@ -2,7 +2,7 @@ import { playableChallenges } from "@chofex/challenges-contract";
 import type { db } from "@chofex/db";
 import { type SQL, sql } from "@chofex/db/orm";
 
-import { currentChallengeVersion } from "./engine";
+import { currentChallengeVersionFor } from "./engine";
 
 export interface ChallengeActivityCounts {
   readonly completed: number;
@@ -23,20 +23,29 @@ const metricsDatabase = async (
   return (await import("@chofex/db")).db;
 };
 
-const playableChallengeSlugList = (): SQL | undefined => {
-  const playableSlugs = playableChallenges.map((challenge) => challenge.slug);
-  if (playableSlugs.length === 0) return undefined;
-  return sql.join(
-    playableSlugs.map((slug) => sql`${slug}`),
-    sql.raw(", "),
-  );
+const currentPlayableChallengeCondition = (
+  slugColumn: SQL,
+  versionColumn: SQL,
+): SQL | undefined => {
+  const conditions = playableChallenges.flatMap((challenge) => {
+    const version = currentChallengeVersionFor(challenge.slug);
+    if (!version) return [];
+    return [
+      sql`(${slugColumn} = ${challenge.slug} and ${versionColumn} = ${version})`,
+    ];
+  });
+  if (conditions.length === 0) return undefined;
+  return sql`(${sql.join(conditions, sql.raw(" or "))})`;
 };
 
 export const completedChallengeParticipantCondition = (
   participantId: SQL,
 ): SQL => {
-  const playableSlugList = playableChallengeSlugList();
-  if (!playableSlugList) return sql`false`;
+  const challengeCondition = currentPlayableChallengeCondition(
+    sql`"completed_challenge_attempt"."challenge_slug"`,
+    sql`"completed_challenge_attempt"."challenge_version"`,
+  );
+  if (!challengeCondition) return sql`false`;
 
   return sql<boolean>`exists (
     select 1
@@ -44,23 +53,24 @@ export const completedChallengeParticipantCondition = (
     inner join "challenge_evaluations" as "completed_challenge_evaluation"
       on "completed_challenge_evaluation"."attempt_id" = "completed_challenge_attempt"."id"
     where "completed_challenge_attempt"."participant_id" = ${participantId}
-      and "completed_challenge_attempt"."challenge_version" = ${currentChallengeVersion}
-      and "completed_challenge_attempt"."challenge_slug" in (${playableSlugList})
+      and ${challengeCondition}
   )`;
 };
 
 export const startedChallengeParticipantCondition = (
   participantId: SQL,
 ): SQL => {
-  const playableSlugList = playableChallengeSlugList();
-  if (!playableSlugList) return sql`false`;
+  const challengeCondition = currentPlayableChallengeCondition(
+    sql`"started_challenge_attempt"."challenge_slug"`,
+    sql`"started_challenge_attempt"."challenge_version"`,
+  );
+  if (!challengeCondition) return sql`false`;
 
   return sql<boolean>`exists (
     select 1
     from "challenge_attempts" as "started_challenge_attempt"
     where "started_challenge_attempt"."participant_id" = ${participantId}
-      and "started_challenge_attempt"."challenge_version" = ${currentChallengeVersion}
-      and "started_challenge_attempt"."challenge_slug" in (${playableSlugList})
+      and ${challengeCondition}
       and (
         "started_challenge_attempt"."queries_used" > 0
         or "started_challenge_attempt"."evaluations_used" > 0
@@ -71,8 +81,11 @@ export const startedChallengeParticipantCondition = (
 export const challengeActivityCounts = async (
   database?: ChallengeMetricsDatabase,
 ): Promise<ChallengeActivityCounts> => {
-  const playableSlugList = playableChallengeSlugList();
-  if (!playableSlugList) return { completed: 0, inProgress: 0 };
+  const challengeCondition = currentPlayableChallengeCondition(
+    sql`attempt."challenge_slug"`,
+    sql`attempt."challenge_version"`,
+  );
+  if (!challengeCondition) return { completed: 0, inProgress: 0 };
   const client = await metricsDatabase(database);
   const result = await client.execute<ChallengeActivityCountsRow>(sql`
     select
@@ -97,8 +110,7 @@ export const challengeActivityCounts = async (
       )::integer as "in_progress"
     from "challenge_attempts" as attempt
     where
-      attempt."challenge_version" = ${currentChallengeVersion}
-      and attempt."challenge_slug" in (${playableSlugList})
+      ${challengeCondition}
       and exists (
         select 1
         from "applications" as application

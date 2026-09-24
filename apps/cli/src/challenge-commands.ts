@@ -173,7 +173,7 @@ const challengeFlag = Flag.string("challenge").pipe(
 
 const sourceFlag = optionalString(
   "source",
-  "JavaScript file defining function calculateShipping(input)",
+  "JavaScript challenge solution file",
 );
 
 const inputFlag = optionalString("input", "JSON file, or - for stdin");
@@ -197,6 +197,28 @@ const booleanFromOption = (
 };
 
 const challengeInitText = (result: ChallengeScaffoldResult): string => {
+  if (result.challenge === "broken-agent") {
+    if (result.status === "exists") {
+      return [
+        `${result.path} already exists. Left it unchanged.`,
+        "",
+        "Next: keep hardening your scheduler, then run the public tests",
+        `  cd ${result.path} && npm test`,
+        `  chofex challenge test --challenge broken-agent --source ./${result.path}/scheduler.js`,
+      ].join("\n");
+    }
+    return [
+      `Created ${result.path}`,
+      "The previous agent says the scheduler is done. Everything passes.",
+      "Unfortunately, the agent was wrong.",
+      "",
+      "Start with the public contract and tests:",
+      `  cd ${result.path} && npm test`,
+      "",
+      "Then repair scheduler.js and test it safely:",
+      `  chofex challenge test --challenge broken-agent --source ./${result.path}/scheduler.js`,
+    ].join("\n");
+  }
   if (result.status === "exists") {
     return [
       `${result.path} already exists. Left it unchanged.`,
@@ -243,13 +265,13 @@ const listCommand = Command.make(
 
 const initCommand = Command.make(
   "init",
-  {},
-  Effect.fn("challengeInitCommand")(function* () {
+  { challenge: challengeFlag },
+  Effect.fn("challengeInitCommand")(function* ({ challenge }) {
     const options = yield* root;
-    const participationState = participationStateFor(defaultChallengeSlug);
+    const participationState = participationStateFor(challenge);
     if (participationState !== "open") {
       const message =
-        launchNoticeFor(defaultChallengeSlug) ??
+        launchNoticeFor(challenge) ??
         "El challenge todavía no está disponible.";
       let code = "CHALLENGE_NOT_OPEN";
       if (participationState === "closed") code = "CHALLENGE_CLOSED";
@@ -260,7 +282,7 @@ const initCommand = Command.make(
       );
       return;
     }
-    const operation = createChallengeScaffold().pipe(
+    const operation = createChallengeScaffold(challenge).pipe(
       Effect.map((data) => ({
         version: 1 as const,
         ok: true as const,
@@ -272,12 +294,16 @@ const initCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Create a documented shipping.js starter in the current directory. Existing files are never overwritten.",
+    "Create a challenge starter without overwriting existing work.",
   ),
   Command.withExamples([
     {
       command: "chofex challenge init",
       description: "Prepare a safe JavaScript solution file",
+    },
+    {
+      command: "chofex challenge init --challenge broken-agent",
+      description: "Prepare the Broken Agent starter repository",
     },
   ]),
 );
@@ -413,6 +439,7 @@ const testCommand = Command.make(
     const operation = Effect.gen(function* () {
       const solution = yield* javascriptSourceFromPath(
         Option.getOrUndefined(source),
+        challenge,
       );
       return yield* testChallenge(
         { apiUrl: options.apiUrl, token },
@@ -424,7 +451,7 @@ const testCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Check calculateShipping against your saved observations. Safe to repeat; official evaluations are not consumed. Requires sign-in.",
+    "Run the challenge's public tests. Safe to repeat; official evaluations are not consumed. Requires sign-in.",
   ),
   Command.withExamples([
     {
@@ -443,6 +470,7 @@ const evaluateCommand = Command.make(
     const operation = Effect.gen(function* () {
       const solution = yield* javascriptSourceFromPath(
         Option.getOrUndefined(source),
+        challenge,
       );
       return yield* evaluateChallenge(
         { apiUrl: options.apiUrl, token },
@@ -454,7 +482,7 @@ const evaluateCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Score calculateShipping on hidden cases. This consumes one limited official evaluation. Requires sign-in.",
+    "Score a solution on hidden cases. This consumes one limited official evaluation. Requires sign-in.",
   ),
   Command.withExamples([
     {

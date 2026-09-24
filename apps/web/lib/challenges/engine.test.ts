@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { Shipment } from "@chofex/challenges-contract";
 
 import {
+  brokenAgentChallengeVersion,
   ChallengeEngineError,
   createChallengeEngine,
   currentChallengeVersion,
@@ -33,6 +34,15 @@ describe("private challenge engine adapter", () => {
           meanError: 1.25,
           queriesUsed: 7,
           runtimeMs: 12,
+          breakdown: {
+            coreBehavior: { earned: 10, available: 10 },
+            persistence: { earned: 12, available: 15 },
+            concurrency: { earned: 16, available: 20 },
+            failureRecovery: { earned: 14, available: 20 },
+            idempotency: { earned: 15, available: 15 },
+            regressionSafety: { earned: 13, available: 15 },
+            performance: { earned: 5, available: 5 },
+          },
         },
       });
     };
@@ -45,6 +55,7 @@ describe("private challenge engine adapter", () => {
     await expect(engine.query("participant_1", shipment)).resolves.toBe(14);
     await expect(
       engine.evaluate(
+        currentChallengeVersion,
         "participant_1",
         "function calculateShipping() { return 10; }",
         7,
@@ -56,6 +67,15 @@ describe("private challenge engine adapter", () => {
       meanError: 1.25,
       queriesUsed: 7,
       runtimeMs: 12,
+      breakdown: {
+        coreBehavior: { earned: 10, available: 10 },
+        persistence: { earned: 12, available: 15 },
+        concurrency: { earned: 16, available: 20 },
+        failureRecovery: { earned: 14, available: 20 },
+        idempotency: { earned: 15, available: 15 },
+        regressionSafety: { earned: 13, available: 15 },
+        performance: { earned: 5, available: 5 },
+      },
     });
 
     expect(requests).toHaveLength(2);
@@ -71,6 +91,10 @@ describe("private challenge engine adapter", () => {
       challengeVersion: currentChallengeVersion,
       participantKey: "participant_1",
       input: shipment,
+    });
+
+    expect(JSON.parse(String(requests[1]?.init.body))).toMatchObject({
+      challengeVersion: currentChallengeVersion,
     });
   });
 
@@ -92,7 +116,12 @@ describe("private challenge engine adapter", () => {
     });
 
     await expect(
-      engine.evaluate("participant_1", "const value = 1", 2),
+      engine.evaluate(
+        brokenAgentChallengeVersion,
+        "participant_1",
+        "const value = 1",
+        0,
+      ),
     ).rejects.toEqual(
       new ChallengeEngineError(
         422,

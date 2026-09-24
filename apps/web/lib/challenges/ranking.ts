@@ -16,12 +16,15 @@ import {
 import { HttpError } from "../registration/http";
 import { catalogItemFor } from "./catalog";
 import { challengesForceOpen, currentChallengeTime } from "./clock";
-import { currentChallengeVersion } from "./engine";
+import { currentChallengeVersionFor } from "./engine";
 import { rankingDisplayName } from "./names";
-import { competitionRanks, publicRankingEntries } from "./ranking-policy";
+import {
+  competitionRanksForEvaluations,
+  publicRankingEntries,
+} from "./ranking-policy";
 import { scoreFromStored } from "./score";
 
-interface RankedEvaluation {
+export interface RankedEvaluation {
   readonly attemptId: string;
   readonly participantId: string;
   readonly shareCode: string;
@@ -41,11 +44,14 @@ const compareRanked = (
 export const rankedEvaluationsFor = async (
   slug: string,
 ): Promise<Array<RankedEvaluation>> => {
+  const challengeVersion = currentChallengeVersionFor(slug);
+  if (!challengeVersion) return [];
   const rows = await db
     .select({
       attemptId: challengeAttempts.id,
       participantId: challengeAttempts.participantId,
       shareCode: challengeAttempts.shareCode,
+      evaluationsUsed: challengeAttempts.evaluationsUsed,
       evaluation: challengeEvaluations,
     })
     .from(challengeAttempts)
@@ -56,7 +62,7 @@ export const rankedEvaluationsFor = async (
     .where(
       and(
         eq(challengeAttempts.challengeSlug, slug),
-        eq(challengeAttempts.challengeVersion, currentChallengeVersion),
+        eq(challengeAttempts.challengeVersion, challengeVersion),
       ),
     );
 
@@ -65,7 +71,10 @@ export const rankedEvaluationsFor = async (
       attemptId: row.attemptId,
       participantId: row.participantId,
       shareCode: row.shareCode,
-      score: scoreFromStored(row.evaluation),
+      score: {
+        ...scoreFromStored(row.evaluation),
+        evaluationsUsed: row.evaluationsUsed,
+      },
       evaluatedAt: row.evaluation.createdAt,
     }))
     .sort(compareRanked);
@@ -77,7 +86,7 @@ export const rankForAttempt = (
 ): { rank: number; competitorCount: number } | undefined => {
   const index = ranked.findIndex((row) => row.attemptId === attemptId);
   if (index < 0) return undefined;
-  const ranks = competitionRanks(ranked.map((row) => row.score));
+  const ranks = competitionRanksForEvaluations(ranked);
   return { rank: ranks[index] ?? 1, competitorCount: ranked.length };
 };
 
@@ -132,7 +141,7 @@ export const getChallengeRanking = async (
     }
   }
 
-  const ranks = competitionRanks(ranked.map((row) => row.score));
+  const ranks = competitionRanksForEvaluations(ranked);
   const publicRanked = publicRankingEntries(ranked);
   const entries: Array<ChallengeRankingEntry> = publicRanked.map(
     (row, index) => {

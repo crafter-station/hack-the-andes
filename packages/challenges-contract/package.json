@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./broken-agent": "./src/broken-agent.ts"
   },
   "scripts": {
     "lint": "biome lint --error-on-warnings .",

@@ -88,6 +88,12 @@ without a subcommand for the guided quick start. The currently implemented
 Black Box challenge asks participants to reverse-engineer a personalized
 shipping-price service with limited queries and evaluations.
 
+Broken Agent starts from an AI-generated job scheduler whose public tests are
+already green. Participants harden one `scheduler.js` implementation against
+hidden concurrency, persistence, recovery, idempotency, compatibility, and load
+scenarios. The contract is public, AI tools are allowed, and five official
+evaluations return capability-level scores without revealing individual cases.
+
 ```sh
 chofex challenge
 chofex challenge list
@@ -98,12 +104,19 @@ chofex challenge notebook
 chofex challenge test --source ./shipping.js
 chofex challenge evaluate --source ./shipping.js
 chofex challenge ranking
+
+chofex challenge init --challenge broken-agent
+cd broken-agent && npm test
+chofex challenge test --challenge broken-agent --source ./scheduler.js
+chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
+chofex challenge ranking --challenge broken-agent
 ```
 
 `list` and `ranking` are public. The other networked challenge commands require
-sign-in. `test` checks only saved notebook observations, is repeatable, and does
-not consume an official evaluation; `query` and `evaluate` use limited attempt
-budgets.
+sign-in. For Black Box, `test` checks only saved notebook observations. For
+Broken Agent, it runs the four visible behavioral tests. Both are repeatable and
+do not consume an official evaluation; `query` and `evaluate` use limited
+attempt budgets.
 
 ### Agent and script usage
 

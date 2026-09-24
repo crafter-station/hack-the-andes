@@ -1,4 +1,6 @@
 import {
+  blackBoxChallengeSlug,
+  brokenAgentChallengeSlug,
   type ChallengeAttemptView,
   type ChallengeCatalogItem,
   type ChallengeDefinition,
@@ -29,12 +31,13 @@ import { Schema } from "effect";
 import { isUniqueViolation } from "../db-errors";
 import { HttpError } from "../registration/http";
 import { participantIdFor } from "../registration/participants";
+import { runBrokenAgentPublicTests } from "./broken-agent-public";
 import { catalogItemFor, rankingPathFor } from "./catalog";
 import { challengesForceOpen, currentChallengeTime } from "./clock";
 import {
   ChallengeEngineError,
   challengeEngine,
-  currentChallengeVersion,
+  currentChallengeVersionFor,
 } from "./engine";
 import { isConfirmedSolutionExecutionFailure } from "./failure-policy";
 import { requireChallengeParticipationOpen } from "./participation-policy";
@@ -44,7 +47,7 @@ import {
   earliestChallengeCompletionAt,
 } from "./progress";
 import { rankedEvaluationsFor, rankForAttempt } from "./ranking";
-import { competitionRanks } from "./ranking-policy";
+import { competitionRanksForEvaluations } from "./ranking-policy";
 import {
   type ChallengeReservation,
   completeEvaluationReservation,
@@ -131,7 +134,10 @@ const requireImplementedChallenge = (
   now: Date,
 ): ChallengeDefinition => {
   const challenge = requirePlayableChallenge(slug, now);
-  if (challenge.slug !== "black-box") {
+  if (
+    challenge.slug !== blackBoxChallengeSlug &&
+    challenge.slug !== brokenAgentChallengeSlug
+  ) {
     throw new HttpError(
       404,
       "CHALLENGE_NOT_AVAILABLE",
@@ -141,13 +147,26 @@ const requireImplementedChallenge = (
   return challenge;
 };
 
+const versionForChallenge = (challenge: ChallengeDefinition): string => {
+  const version = currentChallengeVersionFor(challenge.slug);
+  if (!version) {
+    throw new HttpError(
+      404,
+      "CHALLENGE_NOT_AVAILABLE",
+      `${challenge.title} is not available yet`,
+    );
+  }
+  return version;
+};
+
 const createAttempt = async (
   participantId: string,
   challenge: ChallengeDefinition,
 ): Promise<AttemptRecord> => {
+  const challengeVersion = versionForChallenge(challenge);
   const seed = attemptSeed(
     participantId,
-    `${challenge.slug}:${currentChallengeVersion}`,
+    `${challenge.slug}:${challengeVersion}`,
   );
   for (let length = 4; length <= 8; length += 1) {
     try {
@@ -156,7 +175,7 @@ const createAttempt = async (
         .values({
           participantId,
           challengeSlug: challenge.slug,
-          challengeVersion: currentChallengeVersion,
+          challengeVersion,
           shareCode: shareCodeFromSeed(seed, length),
           queriesLimit: challenge.queryLimit,
           evaluationsLimit: challenge.evaluationLimit,
@@ -172,7 +191,7 @@ const createAttempt = async (
           and(
             eq(challengeAttempts.participantId, participantId),
             eq(challengeAttempts.challengeSlug, challenge.slug),
-            eq(challengeAttempts.challengeVersion, currentChallengeVersion),
+            eq(challengeAttempts.challengeVersion, challengeVersion),
           ),
         )
         .limit(1);
@@ -186,6 +205,7 @@ const attemptFor = async (
   participantId: string,
   challenge: ChallengeDefinition,
 ): Promise<AttemptRecord> => {
+  const challengeVersion = versionForChallenge(challenge);
   const [existing] = await db
     .select()
     .from(challengeAttempts)
@@ -193,7 +213,7 @@ const attemptFor = async (
       and(
         eq(challengeAttempts.participantId, participantId),
         eq(challengeAttempts.challengeSlug, challenge.slug),
-        eq(challengeAttempts.challengeVersion, currentChallengeVersion),
+        eq(challengeAttempts.challengeVersion, challengeVersion),
       ),
     )
     .limit(1);
@@ -285,6 +305,22 @@ const shareTextFor = (
   },
 ): string => {
   const accuracyPercent = (result.accuracy * 100).toFixed(2);
+  if (challenge.slug === brokenAgentChallengeSlug) {
+    const lines = [
+      `🛠️ BROKEN AGENT #${result.shareCode}`,
+      `${accuracyPercent} production readiness`,
+      `${challenge.evaluationLimit} official evaluations available`,
+    ];
+    if (result.rank !== undefined && result.competitorCount !== undefined) {
+      const topPercent = percentileFor(
+        result.rank,
+        result.competitorCount,
+      ).toFixed(1);
+      lines.push(`Top ${topPercent}%`);
+    }
+    lines.push("The public tests were green. Would you ship it?");
+    return lines.join("\n");
+  }
   const lines = [
     `🕵️ BLACK BOX #${result.shareCode}`,
     `${accuracyPercent}% replication`,
@@ -366,26 +402,15 @@ const loadChallengeActivityForParticipants = async (
     };
   }
 
-  let allAttempts: ReadonlyArray<AttemptRecord>;
-  if (includeHistory) {
-    allAttempts = await db
-      .select()
-      .from(challengeAttempts)
-      .where(inArray(challengeAttempts.participantId, uniqueParticipantIds));
-  } else {
-    allAttempts = await db
-      .select()
-      .from(challengeAttempts)
-      .where(
-        and(
-          inArray(challengeAttempts.participantId, uniqueParticipantIds),
-          eq(challengeAttempts.challengeVersion, currentChallengeVersion),
-        ),
-      );
-  }
-  const attempts = allAttempts.filter(
-    (attempt) => attempt.challengeVersion === currentChallengeVersion,
-  );
+  const loadedAttempts = await db
+    .select()
+    .from(challengeAttempts)
+    .where(inArray(challengeAttempts.participantId, uniqueParticipantIds));
+  const attempts = loadedAttempts.filter((attempt) => {
+    const currentVersion = currentChallengeVersionFor(attempt.challengeSlug);
+    return attempt.challengeVersion === currentVersion;
+  });
+  const allAttempts = includeHistory ? loadedAttempts : attempts;
 
   const attemptIds = allAttempts.map((attempt) => attempt.id);
   let evaluations: ReadonlyArray<EvaluationRecord> = [];
@@ -431,7 +456,7 @@ const loadChallengeActivityForParticipants = async (
   );
   const rankByAttemptId = new Map<string, number>();
   for (const [, ranked] of rankings) {
-    const ranks = competitionRanks(ranked.map((entry) => entry.score));
+    const ranks = competitionRanksForEvaluations(ranked);
     for (const [index, entry] of ranked.entries()) {
       rankByAttemptId.set(entry.attemptId, ranks[index] ?? 1);
     }
@@ -526,6 +551,7 @@ export const getChallengeAttempt = async (
   now: Date = currentChallengeTime(),
 ): Promise<ChallengeAttemptView> => {
   const challenge = requireChallenge(slug);
+  const challengeVersion = versionForChallenge(challenge);
   const participantId = await participantIdFor(clerkUserId);
   const item = catalogItemFor(challenge, now, challengesForceOpen());
   const rankingVisible = isChallengeRankingVisibleAt(challenge, now);
@@ -536,7 +562,7 @@ export const getChallengeAttempt = async (
       and(
         eq(challengeAttempts.participantId, participantId),
         eq(challengeAttempts.challengeSlug, challenge.slug),
-        eq(challengeAttempts.challengeVersion, currentChallengeVersion),
+        eq(challengeAttempts.challengeVersion, challengeVersion),
       ),
     )
     .limit(1);
@@ -585,14 +611,20 @@ export const getChallengeAttempt = async (
     };
   }
 
+  let localTestHint =
+    "Test against your notebook with `chofex challenge test --challenge black-box --source ./shipping.js`. Official evaluation consumes one attempt.";
+  if (challenge.slug === brokenAgentChallengeSlug) {
+    localTestHint =
+      "Run `npm test` inside broken-agent, then use `chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js`. Public tests are unlimited.";
+  }
+
   return {
     challenge: item,
     progress,
     observations,
     latestEvaluation,
     aiAllowed: true,
-    localTestHint:
-      "Test against your notebook with `chofex challenge test --challenge black-box --source ./shipping.js`. Official evaluation consumes one attempt.",
+    localTestHint,
   };
 };
 
@@ -603,6 +635,13 @@ export const queryChallenge = async (
   now: Date = currentChallengeTime(),
 ): Promise<ChallengeQueryResult> => {
   const challenge = requireImplementedChallenge(slug, now);
+  if (challenge.slug !== blackBoxChallengeSlug) {
+    throw new HttpError(
+      404,
+      "QUERY_NOT_AVAILABLE",
+      `${challenge.title} does not use oracle queries`,
+    );
+  }
   const input = parseInput(ShipmentSchema, rawInput) as Shipment;
   const participantId = await participantIdFor(clerkUserId);
   const attempt = await attemptFor(participantId, challenge);
@@ -664,6 +703,9 @@ export const testChallengeSolution = async (
   const solution = parseInput(ChallengeSolutionSchema, rawInput);
   const participantId = await participantIdFor(clerkUserId);
   const attempt = await attemptFor(participantId, challenge);
+  if (challenge.slug === brokenAgentChallengeSlug) {
+    return runBrokenAgentPublicTests(solution.source);
+  }
   const observations = await loadObservations(attempt.id);
   if (observations.length === 0) {
     throw new HttpError(
@@ -739,7 +781,10 @@ export const evaluateChallenge = async (
 
   let score: ChallengeScore;
   try {
+    const challengeVersion = currentChallengeVersionFor(challenge.slug);
+    if (!challengeVersion) throw engineUnavailableError();
     score = await challengeEngine().evaluate(
+      challengeVersion,
       attempt.id,
       solution.source,
       reservation.queriesUsed,

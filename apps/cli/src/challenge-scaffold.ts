@@ -1,5 +1,13 @@
-import { writeFile } from "node:fs/promises";
-
+import { mkdir, writeFile } from "node:fs/promises";
+import { challengeBySlug } from "@chofex/challenges-contract";
+import {
+  brokenAgentPackageJson,
+  brokenAgentPublicTestSource,
+  brokenAgentReadme,
+  brokenAgentScaffoldDirectory,
+  brokenAgentSolutionPath,
+  brokenAgentStarterSource,
+} from "@chofex/challenges-contract/broken-agent";
 import { Effect, Predicate } from "effect";
 
 import { type CliError, cliError } from "./errors.js";
@@ -27,12 +35,75 @@ function calculateShipping(input) {
 `;
 
 export interface ChallengeScaffoldResult {
-  readonly path: typeof solutionPath;
+  readonly challenge: string;
+  readonly path: string;
   readonly status: "created" | "exists";
 }
 
 export const createChallengeScaffold = Effect.fn("createChallengeScaffold")(
-  function* (): Effect.fn.Return<ChallengeScaffoldResult, CliError> {
+  function* (
+    challengeSlug = "black-box",
+  ): Effect.fn.Return<ChallengeScaffoldResult, CliError> {
+    const challenge = challengeBySlug(challengeSlug);
+    if (!challenge?.playable) {
+      return yield* Effect.fail(
+        cliError(
+          "CHALLENGE_NOT_AVAILABLE",
+          `Challenge ${challengeSlug} is not available`,
+        ),
+      );
+    }
+
+    if (challengeSlug === "broken-agent") {
+      const status = yield* Effect.tryPromise({
+        try: async () => {
+          await mkdir(brokenAgentScaffoldDirectory);
+          await Promise.all([
+            writeFile(
+              brokenAgentSolutionPath,
+              brokenAgentStarterSource,
+              "utf8",
+            ),
+            writeFile(
+              `${brokenAgentScaffoldDirectory}/scheduler.test.js`,
+              brokenAgentPublicTestSource,
+              "utf8",
+            ),
+            writeFile(
+              `${brokenAgentScaffoldDirectory}/README.md`,
+              brokenAgentReadme,
+              "utf8",
+            ),
+            writeFile(
+              `${brokenAgentScaffoldDirectory}/package.json`,
+              brokenAgentPackageJson,
+              "utf8",
+            ),
+          ]);
+          return "created" as const;
+        },
+        catch: (error) => error,
+      }).pipe(
+        Effect.catch((error) => {
+          if (Predicate.hasProperty(error, "code") && error.code === "EEXIST") {
+            return Effect.succeed("exists" as const);
+          }
+          return Effect.fail(
+            cliError(
+              "SCAFFOLD_FAILED",
+              `Could not create ${brokenAgentScaffoldDirectory}: ${String(error)}`,
+            ),
+          );
+        }),
+      );
+
+      return {
+        challenge: challengeSlug,
+        path: brokenAgentScaffoldDirectory,
+        status,
+      };
+    }
+
     const status = yield* Effect.tryPromise({
       try: async () => {
         await writeFile(solutionPath, starterSource, {
@@ -56,6 +127,6 @@ export const createChallengeScaffold = Effect.fn("createChallengeScaffold")(
       }),
     );
 
-    return { path: solutionPath, status };
+    return { challenge: challengeSlug, path: solutionPath, status };
   },
 );

@@ -168,12 +168,12 @@ export const qualifierChallengesCopy = {
   tracksBody: `Son ${trackCount} temas para construir en equipo durante 30 horas. Los eliges presencialmente en Lima.`,
   challengesLabel: "Challenges / antes del evento",
   challengesBody: `Resuelve una de las ${qualifierChallengeCount} pruebas, sube al ranking y compite por un pase directo al evento.`,
-  liveKicker: "Challenge 1 / cerrado",
-  liveTitle: "The Shipping Machine",
+  liveKicker: "Challenge 2 / nuevo",
+  liveTitle: "The Scheduler",
   liveBody:
-    "El primer challenge puso a prueba cómo investigar una máquina de precios, descubrir sus reglas y construir un reemplazo compatible.",
-  liveMeta: "Ranking final · Top 17",
-  liveCta: "Ver ranking →",
+    "Un agente dice que terminó un job scheduler. Todos los tests pasan. Haz que realmente esté listo para producción.",
+  liveMeta: "4 tests verdes · 5 evaluaciones oficiales · AI permitida",
+  liveCta: "Competir por un pase →",
 } as const;
 
 export const peopleCopy = {

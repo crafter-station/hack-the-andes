@@ -76,7 +76,7 @@ export function LandingQualifierChallenges() {
                 size: "landing",
                 className: "mt-8",
               })}
-              href="/challenges/black-box"
+              href="/challenges/broken-agent"
             >
               {qualifierChallengesCopy.liveCta}
             </Link>

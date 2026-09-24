@@ -332,13 +332,17 @@ export const completeEvaluationReservation = async (
   database?: ReservationDatabase,
 ): Promise<CompletedEvaluation | undefined> => {
   const client = await reservationDatabase(database);
+  let storedSolution: Record<string, unknown> = { ...solution };
+  if (score.breakdown) {
+    storedSolution = { ...storedSolution, scoreBreakdown: score.breakdown };
+  }
   const result = await client.execute<CompletedEvaluationRow>(sql`
     select *
     from "complete_challenge_evaluation"(
       ${reservation.id},
       ${reservation.attemptId},
       ${solution.kind},
-      ${JSON.stringify(solution)}::jsonb,
+      ${JSON.stringify(storedSolution)}::jsonb,
       ${score.accuracy},
       ${score.exactCount},
       ${score.sampleSize},

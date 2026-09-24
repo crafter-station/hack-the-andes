@@ -7,6 +7,8 @@ import type * as PromptModule from "effect/unstable/cli/Prompt";
 
 import { CliError, cliError } from "./errors.js";
 
+export const defaultChallengeSlug = "black-box";
+
 const readStdin = async (): Promise<string> => {
   const chunks: Array<Buffer> = [];
   for await (const chunk of process.stdin) {
@@ -30,12 +32,16 @@ export const readTextFile = (path: string): Effect.Effect<string, CliError> =>
 
 export const javascriptSourceFromPath = (
   path: string | undefined,
+  challenge = defaultChallengeSlug,
 ): Effect.Effect<{ kind: "javascript_source"; source: string }, CliError> => {
   if (!path) {
+    let expectedFunction = "calculateShipping(input)";
+    if (challenge === "broken-agent")
+      expectedFunction = "createScheduler(dependencies)";
     return Effect.fail(
       cliError(
         "SOURCE_REQUIRED",
-        "Pass --source <file.js> with function calculateShipping(input)",
+        `Pass --source <file.js> with function ${expectedFunction}`,
       ),
     );
   }
@@ -147,5 +153,3 @@ export const shipmentInput = (
   }
   return interactiveShipment();
 };
-
-export const defaultChallengeSlug = "black-box";

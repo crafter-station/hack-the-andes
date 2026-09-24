@@ -1,6 +1,24 @@
-import type { ChallengeScore, Shipment } from "@chofex/challenges-contract";
+import {
+  blackBoxChallengeSlug,
+  brokenAgentChallengeSlug,
+  type ChallengeScore,
+  type ChallengeScoreBreakdown,
+  type ChallengeSlug,
+  type Shipment,
+} from "@chofex/challenges-contract";
 
 export const currentChallengeVersion = "black-box-v2" as const;
+export const brokenAgentChallengeVersion = "broken-agent-v1" as const;
+export type CurrentChallengeVersion =
+  | typeof currentChallengeVersion
+  | typeof brokenAgentChallengeVersion;
+
+export const currentChallengeVersionFor = (
+  slug: ChallengeSlug | string,
+): CurrentChallengeVersion | undefined => {
+  if (slug === blackBoxChallengeSlug) return currentChallengeVersion;
+  if (slug === brokenAgentChallengeSlug) return brokenAgentChallengeVersion;
+};
 
 type Fetch = (
   input: string | URL | Request,
@@ -34,6 +52,51 @@ const finiteNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
 };
 
+const parseCapability = (
+  value: unknown,
+): { earned: number; available: number } | undefined => {
+  const capability = record(value);
+  const earned = finiteNumber(capability?.earned);
+  const available = finiteNumber(capability?.available);
+  if (earned === undefined || available === undefined) return;
+  return { earned, available };
+};
+
+const parseBreakdown = (
+  value: unknown,
+): ChallengeScoreBreakdown | undefined => {
+  if (value === undefined) return;
+  const breakdown = record(value);
+  if (!breakdown) return;
+  const coreBehavior = parseCapability(breakdown.coreBehavior);
+  const persistence = parseCapability(breakdown.persistence);
+  const concurrency = parseCapability(breakdown.concurrency);
+  const failureRecovery = parseCapability(breakdown.failureRecovery);
+  const idempotency = parseCapability(breakdown.idempotency);
+  const regressionSafety = parseCapability(breakdown.regressionSafety);
+  const performance = parseCapability(breakdown.performance);
+  if (
+    !coreBehavior ||
+    !persistence ||
+    !concurrency ||
+    !failureRecovery ||
+    !idempotency ||
+    !regressionSafety ||
+    !performance
+  ) {
+    return;
+  }
+  return {
+    coreBehavior,
+    persistence,
+    concurrency,
+    failureRecovery,
+    idempotency,
+    regressionSafety,
+    performance,
+  };
+};
+
 const parseError = (status: number, value: unknown): ChallengeEngineError => {
   const response = record(value);
   const error = record(response?.error);
@@ -56,6 +119,7 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
   const meanError = finiteNumber(score.meanError);
   const queriesUsed = finiteNumber(score.queriesUsed);
   const runtimeMs = finiteNumber(score.runtimeMs);
+  const breakdown = parseBreakdown(score.breakdown);
   if (
     accuracy === undefined ||
     exactCount === undefined ||
@@ -66,7 +130,7 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
   ) {
     return;
   }
-  return {
+  const parsed: ChallengeScore = {
     accuracy,
     exactCount,
     sampleSize,
@@ -74,6 +138,8 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
     queriesUsed,
     runtimeMs,
   };
+  if (breakdown) return { ...parsed, breakdown };
+  return parsed;
 };
 
 export const createChallengeEngine = (options: ChallengeEngineOptions) => {
@@ -135,6 +201,7 @@ export const createChallengeEngine = (options: ChallengeEngineOptions) => {
       return output;
     },
     evaluate: async (
+      challengeVersion: CurrentChallengeVersion,
       participantKey: string,
       source: string,
       queriesUsed: number,
@@ -142,7 +209,7 @@ export const createChallengeEngine = (options: ChallengeEngineOptions) => {
       const result = record(
         await post("/api/v1/evaluate", {
           version: 1,
-          challengeVersion: currentChallengeVersion,
+          challengeVersion,
           participantKey,
           source,
           queriesUsed,

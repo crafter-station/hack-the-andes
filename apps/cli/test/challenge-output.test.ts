@@ -129,6 +129,38 @@ describe("challenge output", () => {
     expect(text).toContain("BLACK BOX #7A3F");
   });
 
+  test("prints Broken Agent capability scores without hidden test names", () => {
+    const text = challengeEvaluateText({
+      accuracy: 0.82,
+      exactCount: 82,
+      sampleSize: 100,
+      meanError: 18,
+      queriesUsed: 0,
+      runtimeMs: 120,
+      shareCode: "SHIP",
+      evaluationsUsed: 2,
+      evaluationsRemaining: 3,
+      evaluationsLimit: 5,
+      rankingPath: "/challenges/broken-agent",
+      shareText: "82.00% production readiness",
+      breakdown: {
+        coreBehavior: { earned: 10, available: 10 },
+        persistence: { earned: 12, available: 15 },
+        concurrency: { earned: 16, available: 20 },
+        failureRecovery: { earned: 14, available: 20 },
+        idempotency: { earned: 13, available: 15 },
+        regressionSafety: { earned: 12, available: 15 },
+        performance: { earned: 5, available: 5 },
+      },
+    });
+
+    expect(text).toContain("BROKEN AGENT — PRODUCTION READINESS");
+    expect(text).toContain("82.00 / 100");
+    expect(text).toContain("Concurrency");
+    expect(text).toContain("16.00 / 20");
+    expect(text).not.toContain("worker_crash");
+  });
+
   test("still reports a persisted evaluation when ranking is unavailable", () => {
     const text = challengeEvaluateText({
       accuracy: 0.9,

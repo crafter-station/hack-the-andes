@@ -70,6 +70,19 @@ test("the public ranking does not reveal the hidden competitor count", async () 
   expect(ranking).toContain("competitorCount: entries.length");
 });
 
+test("the Broken Agent page publishes the contract without hidden cases", async () => {
+  const guide = await sourceFor("broken-agent-guide.tsx");
+  const ranking = await sourceFor("ranking-view.tsx");
+
+  expect(guide).toContain("Everything passes");
+  expect(guide).toContain("5 evaluaciones oficiales");
+  expect(guide).toContain("createScheduler");
+  expect(guide).toContain("npm test");
+  expect(guide).toContain("--challenge broken-agent");
+  expect(guide).not.toContain("worker_crash_after_side_effect");
+  expect(ranking).toContain("BrokenAgentChallengeGuide");
+});
+
 test("reviewer guidance recognizes challenge direct-pass winners", async () => {
   const dashboard = await sourceFor("../candidate-dashboard.tsx");
 

@@ -164,6 +164,51 @@ describe("CLI JSON mode", () => {
     }
   });
 
+  test("creates the Broken Agent starter repository without overwriting work", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "chofex-broken-agent-"));
+    const challengeDirectory = join(directory, "broken-agent");
+    const solutionPath = join(challengeDirectory, "scheduler.js");
+
+    try {
+      const created = await runCliFrom(
+        directory,
+        "challenge",
+        "init",
+        "--challenge",
+        "broken-agent",
+      );
+
+      expect(created.exitCode).toBe(0);
+      expect(created.stderr).toBe("");
+      expect(created.stdout).toContain("Created broken-agent");
+      expect(created.stdout).toContain("Everything passes");
+      expect(await readFile(solutionPath, "utf8")).toContain(
+        "function createScheduler",
+      );
+      expect(
+        await readFile(join(challengeDirectory, "README.md"), "utf8"),
+      ).toContain("Public contract");
+      expect(
+        await readFile(join(challengeDirectory, "scheduler.test.js"), "utf8"),
+      ).toContain('test("executes a due job"');
+
+      await writeFile(solutionPath, "// repaired by me\n", "utf8");
+      const repeated = await runCliFrom(
+        directory,
+        "challenge",
+        "init",
+        "--challenge",
+        "broken-agent",
+      );
+
+      expect(repeated.exitCode).toBe(0);
+      expect(repeated.stdout).toContain("broken-agent already exists");
+      expect(await readFile(solutionPath, "utf8")).toBe("// repaired by me\n");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test("documents the workflow and every challenge subcommand", async () => {
     const challengeHelp = await runCli("challenge", "--help");
 

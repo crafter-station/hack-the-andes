@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { ChallengeScore } from "@chofex/challenges-contract";
-import { competitionRanks, publicRankingEntries } from "./ranking-policy";
+import {
+  competitionRanks,
+  competitionRanksBy,
+  publicRankingEntries,
+} from "./ranking-policy";
 
 const score = (overrides: Partial<ChallengeScore> = {}): ChallengeScore => ({
   accuracy: 0.9,
@@ -29,5 +33,20 @@ describe("challenge ranking policy", () => {
     }));
 
     expect(publicRankingEntries(ranked)).toEqual(ranked.slice(0, 17));
+  });
+
+  test("supports final tie breakers that produce distinct ranks", () => {
+    const entries = [
+      { score: 100, submittedAt: 1 },
+      { score: 100, submittedAt: 2 },
+      { score: 90, submittedAt: 3 },
+    ];
+
+    expect(
+      competitionRanksBy(entries, (left, right) => {
+        if (left.score !== right.score) return right.score - left.score;
+        return left.submittedAt - right.submittedAt;
+      }),
+    ).toEqual([1, 2, 3]);
   });
 });

@@ -15,8 +15,12 @@ import {
 } from "./index.js";
 
 describe("challenge catalog", () => {
-  test("keeps Black Box playable and later challenges locked", () => {
-    expect(challengeBySlug("last-mile")?.playable).toBe(false);
+  test("keeps the first two challenges playable and later challenges locked", () => {
+    expect(challengeBySlug("broken-agent")?.playable).toBe(true);
+    expect(challengeBySlug("broken-agent")?.evaluationLimit).toBe(5);
+    expect(challengeBySlug("broken-agent")?.solutionKind).toBe(
+      "javascript_source",
+    );
     expect(challengeBySlug("black-box")?.queryLimit).toBe(25);
     expect(challengeBySlug("black-box")?.evaluationLimit).toBe(3);
   });
@@ -134,6 +138,35 @@ describe("challenge scoring", () => {
     expect(compareChallengeScores(score, { ...score, runtimeMs: 10_000 })).toBe(
       0,
     );
+  });
+
+  test("breaks Broken Agent ties by fewer evaluations and then runtime", () => {
+    const breakdown = {
+      coreBehavior: { earned: 10, available: 10 },
+      persistence: { earned: 15, available: 15 },
+      concurrency: { earned: 20, available: 20 },
+      failureRecovery: { earned: 20, available: 20 },
+      idempotency: { earned: 15, available: 15 },
+      regressionSafety: { earned: 15, available: 15 },
+      performance: { earned: 5, available: 5 },
+    };
+    const base = {
+      accuracy: 1,
+      exactCount: 100,
+      sampleSize: 100,
+      meanError: 0,
+      queriesUsed: 0,
+      runtimeMs: 50,
+      evaluationsUsed: 2,
+      breakdown,
+    };
+
+    expect(
+      compareChallengeScores(base, { ...base, evaluationsUsed: 3 }),
+    ).toBeLessThan(0);
+    expect(
+      compareChallengeScores(base, { ...base, runtimeMs: 60 }),
+    ).toBeLessThan(0);
   });
 });
 

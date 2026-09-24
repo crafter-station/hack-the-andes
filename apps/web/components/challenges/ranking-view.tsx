@@ -1,5 +1,6 @@
 import {
   blackBoxChallengeSlug,
+  brokenAgentChallengeSlug,
   type ChallengeRanking,
   isChallengeRankingVisibleAt,
 } from "@chofex/challenges-contract";
@@ -11,14 +12,17 @@ import {
   brandSectionClassName,
 } from "@chofex/ui/components/brand";
 import Link from "next/link";
+import { BrokenAgentChallengeGuide } from "./broken-agent-guide";
 import { BlackBoxChallengeGuide } from "./challenge-guide";
 import { RankingCountdown } from "./ranking-countdown-view";
 
 const percent = (value: number): string => `${(value * 100).toFixed(2)}%`;
 
 const RankingResults = ({
+  brokenAgent,
   entries,
 }: {
+  readonly brokenAgent: boolean;
   readonly entries: ChallengeRanking["entries"];
 }) => {
   if (entries.length === 0) {
@@ -39,9 +43,9 @@ const RankingResults = ({
           <tr>
             <th className="px-4 py-3">Puesto</th>
             <th className="px-4 py-3">Participante</th>
-            <th className="px-4 py-3">Accuracy</th>
-            <th className="px-4 py-3">Exactas</th>
-            <th className="px-4 py-3">Queries</th>
+            <th className="px-4 py-3">{brokenAgent ? "Score" : "Accuracy"}</th>
+            <th className="px-4 py-3">{brokenAgent ? "Puntos" : "Exactas"}</th>
+            {!brokenAgent && <th className="px-4 py-3">Queries</th>}
             <th className="px-4 py-3">Runtime</th>
           </tr>
         </thead>
@@ -64,7 +68,9 @@ const RankingResults = ({
               <td className="px-4 py-3 font-mono">
                 {entry.exactCount}/{entry.sampleSize}
               </td>
-              <td className="px-4 py-3 font-mono">{entry.queriesUsed}</td>
+              {!brokenAgent && (
+                <td className="px-4 py-3 font-mono">{entry.queriesUsed}</td>
+              )}
               <td className="px-4 py-3 font-mono">{entry.runtimeMs} ms</td>
             </tr>
           ))}
@@ -82,6 +88,7 @@ export function ChallengeRankingView({
   readonly ranking: ChallengeRanking;
 }) {
   const { challenge, entries } = ranking;
+  const brokenAgent = challenge.slug === brokenAgentChallengeSlug;
   const rankingVisible = isChallengeRankingVisibleAt(challenge, new Date(now));
   let cliHint = "chofex challenge list";
   if (challenge.closed) {
@@ -89,13 +96,18 @@ export function ChallengeRankingView({
   } else if (challenge.playable) {
     cliHint = `chofex challenge query --challenge ${challenge.slug}`;
   }
+  if (brokenAgent) {
+    cliHint = "chofex challenge init --challenge broken-agent";
+  }
   let challengeState = "Abierto";
   if (challenge.closed) {
     challengeState = "Cerrado";
   } else if (!challenge.open) {
     challengeState = `Abre ${challenge.opensAt.slice(0, 10)}`;
   }
-  let rankingContent = <RankingResults entries={entries} />;
+  let rankingContent = (
+    <RankingResults brokenAgent={brokenAgent} entries={entries} />
+  );
   if (!rankingVisible && challenge.rankingVisibleAt) {
     rankingContent = (
       <RankingCountdown
@@ -107,6 +119,15 @@ export function ChallengeRankingView({
   let challengeGuide = null;
   if (challenge.slug === blackBoxChallengeSlug && !challenge.closed) {
     challengeGuide = <BlackBoxChallengeGuide />;
+  }
+  if (challenge.slug === brokenAgentChallengeSlug) {
+    challengeGuide = <BrokenAgentChallengeGuide />;
+  }
+  let rankingDescription =
+    "Ranking público de solo lectura: accuracy, empates por predicciones exactas y menos queries. Las implementaciones no se publican.";
+  if (brokenAgent) {
+    rankingDescription =
+      "Ranking público de solo lectura: score de producción primero y runtime después de la corrección. Los casos ocultos y las implementaciones no se publican.";
   }
 
   return (
@@ -164,9 +185,7 @@ export function ChallengeRankingView({
             Ranking
           </h2>
           <p className="mt-4 mb-8 max-w-2xl text-sm leading-relaxed text-[var(--hud-muted)]">
-            Ranking público de solo lectura: accuracy, empates por predicciones
-            exactas, menos queries y runtime. Las implementaciones no se
-            publican.
+            {rankingDescription}
           </p>
           {rankingContent}
         </section>

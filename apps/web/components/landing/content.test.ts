@@ -427,17 +427,17 @@ test("labels track cards as tracks", async () => {
   expect(source).not.toContain("Challenge {seat.index}");
 });
 
-test("stops advertising Challenge 1 as live after it closes", async () => {
+test("advertises Challenge 2 after Challenge 1 closes", async () => {
   const [homeSource, heroSource] = await Promise.all([
     Bun.file(new URL("../../app/page.tsx", import.meta.url)).text(),
     Bun.file(new URL("./hero.tsx", import.meta.url)).text(),
   ]);
 
   expect(homeSource).not.toContain("LiveChallengeBanner");
-  expect(heroSource).toContain('href="/challenges"');
+  expect(heroSource).toContain('href="/challenges/broken-agent"');
   expect(heroSource).toContain("heroCopy.challengeCta");
-  expect(qualifierChallengesCopy.liveKicker).toMatch(/cerrado/i);
-  expect(qualifierChallengesCopy.liveCta).toMatch(/ranking/i);
+  expect(qualifierChallengesCopy.liveKicker).toMatch(/Challenge 2.*nuevo/i);
+  expect(qualifierChallengesCopy.liveCta).toMatch(/competir/i);
 });
 
 test("exposes skip links and section jumps for keyboard users", async () => {

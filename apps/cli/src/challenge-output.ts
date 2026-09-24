@@ -88,6 +88,37 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
   const queriesRemaining = progress.queriesLimit - progress.queriesUsed;
   const evaluationsRemaining =
     progress.evaluationsLimit - progress.evaluationsUsed;
+  if (challenge.slug === "broken-agent") {
+    let caseStatus = "READY TO AUDIT";
+    if (attempt.latestEvaluation) caseStatus = "EVALUATED";
+    const lines = [
+      `${challenge.title.toUpperCase()} — CASE #${challenge.code}`,
+      challenge.summary,
+      "",
+      `CASE STATUS: ${caseStatus}`,
+      "",
+      "The public tests are green. Your job is to make the scheduler trustworthy under production conditions.",
+      "AI tools are allowed.",
+      "",
+      `Evaluations    ${evaluationsRemaining} / ${progress.evaluationsLimit} remaining`,
+    ];
+    if (progress.bestAccuracy !== undefined) {
+      lines.push("", `Best score     ${percent(progress.bestAccuracy)}`);
+      if (progress.rank !== undefined)
+        lines.push(`Rank           #${progress.rank}`);
+      if (progress.shareCode)
+        lines.push(`Share code     #${progress.shareCode}`);
+    }
+    lines.push(
+      "",
+      "YOUR NEXT MOVE",
+      "Read the contract, audit scheduler.js, and keep the visible suite green.",
+      "  cd broken-agent && npm test",
+      "  chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js",
+    );
+    return lines.join("\n");
+  }
+
   let evidence = `${attempt.observations.length} observations`;
   if (attempt.observations.length === 1) evidence = "1 observation";
   let caseStatus = "AWAITING FIRST CLUE";
@@ -302,6 +333,36 @@ export const notebookCsvText = (
 };
 
 export const challengeTestText = (result: ChallengeLocalTestResult): string => {
+  if (result.kind === "broken_agent") {
+    const lines = [
+      "PUBLIC SUITE — BROKEN AGENT",
+      `${result.matchedObservations} / ${result.observationCount} visible behaviors passing`,
+    ];
+    if (result.accuracy === 1) {
+      lines.push(
+        "",
+        "Everything passes.",
+        "Unfortunately, that does not mean the scheduler is production-correct.",
+        "Reason about concurrency, restarts, failures, and idempotency before evaluating.",
+        "",
+        "Next: spend one official evaluation when you would ship it",
+        "  chofex challenge evaluate --challenge broken-agent --source ./broken-agent/scheduler.js",
+      );
+      return lines.join("\n");
+    }
+    if (result.mismatches.length > 0) {
+      lines.push("", "Visible failures:");
+      for (const mismatch of result.mismatches) {
+        lines.push(`  ${String(mismatch.actual)}`);
+      }
+    }
+    lines.push(
+      "",
+      "Fix the public regressions before using an official evaluation.",
+    );
+    return lines.join("\n");
+  }
+
   let verdict = "KEEP WORKING";
   if (result.accuracy === 1) verdict = "NOTEBOOK MATCHED";
   const lines = [
@@ -340,6 +401,48 @@ export const challengeTestText = (result: ChallengeLocalTestResult): string => {
 export const challengeEvaluateText = (
   result: ChallengeEvaluationResult,
 ): string => {
+  if (result.breakdown) {
+    const capabilityLines = [
+      ["Core behavior", result.breakdown.coreBehavior],
+      ["Persistence", result.breakdown.persistence],
+      ["Concurrency", result.breakdown.concurrency],
+      ["Failure recovery", result.breakdown.failureRecovery],
+      ["Idempotency", result.breakdown.idempotency],
+      ["Regression safety", result.breakdown.regressionSafety],
+      ["Performance", result.breakdown.performance],
+    ] as const;
+    const lines = [
+      "OFFICIAL VERDICT — BROKEN AGENT — PRODUCTION READINESS",
+      `Score               ${(result.accuracy * 100).toFixed(2)} / ${result.sampleSize}`,
+      `Runtime             ${result.runtimeMs} ms`,
+      "",
+      "Capability scores",
+      ...capabilityLines.map(
+        ([label, score]) =>
+          `${label.padEnd(20)}${score.earned.toFixed(2)} / ${score.available}`,
+      ),
+    ];
+    if (result.rank !== undefined) {
+      lines.push(`Rank                 #${result.rank}`);
+    }
+    lines.push(
+      `Official evaluations remaining ${result.evaluationsRemaining} / ${result.evaluationsLimit}`,
+      "",
+      result.shareText,
+      "",
+      "Next: inspect the leaderboard",
+      "  chofex challenge ranking --challenge broken-agent",
+    );
+    if (result.evaluationsRemaining > 0) {
+      lines.push(
+        "",
+        "The evaluator reports capabilities, not individual hidden cases. Reason before submitting again.",
+        "  chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js",
+      );
+    }
+    return lines.join("\n");
+  }
+
   const lines = [
     "OFFICIAL VERDICT — BLACK BOX REPLICATION",
     `Accuracy            ${percent(result.accuracy)}`,
@@ -386,6 +489,22 @@ export const challengeRankingText = (
   lines.push("");
   if (ranking.entries.length === 0) {
     lines.push("No official evaluations yet.");
+    return lines.join("\n");
+  }
+  if (ranking.challenge.slug === "broken-agent") {
+    lines.push("Rank  Score       Points       Runtime  Name");
+    for (const entry of ranking.entries.slice(0, 20)) {
+      const rank = String(entry.rank).padStart(4, " ");
+      const accuracy = percent(entry.accuracy).padStart(8, " ");
+      const points = `${entry.exactCount}/${entry.sampleSize}`.padStart(
+        11,
+        " ",
+      );
+      const runtime = `${entry.runtimeMs}ms`.padStart(8, " ");
+      lines.push(
+        `${rank}  ${accuracy}  ${points}  ${runtime}  ${entry.displayName} #${entry.shareCode}`,
+      );
+    }
     return lines.join("\n");
   }
   lines.push("Rank  Accuracy  Exact        Queries  Name");

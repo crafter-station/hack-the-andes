@@ -1,10 +1,11 @@
 import { Schema } from "effect";
 
 export const blackBoxChallengeSlug = "black-box" as const;
+export const brokenAgentChallengeSlug = "broken-agent" as const;
 
 export type ChallengeSlug =
   | typeof blackBoxChallengeSlug
-  | "last-mile"
+  | typeof brokenAgentChallengeSlug
   | "make-it-fast"
   | "power-grid"
   | "agent-arena";
@@ -57,22 +58,22 @@ export const challengeCatalog: ReadonlyArray<ChallengeDefinition> = [
     solutionKind: "javascript_source",
   },
   {
-    slug: "last-mile",
+    slug: brokenAgentChallengeSlug,
     number: 2,
     code: "02",
-    theme: "Last Mile",
-    title: "The Delivery Plan",
+    theme: "Broken Agent",
+    title: "The Scheduler",
     summary:
-      "Build a delivery plan under capacity, traffic, and deadline constraints. Better heuristics score higher.",
-    coreSkill: "Optimization & heuristics",
-    format: "optimization",
-    formatLabel: "Optimization score",
+      "Take a plausible AI-generated job scheduler whose public tests already pass and harden it against production reality.",
+    coreSkill: "Production correctness & reliability",
+    format: "accuracy",
+    formatLabel: "Production readiness score",
     opensAt: "2026-09-25T05:00:00.000Z",
     queryLimit: 0,
-    evaluationLimit: 3,
-    hiddenSampleSize: 1,
-    playable: false,
-    solutionKind: "json_plan",
+    evaluationLimit: 5,
+    hiddenSampleSize: 100,
+    playable: true,
+    solutionKind: "javascript_source",
   },
   {
     slug: "make-it-fast",
@@ -202,7 +203,7 @@ export const challengeOpeningNotice = (
 
 export const ChallengeSlugSchema = Schema.Literals([
   "black-box",
-  "last-mile",
+  "broken-agent",
   "make-it-fast",
   "power-grid",
   "agent-arena",
@@ -254,9 +255,43 @@ export const ChallengeScoreSchema = Schema.Struct({
   meanError: Schema.Number,
   queriesUsed: Schema.Number,
   runtimeMs: Schema.Number,
+  evaluationsUsed: Schema.optional(Schema.Number),
+  breakdown: Schema.optional(
+    Schema.Struct({
+      coreBehavior: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      persistence: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      concurrency: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      failureRecovery: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      idempotency: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      regressionSafety: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+      performance: Schema.Struct({
+        earned: Schema.Number,
+        available: Schema.Number,
+      }),
+    }),
+  ),
 });
 
 export type ChallengeScore = typeof ChallengeScoreSchema.Type;
+export type ChallengeScoreBreakdown = NonNullable<ChallengeScore["breakdown"]>;
 
 export const ChallengeProgressStatus = Schema.Literals([
   "not_started",
@@ -336,6 +371,7 @@ const ChallengeEvaluationSummarySchema = Schema.Struct({
   rank: Schema.optional(Schema.Number),
   percentile: Schema.optional(Schema.Number),
   createdAt: Schema.String,
+  breakdown: Schema.optional(ChallengeScoreSchema.fields.breakdown),
 });
 
 export const ChallengeAttemptViewSchema = Schema.Struct({
@@ -359,6 +395,7 @@ export const ChallengeQueryResultSchema = Schema.Struct({
 export type ChallengeQueryResult = typeof ChallengeQueryResultSchema.Type;
 
 export const ChallengeLocalTestResultSchema = Schema.Struct({
+  kind: Schema.optional(Schema.Literals(["black_box", "broken_agent"])),
   matchedObservations: Schema.Number,
   observationCount: Schema.Number,
   accuracy: Schema.Number,
@@ -391,6 +428,7 @@ export const ChallengeEvaluationResultSchema = Schema.Struct({
   evaluationsLimit: Schema.Number,
   rankingPath: Schema.String,
   shareText: Schema.String,
+  breakdown: Schema.optional(ChallengeScoreSchema.fields.breakdown),
 });
 
 export type ChallengeEvaluationResult =
@@ -476,6 +514,18 @@ export const compareChallengeScores = (
   }
   if (left.queriesUsed !== right.queriesUsed) {
     return left.queriesUsed - right.queriesUsed;
+  }
+  if (left.breakdown && right.breakdown) {
+    if (
+      left.evaluationsUsed !== undefined &&
+      right.evaluationsUsed !== undefined &&
+      left.evaluationsUsed !== right.evaluationsUsed
+    ) {
+      return left.evaluationsUsed - right.evaluationsUsed;
+    }
+    if (left.runtimeMs !== right.runtimeMs) {
+      return left.runtimeMs - right.runtimeMs;
+    }
   }
   return 0;
 };

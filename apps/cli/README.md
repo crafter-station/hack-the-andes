@@ -24,6 +24,11 @@ chofex challenge notebook
 chofex challenge test --source ./shipping.js
 chofex challenge evaluate --source ./shipping.js
 chofex challenge ranking
+chofex challenge init --challenge broken-agent
+cd broken-agent && npm test
+chofex challenge test --challenge broken-agent --source ./scheduler.js
+chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
+chofex challenge ranking --challenge broken-agent
 chofex confirm
 ```
 
@@ -34,7 +39,7 @@ to the latest published version.
 optional phone number, bio, portfolio URL, shipped project, LinkedIn and GitHub
 URLs, and Terms and Conditions. Use `--input` to submit a completed JSON
 application.
-The Black Box does not block submission, but every challenge winner must submit
+The technical challenges do not block submission, but every challenge winner must submit
 an application before being accepted. Top results receive a direct pass; other
 scores give organizers another review metric.
 
