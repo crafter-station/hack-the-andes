@@ -1,7 +1,7 @@
 /**
  * What arrives when somebody's credential is ready.
  *
- * It carries the badge — the face, but also the name, the role and the
+ * It carries the badge — the face, but also the name, the one-liner and the
  * challenge placement, which is what makes it theirs rather than a photograph. The
  * card is still a thing you pick up and swing, so the email sends people
  * to the page where it hangs; what it shows is the printed object.

@@ -120,6 +120,13 @@
       "when": 1790273962787,
       "tag": "0016_overjoyed_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790275050735,
+      "tag": "0017_unknown_talos",
+      "breakpoints": true
     }
   ]
 }

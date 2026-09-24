@@ -12,14 +12,14 @@
  * becoming something only accepted participants have: the counts were
  * decoration, and a card that exists only for accepted people does not
  * need to announce that it is verified. The printed design shows a
- * challenge placement, a picture, a name and a role, and so does this.
+ * challenge placement, a picture, a name and a one-liner, and so does this.
  */
 
 export interface Credential {
   /** As they wrote it on the form. */
   readonly name: string;
-  /** What they said they are. The line under the name. */
-  readonly role: string | null;
+  /** The participant's public description. The line under the name. */
+  readonly oneLiner: string;
   readonly organization: string | null;
   /**
    * The picture they confirmed, and only that.

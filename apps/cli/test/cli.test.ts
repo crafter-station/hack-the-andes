@@ -540,6 +540,18 @@ describe("CLI JSON mode", () => {
     expect(badgeHelp.stdout).toContain("presentación");
   });
 
+  test("never opens badge prompts in JSON mode", async () => {
+    const result = await runCli("--output", "json", "badge", "regenerate");
+    const envelope = JSON.parse(result.stdout) as {
+      readonly ok: boolean;
+      readonly error: { readonly code: string };
+    };
+
+    expect(result.stdout.trim().split("\n")).toHaveLength(1);
+    expect(envelope.ok).toBe(false);
+    expect(envelope.error.code).toBe("INPUT_REQUIRED");
+  });
+
   test("prints every accepted application input field", async () => {
     const result = await runCli("schema");
 

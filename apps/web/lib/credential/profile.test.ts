@@ -37,7 +37,7 @@ describe("badge profile", () => {
     ]);
 
     expect(challengePlacementLabel(best)).toBe("BROKEN AGENT · #03");
-    expect(challengePlacementLabel(undefined)).toBe("PARTICIPANTE");
+    expect(challengePlacementLabel(undefined)).toBe("PARTICIPANT");
   });
 
   test("resolves application defaults and badge-only overrides in one place", () => {
@@ -60,7 +60,7 @@ describe("badge profile", () => {
       fullName: "Ada L.",
       oneLiner: "Computing pioneer",
       linkUrl: "https://ada.dev",
-      placement: "PARTICIPANTE",
+      placement: "PARTICIPANT",
       pictureUrl: "https://images.example/badge.png",
       portraitUrl: null,
     });

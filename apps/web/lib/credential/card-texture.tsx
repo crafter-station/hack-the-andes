@@ -294,7 +294,7 @@ export const renderCardTexture = async (
       ),
     ]);
 
-  const role = badgeOneLinerFor(credential.role);
+  const oneLiner = badgeOneLinerFor(credential.oneLiner);
 
   let portraitNode = (
     <div
@@ -503,7 +503,7 @@ export const renderCardTexture = async (
               textTransform: "uppercase",
             }}
           >
-            {role}
+            {oneLiner}
           </div>
         </div>,
         qr ? (

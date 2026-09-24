@@ -1,5 +1,5 @@
 import { db } from "@chofex/db";
-import { eq } from "@chofex/db/orm";
+import { and, eq } from "@chofex/db/orm";
 import { applications, participantBadges } from "@chofex/db/schema";
 import { tasks } from "@trigger.dev/sdk";
 
@@ -26,17 +26,19 @@ export const enqueueBadgeGeneration = async (
   if (!application) throw new Error("Application not found");
   if (badge?.status === "completed" && !options.force) return;
 
+  const generationId = crypto.randomUUID();
   const placement = await challengePlacementForParticipant(
     application.participantId,
   );
   await db
     .insert(participantBadges)
-    .values({ applicationId, status: "pending", placement })
+    .values({ applicationId, status: "pending", placement, generationId })
     .onConflictDoUpdate({
       target: participantBadges.applicationId,
       set: {
         status: "pending",
         placement,
+        generationId,
         error: null,
         notificationSentAt: null,
         portraitUrl: null,
@@ -48,13 +50,11 @@ export const enqueueBadgeGeneration = async (
     });
 
   let idempotencyKey = `participant-badge/${applicationId}`;
-  if (options.force) {
-    idempotencyKey = `${idempotencyKey}/${crypto.randomUUID()}`;
-  }
+  if (options.force) idempotencyKey = `${idempotencyKey}/${generationId}`;
 
   const handle = await tasks.trigger<typeof generateParticipantBadge>(
     "generate-participant-badge",
-    { applicationId },
+    { applicationId, generationId },
     {
       idempotencyKey,
       idempotencyKeyTTL: "1h",
@@ -65,11 +65,13 @@ export const enqueueBadgeGeneration = async (
   await db
     .update(participantBadges)
     .set({
-      status: "pending",
       triggerRunId: handle.id,
-      error: null,
-      notificationSentAt: null,
       updatedAt: new Date(),
     })
-    .where(eq(participantBadges.applicationId, applicationId));
+    .where(
+      and(
+        eq(participantBadges.applicationId, applicationId),
+        eq(participantBadges.generationId, generationId),
+      ),
+    );
 };

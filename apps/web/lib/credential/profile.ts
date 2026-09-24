@@ -47,7 +47,7 @@ export const bestChallengePlacement = (
 export const challengePlacementLabel = (
   placement: ChallengePlacementCandidate | undefined,
 ): string => {
-  if (!placement) return "PARTICIPANTE";
+  if (!placement) return "PARTICIPANT";
   const rank = String(placement.rank).padStart(2, "0");
   return `${placement.theme.toUpperCase()} · #${rank}`;
 };
@@ -99,7 +99,7 @@ export const resolveBadgeProfile = (
         githubUrl: application.githubUrl,
         linkedInUrl: application.linkedInUrl,
       }),
-    placement: overrides?.placement?.trim() || "PARTICIPANTE",
+    placement: overrides?.placement?.trim() || "PARTICIPANT",
     pictureUrl:
       overrides?.pictureUrl?.trim() || application.pictureUrl?.trim() || null,
     portraitUrl: overrides?.portraitUrl?.trim() || null,

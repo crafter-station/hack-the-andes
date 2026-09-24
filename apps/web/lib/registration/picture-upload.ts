@@ -64,7 +64,7 @@ const parse = <S extends Schema.ConstraintDecoder<unknown>>(
   throw new HttpError(
     422,
     "VALIDATION_ERROR",
-    "Input validation failed",
+    "Los datos de la foto no son válidos",
     false,
     {
       issues: String(result.failure),
@@ -120,14 +120,14 @@ const completeUpload = async (
     throw new HttpError(
       403,
       "PICTURE_UPLOAD_FORBIDDEN",
-      "Upload does not belong to you",
+      "Esta carga no te pertenece",
     );
   }
   if (identity.pendingPicturePathname !== completion.pathname) {
     throw new HttpError(
       409,
       "PICTURE_UPLOAD_NOT_PENDING",
-      "This picture upload is not pending or was already completed",
+      "Esta carga no está pendiente o ya terminó",
     );
   }
 
@@ -150,7 +150,7 @@ const completeUpload = async (
     throw new HttpError(
       415,
       "INVALID_PICTURE",
-      "Picture must be a JPEG, PNG, or WebP image up to 5 MB",
+      "La foto debe ser JPEG, PNG o WebP y pesar como máximo 5 MB",
     );
   }
 
@@ -171,5 +171,5 @@ export const handlePictureUpload = (
 ): Promise<PictureUploadGrant | PictureUpload> => {
   if (request.method === "POST") return beginUpload(request, dependencies);
   if (request.method === "PUT") return completeUpload(request, dependencies);
-  throw new HttpError(405, "METHOD_NOT_ALLOWED", "Method not allowed");
+  throw new HttpError(405, "METHOD_NOT_ALLOWED", "Método no permitido");
 };

@@ -28,7 +28,7 @@ describe("accepted participant picture confirmation", () => {
 
   test("rejects a selected source that is unavailable", () => {
     expect(() => confirmedPictureUrl("github", {})).toThrow(
-      "The selected github picture is not available",
+      "La foto seleccionada de github no está disponible",
     );
   });
 });

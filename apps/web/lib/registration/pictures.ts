@@ -49,6 +49,6 @@ export const confirmedPictureUrl = (
   throw new HttpError(
     422,
     "PICTURE_SOURCE_UNAVAILABLE",
-    `The selected ${source} picture is not available`,
+    `La foto seleccionada de ${source} no está disponible`,
   );
 };

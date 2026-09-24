@@ -16,13 +16,25 @@ describe("participant badge generation lifecycle", () => {
     const badge = await source("./generate-badge.ts");
     const portrait = await source("./generate-portrait.ts");
 
-    expect(parent).toContain("badge?.triggerRunId !== ctx.run.id");
-    expect(parent).toContain("eq(participantBadges.triggerRunId, ctx.run.id)");
+    const enqueue = await source("../lib/badges/enqueue.ts");
+    expect(enqueue).toContain("generationId = crypto.randomUUID()");
+    expect(enqueue).toContain("{ applicationId, generationId }");
+    expect(parent).toContain("badge?.generationId !== payload.generationId");
+    expect(parent).toContain(
+      "eq(participantBadges.generationId, payload.generationId)",
+    );
     expect(badge).toContain(
-      "eq(participantBadges.triggerRunId, payload.generationId)",
+      "eq(participantBadges.generationId, payload.generationId)",
     );
     expect(portrait).toContain(
-      "eq(participantBadges.triggerRunId, payload.generationId)",
+      "eq(participantBadges.generationId, payload.generationId)",
     );
+  });
+
+  test("reports notification failure instead of exposing stale success", async () => {
+    const parent = await source("./generate-participant-badge.ts");
+
+    expect(parent).toContain('status: "failed"');
+    expect(parent).toContain("Badge created but notification failed");
   });
 });

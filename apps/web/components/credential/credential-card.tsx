@@ -4,7 +4,7 @@
  * The layer underneath the simulated lanyard: what a visitor without
  * JavaScript reads, and what the browser paints before hydration or when
  * WebGL is unavailable. It carries the same four things the printed
- * design does — a placement, a picture, a name and a role — so the two
+ * design does — a placement, a picture, a name and a one-liner — so the two
  * layers cannot say different things about the same person.
  *
  * The stats it used to show, and the state line under them, went with the
@@ -32,11 +32,6 @@ export async function CredentialCard({ credential }: CredentialCardProps) {
     width: 160,
     color: { dark: brandColors.dark.ink, light: SHEET },
   });
-  let role = null;
-  if (credential.role) {
-    role = <p className="credential-card-role">{credential.role}</p>;
-  }
-
   return (
     <article className="credential-card">
       {/*
@@ -55,7 +50,7 @@ export async function CredentialCard({ credential }: CredentialCardProps) {
 
       <div className="credential-card-identity">
         <h2 className="credential-card-name">{credential.name}</h2>
-        {role}
+        <p className="credential-card-one-liner">{credential.oneLiner}</p>
       </div>
 
       {/* biome-ignore lint/performance/noImgElement: generated data URI */}

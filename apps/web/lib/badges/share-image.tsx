@@ -52,7 +52,7 @@ const CONTENT_WIDTH = SHEET_WIDTH - SHEET_PADDING_X * 2;
  * Type sizes, carried over from the card as fractions of its width.
  *
  * The card was measured against the design by cap height — the name
- * stands 0.065 of the face, the role 0.024 — so the same fractions of a
+ * stands 0.065 of the face, the one-liner 0.024 — so the same fractions of a
  * wider frame keep the two in step. Divided by Notch's cap ratio,
  * because what satori takes is an em.
  */
@@ -60,7 +60,7 @@ const NOTCH_CAP = 0.74;
 const capSize = (fraction: number): number =>
   Math.round((WIDTH * fraction) / NOTCH_CAP);
 const NAME_SIZE = capSize(0.065);
-const ROLE_SIZE = capSize(0.024);
+const ONE_LINER_SIZE = capSize(0.024);
 const NUMBER_SIZE = capSize(0.0185);
 
 /** How tall the ridge stands behind the type. */
@@ -68,7 +68,7 @@ const RIDGE_HEIGHT = Math.round(SHEET_WIDTH * 0.62);
 
 export interface ShareBadgeInput {
   readonly fullName: string;
-  readonly role: string;
+  readonly oneLiner: string;
   /** Already screened into dots, as a data URI, or null for no picture. */
   readonly portrait: string | null;
   readonly placement: string;
@@ -168,14 +168,14 @@ export const renderShareBadge = async (
       <div
         style={{
           marginTop: 18,
-          fontSize: ROLE_SIZE,
+          fontSize: ONE_LINER_SIZE,
           fontWeight: 700,
           textAlign: "center",
           textTransform: "uppercase",
           color: colors.ink,
         }}
       >
-        {input.role}
+        {input.oneLiner}
       </div>
     </div>,
     // biome-ignore lint/performance/noImgElement: next/image cannot run inside satori

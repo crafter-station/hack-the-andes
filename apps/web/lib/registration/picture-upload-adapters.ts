@@ -16,6 +16,16 @@ import type { PictureUploadDependencies } from "./picture-upload";
 
 const uploadLimit = 5;
 const uploadWindowMilliseconds = 24 * 60 * 60 * 1_000;
+type UploadIdentity = Parameters<PictureUploadDependencies["reserve"]>[0];
+
+const forUploadTarget = <A>(
+  identity: UploadIdentity,
+  applicationOperation: () => A,
+  badgeOperation: () => A,
+): A => {
+  if (identity.target === "badge") return badgeOperation();
+  return applicationOperation();
+};
 
 const authorize: PictureUploadDependencies["authorize"] = async (request) => {
   const authentication = await requireAuthenticatedParticipant(request);
@@ -45,7 +55,7 @@ const authorize: PictureUploadDependencies["authorize"] = async (request) => {
     throw new HttpError(
       403,
       "PICTURE_UPLOAD_FORBIDDEN",
-      "Only accepted participants can upload a picture",
+      "Solo los participantes aceptados pueden subir una foto",
     );
   }
   if (current.attendanceCompletedAt) {
@@ -84,7 +94,7 @@ const reserveApplication: PictureUploadDependencies["reserve"] = async (
     throw new HttpError(
       409,
       "PICTURE_UPLOAD_PENDING",
-      "Finish the pending picture upload before starting another",
+      "Termina la carga pendiente antes de subir otra foto",
       true,
     );
   }
@@ -128,7 +138,7 @@ const reserveApplication: PictureUploadDependencies["reserve"] = async (
     throw new HttpError(
       429,
       "PICTURE_UPLOAD_RATE_LIMITED",
-      "You can upload at most 5 pictures every 24 hours",
+      "Puedes subir como máximo 5 fotos cada 24 horas",
       true,
     );
   }
@@ -160,7 +170,7 @@ const reserveBadge: PictureUploadDependencies["reserve"] = async (
     throw new HttpError(
       409,
       "PICTURE_UPLOAD_PENDING",
-      "Finish the pending picture upload before starting another",
+      "Termina la carga pendiente antes de subir otra foto",
       true,
     );
   }
@@ -203,7 +213,7 @@ const reserveBadge: PictureUploadDependencies["reserve"] = async (
     throw new HttpError(
       429,
       "PICTURE_UPLOAD_RATE_LIMITED",
-      "You can upload at most 5 pictures every 24 hours",
+      "Puedes subir como máximo 5 fotos cada 24 horas",
       true,
     );
   }
@@ -213,8 +223,11 @@ const reserveBadge: PictureUploadDependencies["reserve"] = async (
 };
 
 const reserve: PictureUploadDependencies["reserve"] = (identity, pathname) => {
-  if (identity.target === "badge") return reserveBadge(identity, pathname);
-  return reserveApplication(identity, pathname);
+  return forUploadTarget(
+    identity,
+    () => reserveApplication(identity, pathname),
+    () => reserveBadge(identity, pathname),
+  );
 };
 
 const issueToken: PictureUploadDependencies["issueToken"] = (options) =>
@@ -250,7 +263,7 @@ const discardApplication: PictureUploadDependencies["discard"] = async (
     throw new HttpError(
       409,
       "PICTURE_UPLOAD_NOT_PENDING",
-      "This picture upload is not pending or was already completed",
+      "Esta carga no está pendiente o ya terminó",
     );
   }
 };
@@ -277,14 +290,17 @@ const discardBadge: PictureUploadDependencies["discard"] = async (
     throw new HttpError(
       409,
       "PICTURE_UPLOAD_NOT_PENDING",
-      "This picture upload is not pending or was already completed",
+      "Esta carga no está pendiente o ya terminó",
     );
   }
 };
 
 const discard: PictureUploadDependencies["discard"] = (identity, pathname) => {
-  if (identity.target === "badge") return discardBadge(identity, pathname);
-  return discardApplication(identity, pathname);
+  return forUploadTarget(
+    identity,
+    () => discardApplication(identity, pathname),
+    () => discardBadge(identity, pathname),
+  );
 };
 
 const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
@@ -295,7 +311,7 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
     throw new HttpError(
       415,
       "INVALID_PICTURE",
-      "Uploaded picture URL is invalid",
+      "La URL de la foto subida no es válida",
     );
   }
   if (
@@ -305,7 +321,7 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
     throw new HttpError(
       415,
       "INVALID_PICTURE",
-      "Uploaded picture URL is invalid",
+      "La URL de la foto subida no es válida",
     );
   }
   // Resolve the reserved pathname with this app's Blob credentials instead of
@@ -319,7 +335,7 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
     metadata.size > maximumPictureBytes ||
     !["image/jpeg", "image/png", "image/webp"].includes(metadata.contentType)
   ) {
-    throw new HttpError(415, "INVALID_PICTURE", "Uploaded picture is invalid");
+    throw new HttpError(415, "INVALID_PICTURE", "La foto subida no es válida");
   }
   const response = await fetch(metadata.url, {
     headers: { range: "bytes=0-11" },
@@ -329,7 +345,7 @@ const inspect: PictureUploadDependencies["inspect"] = async (completion) => {
     throw new HttpError(
       502,
       "PICTURE_VERIFICATION_FAILED",
-      "Could not verify uploaded picture",
+      "No se pudo verificar la foto subida",
       true,
     );
   }
@@ -374,7 +390,7 @@ const recordApplication: PictureUploadDependencies["record"] = async (
     throw new HttpError(
       409,
       "INVALID_APPLICATION_STATE",
-      "Application is no longer accepted",
+      "La postulación ya no está aceptada",
     );
   }
   return current?.url ?? undefined;
@@ -412,7 +428,7 @@ const recordBadge: PictureUploadDependencies["record"] = async (
     throw new HttpError(
       409,
       "INVALID_APPLICATION_STATE",
-      "Application is no longer accepted",
+      "La postulación ya no está aceptada",
     );
   }
   if (current?.url === current?.selectedUrl) return undefined;
@@ -420,8 +436,11 @@ const recordBadge: PictureUploadDependencies["record"] = async (
 };
 
 const record: PictureUploadDependencies["record"] = (identity, completion) => {
-  if (identity.target === "badge") return recordBadge(identity, completion);
-  return recordApplication(identity, completion);
+  return forUploadTarget(
+    identity,
+    () => recordApplication(identity, completion),
+    () => recordBadge(identity, completion),
+  );
 };
 
 export const pictureUploadDependencies: PictureUploadDependencies = {

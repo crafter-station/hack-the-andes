@@ -16,6 +16,7 @@ export const participantBadges = pgTable("participant_badges", {
     .primaryKey()
     .references(() => applications.id, { onDelete: "cascade" }),
   status: badgeGenerationStatus("status").default("pending").notNull(),
+  generationId: text("generation_id"),
   triggerRunId: text("trigger_run_id"),
   displayName: varchar("display_name", { length: 200 }),
   oneLiner: varchar("one_liner", { length: 120 }),

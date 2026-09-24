@@ -1,0 +1,1 @@
+ALTER TABLE "participant_badges" ADD COLUMN "generation_id" text;

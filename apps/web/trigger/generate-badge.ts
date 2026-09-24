@@ -10,7 +10,7 @@ export interface GenerateBadgePayload {
   readonly applicationId: string;
   readonly generationId: string;
   readonly fullName: string;
-  readonly role: string;
+  readonly oneLiner: string;
   readonly placement: string;
   readonly linkUrl: string;
   readonly portraitUrl: string;
@@ -34,7 +34,7 @@ export const generateBadge = task({
 
     const badge = await renderShareBadge({
       fullName: payload.fullName,
-      role: payload.role,
+      oneLiner: payload.oneLiner,
       placement: payload.placement,
       linkUrl: payload.linkUrl,
       portrait,
@@ -53,7 +53,7 @@ export const generateBadge = task({
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, payload.generationId),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       );
 

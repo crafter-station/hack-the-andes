@@ -18,6 +18,7 @@ const BADGE_PAGE_URL =
 
 export interface GenerateParticipantBadgePayload {
   readonly applicationId: string;
+  readonly generationId: string;
 }
 
 export const generateParticipantBadge = task<
@@ -28,37 +29,35 @@ export const generateParticipantBadge = task<
   id: "generate-participant-badge",
   queue: { concurrencyLimit: 5 },
   maxDuration: 900,
-  onFailure: async ({ payload, ctx, error }) => {
+  onFailure: async ({ payload, error }) => {
     const [badge] = await db
       .select({
         badgeUrl: participantBadges.badgeUrl,
-        triggerRunId: participantBadges.triggerRunId,
+        generationId: participantBadges.generationId,
       })
       .from(participantBadges)
       .where(eq(participantBadges.applicationId, payload.applicationId))
       .limit(1);
-    if (badge?.triggerRunId !== ctx.run.id) return;
-    let status: "failed" | "completed" = "failed";
+    if (badge?.generationId !== payload.generationId) return;
     let message = String(error).slice(0, 4_000);
     if (badge?.badgeUrl) {
-      status = "completed";
       message = `Badge created but notification failed: ${message}`;
     }
     await db
       .update(participantBadges)
       .set({
-        status,
+        status: "failed",
         error: message,
         updatedAt: new Date(),
       })
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, ctx.run.id),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       );
   },
-  run: async (payload: GenerateParticipantBadgePayload, { ctx }) => {
+  run: async (payload: GenerateParticipantBadgePayload) => {
     const [record] = await db
       .select({
         application: applications,
@@ -103,7 +102,7 @@ export const generateParticipantBadge = task<
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, ctx.run.id),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       )
       .returning({ applicationId: participantBadges.applicationId });
@@ -116,24 +115,24 @@ export const generateParticipantBadge = task<
       .triggerAndWait(
         {
           applicationId: payload.applicationId,
-          generationId: ctx.run.id,
+          generationId: payload.generationId,
           pictureUrl,
         },
-        { idempotencyKey: `portrait/${ctx.run.id}` },
+        { idempotencyKey: `portrait/${payload.generationId}` },
       )
       .unwrap();
     const badge = await generateBadge
       .triggerAndWait(
         {
           applicationId: payload.applicationId,
-          generationId: ctx.run.id,
+          generationId: payload.generationId,
           fullName,
-          role: profile.oneLiner,
+          oneLiner: profile.oneLiner,
           placement: profile.placement,
           linkUrl: profile.linkUrl,
           portraitUrl: portrait.url,
         },
-        { idempotencyKey: `badge/${ctx.run.id}` },
+        { idempotencyKey: `badge/${payload.generationId}` },
       )
       .unwrap();
 
@@ -143,7 +142,7 @@ export const generateParticipantBadge = task<
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, ctx.run.id),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       )
       .returning({ applicationId: participantBadges.applicationId });
@@ -160,7 +159,7 @@ export const generateParticipantBadge = task<
       badgeUrl: badge.url,
       placement: profile.placement,
       badgePageUrl: BADGE_PAGE_URL,
-      generationId: ctx.run.id,
+      generationId: payload.generationId,
     });
     await db
       .update(participantBadges)
@@ -168,7 +167,7 @@ export const generateParticipantBadge = task<
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, ctx.run.id),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       );
 

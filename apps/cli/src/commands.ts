@@ -207,6 +207,15 @@ const badgeRegenerateCommand = Command.make(
   Effect.fn("badgeRegenerateCommand")(function* ({ input, picture }) {
     const options = yield* root;
     const operation = Effect.gen(function* () {
+      const inputPath = Option.getOrUndefined(input);
+      if (options.output === "json" && inputPath === undefined) {
+        return yield* Effect.fail(
+          cliError(
+            "INPUT_REQUIRED",
+            "El modo JSON requiere --input <archivo> o --input -",
+          ),
+        );
+      }
       const token = Option.getOrUndefined(options.token);
       const client = { apiUrl: options.apiUrl, token };
       const badge = yield* getBadge(client);
@@ -222,16 +231,20 @@ const badgeRegenerateCommand = Command.make(
         getRegistration(client),
         getCurrentUser(client),
       ]);
-      const body = yield* badgeProfileInput(
-        Option.getOrUndefined(input),
-        badge.data.profile,
-        {
-          clerkPictureUrl: currentUser.data.clerkPictureUrl,
-          githubUrl: current.data.registration.githubUrl,
-        },
-      );
+      const body = yield* badgeProfileInput(inputPath, badge.data.profile, {
+        clerkPictureUrl: currentUser.data.clerkPictureUrl,
+        githubUrl: current.data.registration.githubUrl,
+      });
       const picturePath = Option.getOrUndefined(picture);
       if (body.pictureSource === "upload") {
+        if (options.output === "json" && picturePath === undefined) {
+          return yield* Effect.fail(
+            cliError(
+              "PICTURE_PATH_REQUIRED",
+              "Usa --picture <ruta> cuando pictureSource es upload",
+            ),
+          );
+        }
         const path = yield* picturePathInput(picturePath);
         yield* uploadPicture(client, path);
       } else if (picturePath) {

@@ -12,7 +12,7 @@ describe("renderShareBadge", () => {
   test("renders at the shape a shared image is looked at in", async () => {
     const png = await renderShareBadge({
       fullName: "Ada Lovelace",
-      role: "PARTICIPANTE",
+      oneLiner: "PARTICIPANTE",
       placement: "BLACK BOX · #09",
       linkUrl: "https://ada.dev",
       portrait: null,
@@ -33,7 +33,7 @@ describe("renderShareBadge", () => {
     */
     const png = await renderShareBadge({
       fullName: "Ada Lovelace",
-      role: "PARTICIPANTE",
+      oneLiner: "PARTICIPANTE",
       placement: "BLACK BOX · #09",
       linkUrl: "https://ada.dev",
       portrait: null,
@@ -47,7 +47,7 @@ describe("renderShareBadge", () => {
     // own grows past the sheet rather than wrapping.
     const png = await renderShareBadge({
       fullName: "María Fernanda Rodríguez Quispe",
-      role: "SOFTWARE DEVELOPER",
+      oneLiner: "SOFTWARE DEVELOPER",
       placement: "BROKEN AGENT · #03",
       linkUrl: "https://example.com",
       portrait: null,

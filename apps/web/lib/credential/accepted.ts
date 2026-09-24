@@ -2,7 +2,7 @@
  * The accepted participant behind a session.
  *
  * The credential is for people who were accepted, and everything it
- * prints comes from their own application: the name they gave, the role
+ * prints comes from their own application: the name they gave, the one-liner
  * they described themselves with, and the picture they confirmed.
  *
  * There is no lookup by GitHub handle any more, and its absence is the
@@ -44,8 +44,8 @@ import { resolveBadgeProfile } from "./profile";
 export interface AcceptedParticipant {
   /** As they wrote it, not as any profile spells it. */
   readonly name: string;
-  /** What they said they are. The design's line under the name. */
-  readonly role: string | null;
+  /** Their public description. The design's line under the name. */
+  readonly oneLiner: string;
   readonly organization: string | null;
   /** Only ever the confirmed one. Null until they choose. */
   readonly pictureUrl: string | null;
@@ -108,7 +108,7 @@ export const acceptedByClerkUser = async (
   }
   return {
     name,
-    role: profile.oneLiner,
+    oneLiner: profile.oneLiner,
     organization: row.application.organization?.trim() || null,
     pictureUrl: profile.pictureUrl,
     githubUrl: row.application.githubUrl?.trim() || null,
@@ -151,7 +151,7 @@ export const portraitFor = (accepted: AcceptedParticipant): PortraitChoice => {
  */
 export const credentialFor = (accepted: AcceptedParticipant): Credential => ({
   name: accepted.name,
-  role: accepted.role,
+  oneLiner: accepted.oneLiner,
   organization: accepted.organization,
   pictureUrl: portraitFor(accepted).url,
   portraitUrl: accepted.portraitUrl,

@@ -56,7 +56,7 @@ export const generatePortrait = task({
       .where(
         and(
           eq(participantBadges.applicationId, payload.applicationId),
-          eq(participantBadges.triggerRunId, payload.generationId),
+          eq(participantBadges.generationId, payload.generationId),
         ),
       );
 
