@@ -36,10 +36,9 @@ export const generateBadge = task({
       number: payload.number,
       portrait,
     });
-    const bytes = new Uint8Array(badge).buffer;
     const blob = await uploadPng(
       `participant-badges/${payload.applicationId}/badge.png`,
-      bytes,
+      new Uint8Array(badge).buffer,
     );
     await db
       .update(participantBadges)
