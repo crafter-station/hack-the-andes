@@ -18,6 +18,10 @@ const shipment: Shipment = {
 };
 
 describe("private challenge engine adapter", () => {
+  test("isolates the strengthened Broken Agent evaluator in version 2", () => {
+    expect(brokenAgentChallengeVersion).toBe("broken-agent-v2");
+  });
+
   test("authenticates and maps query and evaluation responses", async () => {
     const requests: Array<{ url: string; init: RequestInit }> = [];
     const fetch = async (url: string | URL | Request, init?: RequestInit) => {

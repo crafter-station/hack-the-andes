@@ -962,9 +962,11 @@ const CandidateDrawer = ({
                       <Detail label="Availability">
                         {challengeAvailability(challenge)}
                       </Detail>
-                      <Detail label="Queries used">
-                        {challenge.queriesUsed} / {challenge.queriesLimit}
-                      </Detail>
+                      {challenge.queriesLimit > 0 && (
+                        <Detail label="Queries used">
+                          {challenge.queriesUsed} / {challenge.queriesLimit}
+                        </Detail>
+                      )}
                       <Detail label="Official attempts">
                         {challenge.evaluationsUsed} /{" "}
                         {challenge.evaluationsLimit}

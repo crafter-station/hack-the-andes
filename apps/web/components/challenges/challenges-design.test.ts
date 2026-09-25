@@ -92,5 +92,6 @@ test("reviewer guidance recognizes challenge direct-pass winners", async () => {
   const dashboard = await sourceFor("../candidate-dashboard.tsx");
 
   expect(dashboard).toContain("direct-pass winners");
+  expect(dashboard).toContain("challenge.queriesLimit > 0");
   expect(dashboard).not.toContain("review metrics only");
 });
