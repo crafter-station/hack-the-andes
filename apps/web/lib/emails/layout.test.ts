@@ -33,6 +33,9 @@ describe("email shell", () => {
       decision: "accepted",
       firstName: "Ada <Admin>",
       message: 'He said "yes" & meant it',
+      badgeUrl: "https://blob.example/badge.png",
+      badgePageUrl: "https://hacktheandes.com/badge",
+      placement: "PARTICIPANT",
     });
 
     expect(email.html).toContain("Ada &lt;Admin&gt;");
@@ -47,6 +50,9 @@ describe("email shell", () => {
     const email = buildDecisionEmail({
       decision: "accepted",
       firstName: "Ada",
+      badgeUrl: "https://blob.example/badge.png",
+      badgePageUrl: "https://hacktheandes.com/badge",
+      placement: "PARTICIPANT",
     });
 
     expect(email.html).toContain("chofex confirm");
@@ -61,11 +67,13 @@ describe("email shell", () => {
       placement: "BLACK BOX · #07",
       badgePageUrl: "https://hacktheandes.com/badge",
       requiresConfirmation: true,
+      notification: { kind: "acceptance" },
     });
 
     expect(email.html).toContain("https://blob.example/badge.png");
     expect(email.html).toContain("https://hacktheandes.com/badge");
     // Stamped with the same exact placement the card carries.
     expect(email.html).toContain("BLACK BOX · #07");
+    expect(email.subject).toBe("Estás dentro — bienvenida a Hack the Andes");
   });
 });

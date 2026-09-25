@@ -88,11 +88,14 @@ export const paragraph = (text: string): string =>
  * under it where the baseline would be, which on a dark sheet reads as a
  * seam.
  */
-export const picture = (src: string, alt: string): string =>
-  row(
-    `<img alt="${escapeHtml(alt)}" src="${escapeHtml(src)}" width="524" style="display:block;width:100%;max-width:524px;height:auto;border:1px solid ${emailPalette.edge}" />`,
-    "8px 38px 24px",
-  );
+export const picture = (src: string, alt: string, href?: string): string => {
+  const image = `<img alt="${escapeHtml(alt)}" src="${escapeHtml(src)}" width="524" style="display:block;width:100%;max-width:524px;height:auto;border:1px solid ${emailPalette.edge}" />`;
+  let content = image;
+  if (href) {
+    content = `<a href="${escapeHtml(href)}" style="display:block;text-decoration:none">${image}</a>`;
+  }
+  return row(content, "8px 38px 24px");
+};
 
 export const button = (label: string, url: string): string =>
   row(

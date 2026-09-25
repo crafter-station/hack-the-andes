@@ -22,47 +22,35 @@
  * second file per variant.
  */
 
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import sharp from "sharp";
 
 /**
- * Every file named once, in full, and never built from a variable.
+ * Every file named once, in full.
  *
- * These are resolved against this module rather than the working
- * directory, because the card is drawn from a Next route where the
- * working directory is the app while the emailed badge is drawn from a
- * Trigger worker where it is something else.
- *
- * The literals are not style. A bundler reads `new URL(…, import.meta.url)`
- * as an asset reference and rewrites it to wherever it emitted that file —
- * which is a content-hashed name. Given a path built from a variable it
- * cannot know which file is meant, so the rewrite does not line up and the
- * name asked for at runtime matches nothing. That shipped: the card asked
- * for `ridge.png`, got another mark in the drawing's place, and every
- * credential carried a sponsor's logo across its lower half. It worked in
- * every test and every local run, because nothing there is bundled.
+ * Next runs with this app as its working directory, where `public` already
+ * lives. Trigger is configured with its build directory as the working
+ * directory and copies the same files there. Using that shared runtime
+ * contract matters because Trigger's bundler leaves these `new URL` paths
+ * pointing outside its image instead of emitting the PNGs.
  */
 const ASSETS = {
-  "ridge.png": new URL("../../public/credential/ridge.png", import.meta.url),
-  "mountain.png": new URL(
-    "../../public/credential/mountain.png",
-    import.meta.url,
-  ),
-  "chofex.png": new URL("../../public/credential/chofex.png", import.meta.url),
-  "crafter-station.png": new URL(
-    "../../public/credential/crafter-station.png",
-    import.meta.url,
-  ),
-  "peru-tech-week.png": new URL(
-    "../../public/credential/peru-tech-week.png",
-    import.meta.url,
-  ),
+  "ridge.png": "public/credential/ridge.png",
+  "mountain.png": "public/credential/mountain.png",
+  "chofex.png": "public/credential/chofex.png",
+  "crafter-station.png": "public/credential/crafter-station.png",
+  "peru-tech-week.png": "public/credential/peru-tech-week.png",
 } as const;
 
-const assetPath = (file: keyof typeof ASSETS): string =>
-  fileURLToPath(ASSETS[file]);
+const assetPath = (file: keyof typeof ASSETS): string => {
+  const runtimePath = join(process.cwd(), ASSETS[file]);
+  if (existsSync(runtimePath)) return runtimePath;
+
+  return join(process.cwd(), "apps", "web", ASSETS[file]);
+};
 
 /**
  * Memoised by every argument that changes the bytes.

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { credentialFonts } from "./trigger.config";
+import { credentialArtwork, credentialFonts } from "./trigger.config";
 
 test("copies credential fonts to the Trigger runtime path", async () => {
   const outputPath = await mkdtemp(join(tmpdir(), "chofex-trigger-build-"));
@@ -19,6 +19,33 @@ test("copies credential fonts to the Trigger runtime path", async () => {
     ]) {
       const source = await readFile(join(workingDir, "app", "fonts", fileName));
       const deployed = await readFile(join(outputPath, "fonts", fileName));
+      expect(deployed).toEqual(source);
+    }
+  } finally {
+    await rm(outputPath, { recursive: true, force: true });
+  }
+});
+
+test("copies credential artwork to the Trigger runtime path", async () => {
+  const outputPath = await mkdtemp(join(tmpdir(), "chofex-trigger-build-"));
+  const workingDir = dirname(fileURLToPath(import.meta.url));
+
+  try {
+    await credentialArtwork.onBuildComplete({ workingDir }, { outputPath });
+
+    for (const fileName of [
+      "ridge.png",
+      "mountain.png",
+      "chofex.png",
+      "crafter-station.png",
+      "peru-tech-week.png",
+    ]) {
+      const source = await readFile(
+        join(workingDir, "public", "credential", fileName),
+      );
+      const deployed = await readFile(
+        join(outputPath, "public", "credential", fileName),
+      );
       expect(deployed).toEqual(source);
     }
   } finally {

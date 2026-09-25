@@ -22,8 +22,10 @@ describe("badge-ready email", () => {
       placement: "BLACK BOX · #01",
       badgePageUrl: "https://hacktheandes.com/badge",
       requiresConfirmation: true,
+      notification: { kind: "acceptance" },
     });
 
+    expect(email.subject).toBe("Estás dentro — bienvenida a Hack the Andes");
     expect(email.text).toContain("BLACK BOX · #01");
     expect(email.text).toContain("carnet predeterminado");
     expect(email.text).toContain("chofex confirm");
@@ -35,6 +37,7 @@ describe("badge-ready email", () => {
     expect(email.text).toContain("LinkedIn");
     expect(email.text).toContain("Instagram");
     expect(email.html).toContain("BLACK BOX · #01");
+    expect(email.html).toContain("https://example.com/badge.png");
   });
 
   test("does not claim an unranked participant has a ranking", () => {
@@ -44,6 +47,7 @@ describe("badge-ready email", () => {
       placement: "PARTICIPANT",
       badgePageUrl: "https://hacktheandes.com/badge",
       requiresConfirmation: true,
+      notification: { kind: "acceptance" },
     });
 
     expect(email.text).not.toContain("posición en el challenge");
@@ -86,6 +90,10 @@ describe("badge-ready email", () => {
       badgePageUrl: "https://hacktheandes.com/badge",
       requiresConfirmation: true,
       generationId: "run-456",
+      notification: {
+        kind: "acceptance",
+        message: "Trae tus mejores ideas.",
+      },
     });
 
     expect(headers.get("idempotency-key")).toBe(
@@ -98,5 +106,7 @@ describe("badge-ready email", () => {
     // The face, and a way to the card — not a flattened picture of one.
     expect(body.html).toContain("https://hacktheandes.com/badge");
     expect(body.html).toContain("chofex confirm");
+    expect(body.html).toContain("Trae tus mejores ideas.");
+    expect(body.subject).toBe("Estás dentro — bienvenida a Hack the Andes");
   });
 });

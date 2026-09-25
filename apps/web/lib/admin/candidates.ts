@@ -551,9 +551,8 @@ export interface CandidateDecisionInput {
   readonly decidedByClerkUserId: string;
 }
 
-const sendDecisionEmail = async (
+const sendRejectionEmail = async (
   candidate: Candidate,
-  decision: CandidateDecisionInput["decision"],
   message: string | undefined,
 ): Promise<
   { readonly ok: true } | { readonly ok: false; readonly error: string }
@@ -567,7 +566,7 @@ const sendDecisionEmail = async (
   }
 
   const email = buildDecisionEmail({
-    decision,
+    decision: "rejected",
     firstName: candidate.firstName,
     message,
   });
@@ -576,7 +575,7 @@ const sendDecisionEmail = async (
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
-      "idempotency-key": `application-decision/${candidate.id}/${decision}`,
+      "idempotency-key": `application-decision/${candidate.id}/rejected`,
     },
     body: JSON.stringify({
       from: decisionEmailFrom,
@@ -656,7 +655,10 @@ export const decideCandidate = async (
     try {
       if (shouldInitialize) await storeAcceptanceBadgeProfile(candidate);
       if (shouldEnqueue) {
-        await enqueueBadgeGeneration(candidate.id, { force: true });
+        await enqueueBadgeGeneration(candidate.id, {
+          force: true,
+          notification: { kind: "acceptance", message },
+        });
         badgeStatus = "pending";
       } else {
         badgeStatus = record.badge?.status ?? "pending";
@@ -667,15 +669,28 @@ export const decideCandidate = async (
       badgeError =
         "La decisión se guardó, pero no se pudo iniciar la generación del carnet";
     }
+
+    if (badgeStatus === "failed") {
+      return {
+        candidate,
+        emailStatus: "failed",
+        emailError:
+          "La decisión se guardó, pero el correo no puede enviarse hasta generar el carnet",
+        badgeStatus,
+        badgeError,
+      };
+    }
+
+    const emailStatus = record.badge?.notificationSentAt ? "sent" : "pending";
+    return { candidate, emailStatus, badgeStatus, badgeError };
   }
 
-  const shouldNotify = input.notify || input.decision === "accepted";
-  if (!shouldNotify) {
+  if (!input.notify) {
     return { candidate, emailStatus: "not_requested", badgeStatus };
   }
 
   try {
-    const email = await sendDecisionEmail(candidate, input.decision, message);
+    const email = await sendRejectionEmail(candidate, message);
     if (email.ok) {
       return { candidate, emailStatus: "sent", badgeStatus, badgeError };
     }

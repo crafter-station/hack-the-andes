@@ -137,7 +137,7 @@ export interface CandidatePage {
 
 export interface CandidateDecisionResult {
   readonly candidate: Candidate;
-  readonly emailStatus: "not_requested" | "sent" | "failed";
+  readonly emailStatus: "not_requested" | "pending" | "sent" | "failed";
   readonly emailError?: string;
   readonly badgeStatus:
     | "not_requested"

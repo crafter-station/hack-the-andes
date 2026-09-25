@@ -8,6 +8,14 @@ const credentialFontFiles = [
   "StackSansNotch-700.ttf",
 ] as const;
 
+const credentialArtworkFiles = [
+  "ridge.png",
+  "mountain.png",
+  "chofex.png",
+  "crafter-station.png",
+  "peru-tech-week.png",
+] as const;
+
 export const credentialFonts = {
   name: "credentialFonts",
   onBuildComplete: async (
@@ -27,9 +35,29 @@ export const credentialFonts = {
   },
 };
 
+export const credentialArtwork = {
+  name: "credentialArtwork",
+  onBuildComplete: async (
+    context: { readonly workingDir: string },
+    manifest: { readonly outputPath: string },
+  ): Promise<void> => {
+    const outputDirectory = join(manifest.outputPath, "public", "credential");
+    await mkdir(outputDirectory, { recursive: true });
+    await Promise.all(
+      credentialArtworkFiles.map((fileName) =>
+        copyFile(
+          join(context.workingDir, "public", "credential", fileName),
+          join(outputDirectory, fileName),
+        ),
+      ),
+    );
+  },
+};
+
 export default defineConfig({
   project: "proj_kemqynqfsdzrftzoutsz",
   dirs: ["./trigger"],
+  legacyDevProcessCwdBehaviour: false,
   maxDuration: 900,
   retries: {
     enabledInDev: false,
@@ -43,6 +71,10 @@ export default defineConfig({
   },
   build: {
     external: ["next", "sharp"],
-    extensions: [aptGet({ packages: ["fonts-liberation2"] }), credentialFonts],
+    extensions: [
+      aptGet({ packages: ["fonts-liberation2"] }),
+      credentialFonts,
+      credentialArtwork,
+    ],
   },
 });

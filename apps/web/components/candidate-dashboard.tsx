@@ -638,6 +638,9 @@ const CandidateDrawer = ({
     feedback =
       decisionMutation.data.badgeError ??
       "La decisión se guardó, pero no se pudo iniciar la generación del carnet.";
+  } else if (decisionMutation.data?.emailStatus === "pending") {
+    feedback =
+      "Decisión guardada. El correo se enviará cuando el carnet esté listo.";
   } else if (decisionMutation.data?.emailStatus === "sent") {
     if (decisionMutation.data.badgeStatus === "pending") {
       feedback =

@@ -250,7 +250,7 @@ describe("CLI upgrade", () => {
           return { exitCode: 0, stderr: "" };
         },
       }),
-    ).rejects.toThrow("npm exited with code 1: permission denied");
+    ).rejects.toThrow("npm terminó con código 1: permission denied");
     expect(skillUpdateCount).toBe(0);
   });
 
@@ -264,7 +264,7 @@ describe("CLI upgrade", () => {
         }),
       }),
     ).rejects.toThrow(
-      "skill installer exited with code 1: skill install failed",
+      "instalador de skills terminó con código 1: skill install failed",
     );
   });
 
@@ -302,7 +302,7 @@ describe("CLI upgrade", () => {
           stderr: "permission denied",
         }),
       }),
-    ).rejects.toThrow("npm exited with code 1: permission denied");
+    ).rejects.toThrow("npm terminó con código 1: permission denied");
   });
 
   test("installs the exact npm version requested by the startup check", async () => {

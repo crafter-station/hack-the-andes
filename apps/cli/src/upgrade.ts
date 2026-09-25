@@ -163,7 +163,7 @@ const assertSuccessful = (result: ProcessResult, program: string): void => {
 
   let detail = "";
   if (result.stderr) detail = `: ${result.stderr}`;
-  throw new Error(`${program} exited with code ${result.exitCode}${detail}`);
+  throw new Error(`${program} terminó con código ${result.exitCode}${detail}`);
 };
 
 export const upgradeCli = async (
@@ -204,7 +204,7 @@ export const updateChofex = async (
     "-g",
     "-y",
   ]);
-  assertSuccessful(result, "skill installer");
+  assertSuccessful(result, "instalador de skills");
 };
 
 type ParsedVersion = {

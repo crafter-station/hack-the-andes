@@ -6,15 +6,30 @@ import {
   heading,
   note,
   paragraph,
+  picture,
 } from "@/lib/emails/layout";
 
 export type ApplicationDecision = "accepted" | "rejected";
 
-export interface DecisionEmailInput {
-  readonly decision: ApplicationDecision;
+interface DecisionEmailInputBase {
   readonly firstName: string;
   readonly message?: string;
 }
+
+interface AcceptedDecisionEmailInput extends DecisionEmailInputBase {
+  readonly decision: "accepted";
+  readonly badgeUrl: string;
+  readonly badgePageUrl: string;
+  readonly placement: string;
+}
+
+interface RejectedDecisionEmailInput extends DecisionEmailInputBase {
+  readonly decision: "rejected";
+}
+
+export type DecisionEmailInput =
+  | AcceptedDecisionEmailInput
+  | RejectedDecisionEmailInput;
 
 export interface DecisionEmail {
   readonly subject: string;
@@ -46,7 +61,7 @@ const decisionCopy = (decision: ApplicationDecision) => {
       heading: "Estás dentro.",
       introduction:
         "Nos alegra ofrecerte un lugar en Hack the Andes, en Lima, el 17 y 18 de octubre.",
-      body: "Ya estamos preparando tu carnet predeterminado con el nombre y la foto que vimos en tu postulación. Aun así, completa chofex confirm: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si hace falta. En ese mismo paso puedes cambiar el nombre del carnet, la foto y la presentación de una línea; al terminar generaremos uno nuevo.",
+      body: "Este es tu carnet predeterminado, hecho con el nombre, la foto y la presentación que vimos en tu postulación. Completa chofex confirm aunque quieras conservarlo: necesitamos tu nombre completo y DNI o pasaporte para autorizar tu ingreso al venue. Comparte también tu teléfono para que podamos contactarte por WhatsApp si hace falta. En ese mismo paso puedes cambiar el nombre del carnet, la foto y la presentación de una línea; al terminar generaremos uno nuevo.",
       action: "Confirmar mi asistencia",
       url: CONFIRM_URL,
       commandLabel: "O desde tu terminal:",
@@ -69,14 +84,19 @@ const decisionCopy = (decision: ApplicationDecision) => {
   };
 };
 
-export const buildDecisionEmail = ({
-  decision,
-  firstName,
-  message,
-}: DecisionEmailInput): DecisionEmail => {
-  const copy = decisionCopy(decision);
-  const name = firstName.trim();
+export const buildDecisionEmail = (
+  input: DecisionEmailInput,
+): DecisionEmail => {
+  const copy = decisionCopy(input.decision);
+  const name = input.firstName.trim();
   const greeting = name ? `Hola ${name},` : "Hola,";
+
+  const badgeText: string[] = [];
+  if (input.decision === "accepted") {
+    badgeText.push("", `Mi carnet (${input.placement}): ${input.badgePageUrl}`);
+  }
+  const sharing =
+    "Celebra este logro compartiendo tu carnet en LinkedIn e Instagram.";
 
   const text = [
     greeting,
@@ -84,30 +104,50 @@ export const buildDecisionEmail = ({
     copy.introduction,
     "",
     copy.body,
+    ...badgeText,
     "",
     `${copy.action}: ${copy.url}`,
     `${copy.commandLabel} ${copy.command}`,
-    ...(message ? ["", "Una nota del equipo de revisión:", message] : []),
+    ...(input.decision === "accepted" ? ["", sharing] : []),
+    ...(input.message
+      ? ["", "Una nota del equipo de revisión:", input.message]
+      : []),
     "",
     "Nos vemos en la cima.",
     "— El equipo de Hack the Andes",
   ].join("\n");
 
+  const blocks = [
+    eyebrow(copy.eyebrow),
+    heading(copy.heading),
+    paragraph(greeting),
+    paragraph(copy.introduction),
+  ];
+  if (input.decision === "accepted") {
+    blocks.push(
+      picture(
+        input.badgeUrl,
+        "Tu carnet de Hack the Andes",
+        input.badgePageUrl,
+      ),
+    );
+  }
+  blocks.push(
+    paragraph(copy.body),
+    button(copy.action, copy.url),
+    command(copy.commandLabel, copy.command),
+  );
+  if (input.decision === "accepted") blocks.push(paragraph(sharing));
+  if (input.message) {
+    blocks.push(note("Una nota del equipo de revisión", input.message));
+  }
+
   const html = emailShell({
     subject: copy.subject,
     preheader: copy.preheader,
-    // Nothing more specific to stamp on a card nobody has yet.
-    stamp: "17–18 OCT 2026",
-    blocks: [
-      eyebrow(copy.eyebrow),
-      heading(copy.heading),
-      paragraph(greeting),
-      paragraph(copy.introduction),
-      paragraph(copy.body),
-      button(copy.action, copy.url),
-      command(copy.commandLabel, copy.command),
-      ...(message ? [note("Una nota del equipo de revisión", message)] : []),
-    ],
+    stamp: input.decision === "accepted" ? input.placement : "17–18 OCT 2026",
+    ridge: input.decision !== "accepted",
+    blocks,
   });
 
   return { subject: copy.subject, text, html };

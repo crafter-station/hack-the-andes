@@ -9,7 +9,13 @@ import type { generateParticipantBadge } from "../../trigger/generate-participan
 
 export const enqueueBadgeGeneration = async (
   applicationId: string,
-  options: { readonly force?: boolean } = {},
+  options: {
+    readonly force?: boolean;
+    readonly notification?: {
+      readonly kind: "acceptance";
+      readonly message?: string;
+    };
+  } = {},
 ): Promise<void> => {
   const [[application], [badge]] = await Promise.all([
     db
@@ -64,7 +70,7 @@ export const enqueueBadgeGeneration = async (
       );
     handle = await tasks.trigger<typeof generateParticipantBadge>(
       "generate-participant-badge",
-      { applicationId, generationId },
+      { applicationId, generationId, notification: options.notification },
       {
         idempotencyKey,
         idempotencyKeyTTL: "1h",

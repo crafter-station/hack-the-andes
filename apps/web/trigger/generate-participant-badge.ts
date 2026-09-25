@@ -20,6 +20,10 @@ const BADGE_PAGE_URL =
 export interface GenerateParticipantBadgePayload {
   readonly applicationId: string;
   readonly generationId: string;
+  readonly notification?: {
+    readonly kind: "acceptance";
+    readonly message?: string;
+  };
 }
 
 export const generateParticipantBadge = task<
@@ -165,6 +169,7 @@ export const generateParticipantBadge = task<
       badgePageUrl: BADGE_PAGE_URL,
       requiresConfirmation: !record.details?.completedAt,
       generationId: payload.generationId,
+      notification: payload.notification,
     });
     await db
       .update(participantBadges)

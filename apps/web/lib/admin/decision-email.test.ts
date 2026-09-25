@@ -9,6 +9,9 @@ describe("buildDecisionEmail", () => {
     const email = buildDecisionEmail({
       decision: "accepted",
       firstName: "Ada",
+      badgeUrl: "https://blob.example/ada-badge.png",
+      badgePageUrl: "https://hacktheandes.com/badge",
+      placement: "BLACK BOX · #07",
     });
 
     expect(email.subject).toBe("Estás dentro — bienvenida a Hack the Andes");
@@ -19,6 +22,8 @@ describe("buildDecisionEmail", () => {
     expect(email.text).toContain("WhatsApp");
     expect(email.html).toContain("POSTULACIÓN APROBADA");
     expect(email.html).toContain("Confirmar mi asistencia");
+    expect(email.html).toContain("https://blob.example/ada-badge.png");
+    expect(email.html).toContain("BLACK BOX · #07");
   });
 
   test("renders respectful denial copy and reapplication next steps", () => {
@@ -38,6 +43,9 @@ describe("buildDecisionEmail", () => {
       decision: "accepted",
       firstName: '<Ada & "friends">',
       message: "Bring <ideas> & curiosity.",
+      badgeUrl: "https://blob.example/badge.png?a=1&b=2",
+      badgePageUrl: "https://hacktheandes.com/badge?a=1&b=2",
+      placement: "PARTICIPANT",
     });
 
     expect(email.text).toContain("Una nota del equipo de revisión:");
@@ -56,6 +64,9 @@ describe("buildDecisionEmail", () => {
     const email = buildDecisionEmail({
       decision: "accepted",
       firstName: "Ada",
+      badgeUrl: "https://blob.example/ada-badge.png",
+      badgePageUrl: "https://hacktheandes.com/badge",
+      placement: "PARTICIPANT",
     });
 
     expect(email.html).toContain("https://hacktheandes.com/welcome");

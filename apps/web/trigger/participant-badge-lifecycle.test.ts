@@ -18,7 +18,9 @@ describe("participant badge generation lifecycle", () => {
 
     const enqueue = await source("../lib/badges/enqueue.ts");
     expect(enqueue).toContain("generationId = crypto.randomUUID()");
-    expect(enqueue).toContain("{ applicationId, generationId }");
+    expect(enqueue).toContain(
+      "{ applicationId, generationId, notification: options.notification }",
+    );
     expect(enqueue).toMatch(
       /participant-badge\/\$\{applicationId\}\/\$\{generationId\}/,
     );
@@ -75,9 +77,18 @@ describe("participant badge generation lifecycle", () => {
 
   test("starts default badge generation when an admin accepts a candidate", async () => {
     const candidates = await source("../lib/admin/candidates.ts");
+    const enqueue = await source("../lib/badges/enqueue.ts");
+    const parent = await source("./generate-participant-badge.ts");
 
     expect(candidates).toContain("storeAcceptanceBadgeProfile");
     expect(candidates).toContain("enqueueBadgeGeneration");
+    expect(candidates).toContain("const sendRejectionEmail");
+    expect(candidates).not.toContain("const sendDecisionEmail");
+    expect(candidates).toContain(
+      'notification: { kind: "acceptance", message }',
+    );
+    expect(enqueue).toContain("notification: options.notification");
+    expect(parent).toContain("notification: payload.notification");
   });
 
   test("marks a generation failed when Trigger dispatch fails", async () => {
