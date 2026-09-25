@@ -172,7 +172,7 @@ export const qualifierChallengesCopy = {
   liveTitle: "The Scheduler",
   liveBody:
     "Un agente dice que terminó un job scheduler. Todos los tests pasan. Haz que realmente esté listo para producción.",
-  liveMeta: "4 tests verdes · 5 evaluaciones oficiales · AI permitida",
+  liveMeta: "7 tests verdes · 5 evaluaciones oficiales · AI permitida",
   liveCta: "Competir por un pase →",
 } as const;
 

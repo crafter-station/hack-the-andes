@@ -35,10 +35,10 @@ describe("challenge catalog", () => {
       isChallengeOpenAt(challenge, new Date("2026-09-17T14:00:00.000Z")),
     ).toBe(true);
     expect(formatChallengeOpeningInPeru(challenge.opensAt)).toBe(
-      "September 17, 2026 at 09:00 (UTC-5)",
+      "17 de septiembre de 2026 a las 09:00 (UTC-5)",
     );
     expect(challengeOpeningNotice(challenge.title, challenge.opensAt)).toBe(
-      "The Shipping Machine opens September 17, 2026 at 09:00 (UTC-5). Queries and evaluations are disabled until then; no attempts will be consumed.",
+      "The Shipping Machine abre el 17 de septiembre de 2026 a las 09:00 (UTC-5). Las consultas y evaluaciones están deshabilitadas hasta entonces; no se consumirá ningún intento.",
     );
     expect(
       isChallengeOpenAt(challenge, new Date("2026-09-17T00:00:00.000Z"), true),
@@ -72,6 +72,32 @@ describe("challenge catalog", () => {
     expect(
       isChallengeOpenAt(challenge, new Date("2026-09-24T19:25:00.000Z")),
     ).toBe(true);
+  });
+
+  test("closes Broken Agent when Challenge 3 opens and reveals its ranking first", () => {
+    const challenge = challengeBySlug("broken-agent");
+    if (!challenge) throw new Error("missing broken-agent");
+
+    expect(challenge.rankingVisibleAt).toBe("2026-10-01T20:00:00.000Z");
+    expect(challenge.closesAt).toBe("2026-10-02T05:00:00.000Z");
+    expect(
+      isChallengeRankingVisibleAt(
+        challenge,
+        new Date("2026-10-01T19:59:59.999Z"),
+      ),
+    ).toBe(false);
+    expect(
+      isChallengeRankingVisibleAt(
+        challenge,
+        new Date("2026-10-01T20:00:00.000Z"),
+      ),
+    ).toBe(true);
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-10-02T04:59:59.999Z")),
+    ).toBe(true);
+    expect(
+      isChallengeOpenAt(challenge, new Date("2026-10-02T05:00:00.000Z")),
+    ).toBe(false);
   });
 
   test("reveals the Black Box ranking on 23 September 2026 at 15:00 UTC-5", () => {
@@ -153,7 +179,7 @@ describe("challenge scoring", () => {
     ).toBeLessThan(0);
   });
 
-  test("breaks Broken Agent ties by fewer evaluations and then runtime", () => {
+  test("breaks Broken Agent ties by fewer evaluations and deterministic cost", () => {
     const breakdown = {
       coreBehavior: { earned: 10, available: 10 },
       persistence: { earned: 15, available: 15 },
@@ -170,6 +196,7 @@ describe("challenge scoring", () => {
       meanError: 0,
       queriesUsed: 0,
       runtimeMs: 50,
+      executionCost: 50,
       evaluationsUsed: 2,
       breakdown,
     };
@@ -178,7 +205,7 @@ describe("challenge scoring", () => {
       compareChallengeScores(base, { ...base, evaluationsUsed: 3 }),
     ).toBeLessThan(0);
     expect(
-      compareChallengeScores(base, { ...base, runtimeMs: 60 }),
+      compareChallengeScores(base, { ...base, executionCost: 60 }),
     ).toBeLessThan(0);
   });
 });

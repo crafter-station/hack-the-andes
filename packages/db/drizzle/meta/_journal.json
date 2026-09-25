@@ -155,6 +155,13 @@
       "when": 1790286305582,
       "tag": "0021_grey_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1790293984901,
+      "tag": "0022_burly_mesmero",
+      "breakpoints": true
     }
   ]
 }

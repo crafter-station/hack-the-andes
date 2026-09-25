@@ -93,22 +93,21 @@ describe("CLI JSON mode", () => {
 
     expect(help.exitCode).toBe(0);
     expect(help.stdout).toContain("challenge");
-    expect(help.stdout).toContain("Play mini technical challenges");
+    expect(help.stdout).toContain("Compite en challenges técnicos");
   });
 
-  test("sends a closed challenge to its final ranking", async () => {
+  test("opens the live Broken Agent guided workflow by default", async () => {
     const result = await runCli("challenge");
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("THE SHIPPING MACHINE");
-    expect(result.stdout).toContain("está cerrado");
-    expect(result.stdout).toContain("chofex challenge ranking");
-    expect(result.stdout).not.toContain("chofex challenge query");
-    expect(result.stdout).not.toContain("chofex challenge evaluate");
+    expect(result.stdout).toContain("BROKEN AGENT — THE SCHEDULER");
+    expect(result.stdout).toContain("siete tests públicos");
+    expect(result.stdout).toContain("chofex challenge evaluate");
+    expect(result.stdout).not.toContain("chofex challenge query --distance");
   });
 
-  test("returns the closed challenge status as one JSON document", async () => {
+  test("returns the live challenge status as one JSON document", async () => {
     const result = await runCli("--output", "json", "challenge");
 
     expect(result.exitCode).toBe(0);
@@ -119,18 +118,18 @@ describe("CLI JSON mode", () => {
       version: 1,
       ok: true,
       data: {
-        title: "THE SHIPPING MACHINE",
-        open: false,
-        state: "closed",
+        title: "BROKEN AGENT — THE SCHEDULER",
+        open: true,
+        state: "open",
       },
     });
     expect(document.data.workflow[0]).toMatchObject({
-      step: 8,
-      command: "chofex challenge ranking",
+      step: 1,
+      command: "chofex login",
     });
-    expect(document.data.workflow).toHaveLength(1);
-    expect(document.data.story).toEqual([]);
-    expect(document.data.rules).toEqual([]);
+    expect(document.data.workflow).toHaveLength(8);
+    expect(document.data.story).not.toEqual([]);
+    expect(document.data.rules).not.toEqual([]);
   });
 
   test("does not initialize files for a closed challenge", async () => {
@@ -138,7 +137,13 @@ describe("CLI JSON mode", () => {
     const solutionPath = join(directory, "shipping.js");
 
     try {
-      const result = await runCliFrom(directory, "challenge", "init");
+      const result = await runCliFrom(
+        directory,
+        "challenge",
+        "init",
+        "--challenge",
+        "black-box",
+      );
 
       expect(result.exitCode).toBe(2);
       expect(result.stdout).toBe("");
@@ -152,6 +157,8 @@ describe("CLI JSON mode", () => {
         "json",
         "challenge",
         "init",
+        "--challenge",
+        "black-box",
       );
       expect(json.stderr).toBe("");
       expect(json.stdout.trim().split("\n")).toHaveLength(1);
@@ -180,17 +187,17 @@ describe("CLI JSON mode", () => {
 
       expect(created.exitCode).toBe(0);
       expect(created.stderr).toBe("");
-      expect(created.stdout).toContain("Created broken-agent");
-      expect(created.stdout).toContain("Everything passes");
+      expect(created.stdout).toContain("Se creó broken-agent");
+      expect(created.stdout).toContain("Todo pasa");
       expect(await Bun.file(solutionPath).text()).toContain(
         "function createScheduler",
       );
       expect(
         await Bun.file(join(challengeDirectory, "README.md")).text(),
-      ).toContain("Public contract");
+      ).toContain("Contrato normativo");
       expect(
         await Bun.file(join(challengeDirectory, "scheduler.test.js")).text(),
-      ).toContain('test("executes a due job"');
+      ).toContain('test("ejecuta vencidos');
 
       await writeFile(solutionPath, "// repaired by me\n", "utf8");
 
@@ -202,7 +209,7 @@ describe("CLI JSON mode", () => {
         "broken-agent",
       );
       expect(repeated.exitCode).toBe(0);
-      expect(repeated.stdout).toContain("broken-agent already exists");
+      expect(repeated.stdout).toContain("broken-agent ya existe");
       expect(await Bun.file(solutionPath).text()).toBe("// repaired by me\n");
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -213,19 +220,33 @@ describe("CLI JSON mode", () => {
     const challengeHelp = await runCli("challenge", "--help");
 
     expect(challengeHelp.exitCode).toBe(0);
-    expect(challengeHelp.stdout).toContain("Start here");
+    expect(challengeHelp.stdout).toContain("challenge actual");
     expect(challengeHelp.stdout).toContain("Chofex API base URL");
-    expect(challengeHelp.stdout).toContain("chofex challenge query --distance");
+    expect(challengeHelp.stdout).toContain(
+      "chofex challenge init --challenge broken-agent",
+    );
 
     const expectedExamples = new Map([
       ["list", "chofex challenge list"],
-      ["init", "chofex challenge init"],
+      ["init", "chofex challenge init --challenge broken-agent"],
       ["show", "chofex challenge show"],
-      ["query", "chofex challenge query --input shipment.json"],
-      ["notebook", "chofex challenge notebook --format csv"],
-      ["test", "chofex challenge test --source ./shipping.js"],
-      ["evaluate", "chofex challenge evaluate --source ./shipping.js"],
-      ["ranking", "chofex challenge ranking"],
+      [
+        "query",
+        "chofex challenge query --challenge black-box --input shipment.json",
+      ],
+      [
+        "notebook",
+        "chofex challenge notebook --challenge black-box --format csv",
+      ],
+      [
+        "test",
+        "chofex challenge test --challenge broken-agent --source ./scheduler.js",
+      ],
+      [
+        "evaluate",
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+      ],
+      ["ranking", "chofex challenge ranking --challenge broken-agent"],
     ]);
 
     for (const [command, example] of expectedExamples) {

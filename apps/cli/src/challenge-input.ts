@@ -7,7 +7,7 @@ import type * as PromptModule from "effect/unstable/cli/Prompt";
 
 import { CliError, cliError } from "./errors.js";
 
-export const defaultChallengeSlug = "black-box";
+export const defaultChallengeSlug = "broken-agent";
 
 const readStdin = async (): Promise<string> => {
   const chunks: Array<Buffer> = [];

@@ -6,7 +6,7 @@ const workflow = [
   {
     title: "Crea el repositorio",
     command: "chofex challenge init --challenge broken-agent",
-    body: "La CLI crea broken-agent/ con el contrato, la implementación del agente y cuatro tests públicos.",
+    body: "La CLI crea broken-agent/ con el contrato normativo, una implementación plausible pero defectuosa y siete tests públicos.",
   },
   {
     title: "Confirma el punto de partida",
@@ -16,7 +16,7 @@ const workflow = [
   {
     title: "Audita y repara",
     command: "$EDITOR scheduler.js",
-    body: "Mantén createScheduler y razona sobre concurrencia, persistencia, leases de 30 segundos, reintentos, cancelación e idempotencia.",
+    body: "Mantén createScheduler y razona sobre claims únicos, concurrencia, persistencia, leases de 30 segundos, reintentos, cancelación e idempotencia.",
   },
   {
     title: "Protege el comportamiento visible",
@@ -52,17 +52,21 @@ export function BrokenAgentChallengeGuide() {
           producción.
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
-          El contrato es público; los escenarios adversos son ocultos. El
-          executor aplica efectos idempotentemente por job ID, así que el
-          sistema puede recuperarse sin prometer exactamente-once para efectos
-          arbitrarios. Puedes usar Claude Code, Codex, Cursor o cualquier otra
-          AI.
+          El contrato es público; cada participante recibe variantes
+          determinísticas de los escenarios adversos. El executor aplica efectos
+          idempotentemente por job ID, así que el sistema puede recuperarse sin
+          prometer exactly-once para efectos arbitrarios. Puedes usar Claude
+          Code, Codex, Cursor o cualquier otra AI.
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
           Puntaje: comportamiento base 10, persistencia 15, concurrencia 20,
           recuperación 20, idempotencia 15, seguridad contra regresiones 15 y
           rendimiento 5. Los empates se resuelven por menos evaluaciones
-          oficiales, runtime y, al final, hora de envío.
+          oficiales, costo determinístico de operaciones —no tiempo del
+          servidor— y, al final, hora del mejor envío. El ranking se revela el 1
+          de octubre a las 15:00 y el challenge cierra el 2 de octubre a las
+          00:00, hora de Perú. Todos los puntajes válidos con una postulación
+          enviada aparecen en el ranking.
         </p>
 
         <dl className="mt-8 grid gap-px bg-[var(--hud-ink)]/10 sm:grid-cols-3">
@@ -73,7 +77,7 @@ export function BrokenAgentChallengeGuide() {
               </BrandKicker>
             </dt>
             <dd className="mt-2 font-display text-3xl uppercase">
-              4/4 tests verdes
+              7/7 tests verdes
             </dd>
           </div>
           <div className="bg-[var(--hud-card)] p-5">

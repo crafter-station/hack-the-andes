@@ -10,6 +10,7 @@ export interface StoredChallengeScore {
   readonly meanError: number;
   readonly queriesUsed: number;
   readonly runtimeMs: number;
+  readonly executionCost?: number | null;
   readonly solution?: unknown;
 }
 
@@ -38,6 +39,13 @@ export const scoreFromStored = (
     runtimeMs: score.runtimeMs,
   };
   const breakdown = scoreBreakdownFrom(score.solution);
+  if (
+    breakdown &&
+    score.executionCost !== null &&
+    score.executionCost !== undefined
+  ) {
+    return { ...stored, breakdown, executionCost: score.executionCost };
+  }
   if (breakdown) return { ...stored, breakdown };
   return stored;
 };

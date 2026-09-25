@@ -34,6 +34,7 @@ describe("private challenge engine adapter", () => {
           meanError: 1.25,
           queriesUsed: 7,
           runtimeMs: 12,
+          executionCost: 321,
           breakdown: {
             coreBehavior: { earned: 10, available: 10 },
             persistence: { earned: 12, available: 15 },
@@ -67,6 +68,7 @@ describe("private challenge engine adapter", () => {
       meanError: 1.25,
       queriesUsed: 7,
       runtimeMs: 12,
+      executionCost: 321,
       breakdown: {
         coreBehavior: { earned: 10, available: 10 },
         persistence: { earned: 12, available: 15 },

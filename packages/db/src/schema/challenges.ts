@@ -105,6 +105,7 @@ export const challengeEvaluations = pgTable(
     meanError: doublePrecision("mean_error").notNull(),
     queriesUsed: integer("queries_used").notNull(),
     runtimeMs: integer("runtime_ms").notNull(),
+    executionCost: integer("execution_cost"),
     ...auditTimestamps(),
   },
   (table) => [
@@ -129,6 +130,7 @@ export const challengeBestEvaluations = pgTable("challenge_best_evaluations", {
   exactCount: integer("exact_count").notNull(),
   queriesUsed: integer("queries_used").notNull(),
   runtimeMs: integer("runtime_ms").notNull(),
+  executionCost: integer("execution_cost"),
   evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull(),
   ...auditTimestamps(),
 });

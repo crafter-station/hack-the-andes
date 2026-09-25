@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { ChallengeLocalTestResult } from "@chofex/challenges-contract";
 import { brokenAgentPublicTestSource } from "@chofex/challenges-contract/broken-agent";
 
-const publicTestCount = 4;
+const publicTestCount = 7;
 const testTimeoutMs = 3_000;
 const maximumOutputBytes = 64 * 1_024;
 

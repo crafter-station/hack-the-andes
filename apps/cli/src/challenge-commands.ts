@@ -39,71 +39,72 @@ import { cliError } from "./errors.js";
 import { execute, printJson } from "./output.js";
 
 const challengeQuickstart = {
-  title: "THE SHIPPING MACHINE",
+  title: "BROKEN AGENT — THE SCHEDULER",
   story: [
-    "A delivery company is about to retire the service that prices every shipment.",
-    "There is no documentation and no source code—only five controls and the price the machine returns.",
+    "Un agente de código implementó un job scheduler y declaró la tarea terminada.",
+    "Los siete tests públicos pasan, pero eso no demuestra que sea seguro bajo concurrencia, reinicios y fallas.",
   ],
   mission:
-    "Learn the hidden pricing rules, then replace the machine with your own calculateShipping(input) function.",
+    "Audita scheduler.js, conserva createScheduler(dependencies) y haz que el sistema cumpla el contrato de producción.",
   rules: [
-    "You have 25 oracle queries to gather evidence.",
-    "You have 3 official evaluations against hidden shipments.",
-    "Local notebook tests are free. Accuracy wins, then exact matches, then fewer oracle queries.",
-    "AI tools are welcome, but the hidden rules are personalized to you.",
+    "Tienes 5 evaluaciones oficiales contra variantes ocultas y determinísticas por participante.",
+    "Los tests locales y públicos son ilimitados.",
+    "Gana el puntaje total; los empates usan menos evaluaciones, costo determinístico y hora del mejor envío.",
+    "Las herramientas de AI están permitidas.",
   ],
   workflow: [
     {
       step: 1,
-      action: "Sign in",
+      action: "Inicia sesión",
       command: "chofex login",
-      note: "Opens Clerk authentication in your browser.",
+      note: "Abre la autenticación de Clerk en tu navegador.",
     },
     {
       step: 2,
-      action: "Prepare your field kit",
-      command: "chofex challenge init",
-      note: "Creates a documented shipping.js starter without overwriting existing work.",
+      action: "Crea el repositorio del challenge",
+      command: "chofex challenge init --challenge broken-agent",
+      note: "Crea broken-agent/ con el contrato, el scheduler y siete tests públicos sin sobrescribir trabajo existente.",
     },
     {
       step: 3,
-      action: "Check your budget",
-      command: "chofex challenge show",
-      note: "Shows remaining oracle queries and official evaluations.",
+      action: "Confirma el punto de partida",
+      command: "cd broken-agent && npm test",
+      note: "Todo pasa. Ahora debes encontrar los riesgos que los happy paths no cubren.",
     },
     {
       step: 4,
-      action: "Probe the Black Box",
-      command:
-        "chofex challenge query --distance 10 --weight 3 --hour 14 --fragile false --express false",
-      note: "A successful query reveals one shipping price and consumes one query.",
+      action: "Revisa tu presupuesto",
+      command: "chofex challenge show --challenge broken-agent",
+      note: "Muestra las evaluaciones oficiales restantes y tu mejor puntaje.",
     },
     {
       step: 5,
-      action: "Study your observations",
-      command: "chofex challenge notebook",
-      note: "Compare inputs and outputs to infer the pricing rules.",
+      action: "Audita y repara",
+      command: "$EDITOR scheduler.js",
+      note: "Razona sobre claims únicos, leases, reinicios, carreras, cancelación, reintentos e idempotencia.",
     },
     {
       step: 6,
-      action: "Edit and test your replacement",
-      command: "chofex challenge test --source ./shipping.js",
-      note: "Checks your solution against your notebook without consuming an official evaluation.",
+      action: "Ejecuta los tests públicos",
+      command:
+        "chofex challenge test --challenge broken-agent --source ./scheduler.js",
+      note: "Es seguro repetirlos y no consumen evaluaciones oficiales.",
     },
     {
       step: 7,
-      action: "Submit to the hidden test set",
-      command: "chofex challenge evaluate --source ./shipping.js",
-      note: "Official evaluations are limited. Use test as often as needed, then evaluate when your solution is ready.",
+      action: "Solicita un veredicto oculto",
+      command:
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+      note: "Úsalo solo cuando enviarías la implementación a producción.",
     },
     {
       step: 8,
-      action: "Check the leaderboard",
-      command: "chofex challenge ranking",
-      note: "Shows the public ranking without consuming budget.",
+      action: "Consulta el ranking",
+      command: "chofex challenge ranking --challenge broken-agent",
+      note: "Se revela el 1 de octubre a las 15:00, hora de Perú.",
     },
   ],
-  helpCommand: "chofex challenge query --help",
+  helpCommand: "chofex challenge test --help",
 } as const;
 
 const launchNoticeFor = (slug: string): string | undefined => {
@@ -168,7 +169,7 @@ const optionalString = (name: string, description: string) =>
 
 const challengeFlag = Flag.string("challenge").pipe(
   Flag.withDefault(defaultChallengeSlug),
-  Flag.withDescription("Challenge slug (default: black-box)"),
+  Flag.withDescription("Challenge slug (default: broken-agent)"),
 );
 
 const sourceFlag = optionalString(
@@ -200,23 +201,23 @@ const challengeInitText = (result: ChallengeScaffoldResult): string => {
   if (result.challenge === "broken-agent") {
     if (result.status === "exists") {
       return [
-        `${result.path} already exists. Left it unchanged.`,
+        `${result.path} ya existe. No se modificó.`,
         "",
-        "Next: keep hardening your scheduler, then run the public tests",
+        "Siguiente: continúa endureciendo el scheduler y ejecuta los tests públicos",
         `  cd ${result.path} && npm test`,
-        `  chofex challenge test --challenge broken-agent --source ./${result.path}/scheduler.js`,
+        "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
       ].join("\n");
     }
     return [
-      `Created ${result.path}`,
-      "The previous agent says the scheduler is done. Everything passes.",
-      "Unfortunately, the agent was wrong.",
+      `Se creó ${result.path}`,
+      "El agente anterior dice que el scheduler está terminado. Todo pasa.",
+      "Pero todavía no es seguro para producción.",
       "",
-      "Start with the public contract and tests:",
+      "Empieza con el contrato normativo y los tests públicos:",
       `  cd ${result.path} && npm test`,
       "",
-      "Then repair scheduler.js and test it safely:",
-      `  chofex challenge test --challenge broken-agent --source ./${result.path}/scheduler.js`,
+      "Luego repara scheduler.js y pruébalo sin consumir evaluaciones:",
+      "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
     ].join("\n");
   }
   if (result.status === "exists") {
@@ -294,16 +295,16 @@ const initCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Create a challenge starter without overwriting existing work.",
+    "Crea el starter de un challenge sin sobrescribir trabajo existente.",
   ),
   Command.withExamples([
     {
-      command: "chofex challenge init",
-      description: "Prepare a safe JavaScript solution file",
+      command: "chofex challenge init --challenge broken-agent",
+      description: "Prepara el repositorio de Broken Agent",
     },
     {
       command: "chofex challenge init --challenge broken-agent",
-      description: "Prepare the Broken Agent starter repository",
+      description: "Usa explícitamente el slug del challenge",
     },
   ]),
 );
@@ -322,12 +323,12 @@ const showCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Check your Black Box query budget, evaluation budget, score, and saved observations. Requires sign-in.",
+    "Consulta presupuesto, puntaje y progreso del challenge. Requiere iniciar sesión.",
   ),
   Command.withExamples([
     {
       command: "chofex challenge show",
-      description: "Check your progress before spending limited attempts",
+      description: "Revisa tu progreso antes de consumir intentos limitados",
     },
   ]),
 );
@@ -383,11 +384,12 @@ const queryCommand = Command.make(
   Command.withExamples([
     {
       command:
-        "chofex challenge query --distance 10 --weight 3 --hour 14 --fragile false --express false",
+        "chofex challenge query --challenge black-box --distance 10 --weight 3 --hour 14 --fragile false --express false",
       description: "Spend one oracle query",
     },
     {
-      command: "chofex challenge query --input shipment.json",
+      command:
+        "chofex challenge query --challenge black-box --input shipment.json",
       description: "Read the shipment fields from a JSON file",
     },
   ]),
@@ -420,11 +422,12 @@ const notebookCommand = Command.make(
   ),
   Command.withExamples([
     {
-      command: "chofex challenge notebook",
+      command: "chofex challenge notebook --challenge black-box",
       description: "Read observations in a terminal table",
     },
     {
-      command: "chofex challenge notebook --format csv > observations.csv",
+      command:
+        "chofex challenge notebook --challenge black-box --format csv > observations.csv",
       description: "Save observations for a spreadsheet",
     },
   ]),
@@ -455,8 +458,9 @@ const testCommand = Command.make(
   ),
   Command.withExamples([
     {
-      command: "chofex challenge test --source ./shipping.js",
-      description: "Test a JavaScript replacement against your notebook",
+      command:
+        "chofex challenge test --challenge broken-agent --source ./scheduler.js",
+      description: "Ejecuta los tests públicos de Broken Agent",
     },
   ]),
 );
@@ -486,8 +490,10 @@ const evaluateCommand = Command.make(
   ),
   Command.withExamples([
     {
-      command: "chofex challenge evaluate --source ./shipping.js",
-      description: "Spend one official evaluation when your solution is ready",
+      command:
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+      description:
+        "Consume una evaluación oficial cuando tu solución esté lista",
     },
   ]),
 );
@@ -509,8 +515,8 @@ const rankingCommand = Command.make(
   ),
   Command.withExamples([
     {
-      command: "chofex challenge ranking",
-      description: "Compare official hidden-set scores",
+      command: "chofex challenge ranking --challenge broken-agent",
+      description: "Compara puntajes oficiales",
     },
   ]),
 );
@@ -536,7 +542,7 @@ export const challengeCommand = Command.make(
         workflow = rankingStep ? [rankingStep] : [];
         helpCommand = "chofex challenge ranking --help";
         story = [];
-        mission = "El Challenge 1 terminó. El ranking final sigue disponible.";
+        mission = "El Challenge 2 terminó. El ranking final sigue disponible.";
         rules = [];
       } else if (participationState === "scheduled") {
         workflow = [];
@@ -580,21 +586,20 @@ export const challengeCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Play mini technical challenges. Start here: learn the Black Box workflow from first query to leaderboard. Run without a subcommand for the guided quickstart.",
+    "Compite en challenges técnicos. Ejecuta el comando sin subcomandos para abrir la guía del challenge actual.",
   ),
   Command.withExamples([
     {
       command: "chofex challenge",
-      description: "Open the guided Black Box quickstart",
+      description: "Abre la guía de Broken Agent",
     },
     {
-      command:
-        "chofex challenge query --distance 10 --weight 3 --hour 14 --fragile false --express false",
-      description: "Make your first oracle query",
+      command: "chofex challenge init --challenge broken-agent",
+      description: "Crea el repositorio de Broken Agent",
     },
     {
-      command: "chofex challenge query --help",
-      description: "See flags and examples for the query step",
+      command: "chofex challenge test --help",
+      description: "Revisa cómo ejecutar los tests públicos",
     },
   ]),
   Command.withSubcommands([

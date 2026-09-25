@@ -19,7 +19,7 @@ describe("challenge output", () => {
         new Date("2026-09-17T13:59:59.999Z"),
       ),
     ).toBe(
-      "Black Box opens September 17, 2026 at 09:00 (UTC-5). Queries and evaluations are disabled until then; no attempts will be consumed.",
+      "Black Box abre el 17 de septiembre de 2026 a las 09:00 (UTC-5). Las consultas y evaluaciones están deshabilitadas hasta entonces; no se consumirá ningún intento.",
     );
     expect(
       challengeLaunchNotice(
@@ -50,7 +50,7 @@ describe("challenge output", () => {
         },
       ],
     });
-    expect(text).toContain("abre September 17, 2026 at 09:00 (UTC-5)");
+    expect(text).toContain("abre 17 de septiembre de 2026 a las 09:00 (UTC-5)");
   });
 
   test("labels a finished challenge as closed", () => {
@@ -79,7 +79,7 @@ describe("challenge output", () => {
     });
 
     expect(text).toContain("cerrado");
-    expect(text).not.toContain("abre September 17");
+    expect(text).not.toContain("abre 17 de septiembre");
     expect(text).not.toContain("Empieza el challenge abierto");
     expect(text).toContain("No hay un challenge abierto");
     expect(
@@ -137,6 +137,7 @@ describe("challenge output", () => {
       meanError: 18,
       queriesUsed: 0,
       runtimeMs: 120,
+      executionCost: 4321,
       shareCode: "SHIP",
       evaluationsUsed: 2,
       evaluationsRemaining: 3,
@@ -154,10 +155,11 @@ describe("challenge output", () => {
       },
     });
 
-    expect(text).toContain("BROKEN AGENT — PRODUCTION READINESS");
+    expect(text).toContain("BROKEN AGENT — PREPARACIÓN PARA PRODUCCIÓN");
     expect(text).toContain("82.00 / 100");
-    expect(text).toContain("Concurrency");
+    expect(text).toContain("Concurrencia");
     expect(text).toContain("16.00 / 20");
+    expect(text).toContain("4321 ops");
     expect(text).not.toContain("worker_crash");
   });
 
@@ -210,7 +212,7 @@ describe("challenge output", () => {
     );
 
     expect(text).toContain(
-      "Ranking available September 23, 2026 at 15:00 (UTC-5).",
+      "Ranking disponible 23 de septiembre de 2026 a las 15:00 (UTC-5).",
     );
     expect(text).not.toContain("0 official evaluations");
   });

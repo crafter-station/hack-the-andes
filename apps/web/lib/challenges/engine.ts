@@ -119,6 +119,7 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
   const meanError = finiteNumber(score.meanError);
   const queriesUsed = finiteNumber(score.queriesUsed);
   const runtimeMs = finiteNumber(score.runtimeMs);
+  const executionCost = finiteNumber(score.executionCost);
   const breakdown = parseBreakdown(score.breakdown);
   if (
     accuracy === undefined ||
@@ -138,7 +139,10 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
     queriesUsed,
     runtimeMs,
   };
-  if (breakdown) return { ...parsed, breakdown };
+  if (breakdown) {
+    if (executionCost === undefined) return;
+    return { ...parsed, breakdown, executionCost };
+  }
   return parsed;
 };
 

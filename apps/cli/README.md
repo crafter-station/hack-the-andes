@@ -19,11 +19,11 @@ chofex register
 chofex status
 chofex requirements
 chofex challenge list
-chofex challenge query
-chofex challenge notebook
-chofex challenge test --source ./shipping.js
-chofex challenge evaluate --source ./shipping.js
-chofex challenge ranking
+chofex challenge query --challenge black-box
+chofex challenge notebook --challenge black-box
+chofex challenge test --challenge black-box --source ./shipping.js
+chofex challenge evaluate --challenge black-box --source ./shipping.js
+chofex challenge ranking --challenge black-box
 chofex challenge init --challenge broken-agent
 cd broken-agent && npm test
 chofex challenge test --challenge broken-agent --source ./scheduler.js

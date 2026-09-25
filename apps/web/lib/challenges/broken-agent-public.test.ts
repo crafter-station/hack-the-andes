@@ -10,8 +10,8 @@ describe("Broken Agent public tests", () => {
 
     expect(result).toMatchObject({
       kind: "broken_agent",
-      matchedObservations: 4,
-      observationCount: 4,
+      matchedObservations: 7,
+      observationCount: 7,
       accuracy: 1,
       mismatches: [],
     });

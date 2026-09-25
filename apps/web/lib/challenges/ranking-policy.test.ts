@@ -17,7 +17,7 @@ const score = (overrides: Partial<ChallengeScore> = {}): ChallengeScore => ({
 });
 
 describe("challenge ranking policy", () => {
-  test("breaks otherwise identical scores by runtime", () => {
+  test("breaks otherwise identical scores by their numeric execution cost", () => {
     expect(
       competitionRanks([
         score({ runtimeMs: 1_000 }),

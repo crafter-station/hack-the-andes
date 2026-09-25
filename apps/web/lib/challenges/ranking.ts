@@ -6,7 +6,7 @@ import {
   isChallengeRankingVisibleAt,
 } from "@chofex/challenges-contract";
 import { db } from "@chofex/db";
-import { and, desc, eq, gt, inArray } from "@chofex/db/orm";
+import { and, desc, eq, inArray } from "@chofex/db/orm";
 import {
   applications,
   challengeAttempts,
@@ -45,34 +45,43 @@ export const rankedEvaluationsFor = async (
 ): Promise<Array<RankedEvaluation>> => {
   const challengeVersion = currentChallengeVersionFor(slug);
   if (!challengeVersion) return [];
-  const latestApplications = database
-    .selectDistinctOn([applications.participantId], {
+  const applicationRows = await database
+    .select({
       participantId: applications.participantId,
       status: applications.status,
       githubUrl: applications.githubUrl,
       linkedInUrl: applications.linkedInUrl,
-    })
-    .from(applications)
-    .orderBy(
-      applications.participantId,
-      desc(applications.createdAt),
-      desc(applications.id),
-    )
-    .as("ranking_latest_applications");
-  const applicationRows = await database
-    .select({
-      participantId: latestApplications.participantId,
-      status: latestApplications.status,
-      githubUrl: latestApplications.githubUrl,
-      linkedInUrl: latestApplications.linkedInUrl,
       participantCreatedAt: participants.createdAt,
     })
-    .from(latestApplications)
-    .innerJoin(
-      participants,
-      eq(participants.id, latestApplications.participantId),
+    .from(applications)
+    .innerJoin(participants, eq(participants.id, applications.participantId))
+    .orderBy(desc(applications.createdAt), desc(applications.id));
+
+  const applicationsByParticipant = new Map<
+    string,
+    Array<(typeof applicationRows)[number]>
+  >();
+  for (const application of applicationRows) {
+    const participantApplications =
+      applicationsByParticipant.get(application.participantId) ?? [];
+    participantApplications.push(application);
+    applicationsByParticipant.set(
+      application.participantId,
+      participantApplications,
     );
-  applicationRows.sort((left, right) => {
+  }
+
+  const eligibleApplications: Array<(typeof applicationRows)[number]> = [];
+  for (const participantApplications of applicationsByParticipant.values()) {
+    if (participantApplications[0]?.status === "withdrawn") continue;
+    const eligibleApplication = participantApplications.find(
+      (application) => application.status !== "draft",
+    );
+    if (eligibleApplication && eligibleApplication.status !== "withdrawn") {
+      eligibleApplications.push(eligibleApplication);
+    }
+  }
+  eligibleApplications.sort((left, right) => {
     const createdAtDifference =
       left.participantCreatedAt.getTime() -
       right.participantCreatedAt.getTime();
@@ -82,7 +91,7 @@ export const rankedEvaluationsFor = async (
 
   const claimedProfileIdentities = new Set<string>();
   const eligibleParticipantIds: Array<string> = [];
-  for (const application of applicationRows) {
+  for (const application of eligibleApplications) {
     const identities = publicProfileIdentitiesFor(application);
     const profileIdentities = [
       identities.github ? `github:${identities.github}` : undefined,
@@ -94,7 +103,7 @@ export const rankedEvaluationsFor = async (
     for (const identity of profileIdentities) {
       claimedProfileIdentities.add(identity);
     }
-    if (duplicate || application.status === "withdrawn") continue;
+    if (duplicate) continue;
     eligibleParticipantIds.push(application.participantId);
   }
   if (eligibleParticipantIds.length === 0) return [];
@@ -117,7 +126,6 @@ export const rankedEvaluationsFor = async (
         eq(challengeAttempts.challengeSlug, slug),
         eq(challengeAttempts.challengeVersion, challengeVersion),
         inArray(challengeAttempts.participantId, eligibleParticipantIds),
-        gt(challengeEvaluations.accuracy, 0.5),
       ),
     );
 
@@ -227,6 +235,7 @@ export const getChallengeRanking = async (
         meanError: row.score.meanError,
         queriesUsed: row.score.queriesUsed,
         runtimeMs: row.score.runtimeMs,
+        executionCost: row.score.executionCost,
         evaluatedAt: row.evaluatedAt.toISOString(),
       };
     },

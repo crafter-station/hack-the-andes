@@ -16,6 +16,7 @@ const migration = [
   "0010_strong_blackheart.sql",
   "0011_boring_bushwacker.sql",
   "0018_rank_challenge_runtime.sql",
+  "0022_burly_mesmero.sql",
 ]
   .map((name) =>
     readFileSync(
@@ -406,5 +407,51 @@ describe("challenge reservations", () => {
       [attemptId],
     );
     expect(result.rows[0]?.runtime_ms).toBe(1);
+  });
+
+  test("promotes a tied Broken Agent evaluation with a lower deterministic cost", async () => {
+    const first = await reserveChallengeUse(attemptId, "evaluation", database);
+    if (!first) throw new Error("missing first reservation");
+    await completeEvaluationReservation(
+      first,
+      { kind: "javascript_source", source: "return 1" },
+      {
+        accuracy: 1,
+        exactCount: 100,
+        sampleSize: 100,
+        meanError: 0,
+        queriesUsed: 0,
+        runtimeMs: 0,
+        executionCost: 900,
+      },
+      database,
+    );
+
+    const second = await reserveChallengeUse(attemptId, "evaluation", database);
+    if (!second) throw new Error("missing second reservation");
+    await completeEvaluationReservation(
+      second,
+      { kind: "javascript_source", source: "return 2" },
+      {
+        accuracy: 1,
+        exactCount: 100,
+        sampleSize: 100,
+        meanError: 0,
+        queriesUsed: 0,
+        runtimeMs: 0,
+        executionCost: 700,
+      },
+      database,
+    );
+
+    const result = await client.query<{ execution_cost: number }>(
+      `select evaluation.execution_cost
+      from challenge_attempts as attempt
+      join challenge_evaluations as evaluation
+        on evaluation.id = attempt.best_evaluation_id
+      where attempt.id = $1`,
+      [attemptId],
+    );
+    expect(result.rows[0]?.execution_cost).toBe(700);
   });
 });

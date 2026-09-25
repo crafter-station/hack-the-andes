@@ -17,6 +17,14 @@ import { BrokenAgentChallengeGuide } from "./broken-agent-guide";
 import { BlackBoxChallengeGuide } from "./challenge-guide";
 import { RankingCountdown } from "./ranking-countdown-view";
 
+const executionMetricText = (
+  entry: ChallengeRanking["entries"][number],
+  brokenAgent: boolean,
+): string => {
+  if (brokenAgent) return `${entry.executionCost ?? entry.runtimeMs} ops`;
+  return `${entry.runtimeMs} ms`;
+};
+
 const GitHubIcon = () => (
   <svg
     aria-hidden="true"
@@ -64,10 +72,12 @@ const RankingResults = ({
           <tr>
             <th className="px-4 py-3">Puesto</th>
             <th className="px-4 py-3">Participante</th>
-            <th className="px-4 py-3">{brokenAgent ? "Score" : "Accuracy"}</th>
+            <th className="px-4 py-3">
+              {brokenAgent ? "Puntaje" : "Accuracy"}
+            </th>
             <th className="px-4 py-3">{brokenAgent ? "Puntos" : "Exactas"}</th>
             {!brokenAgent && <th className="px-4 py-3">Queries</th>}
-            <th className="px-4 py-3">Runtime</th>
+            <th className="px-4 py-3">{brokenAgent ? "Costo" : "Runtime"}</th>
           </tr>
         </thead>
         <tbody>
@@ -119,7 +129,9 @@ const RankingResults = ({
               {!brokenAgent && (
                 <td className="px-4 py-3 font-mono">{entry.queriesUsed}</td>
               )}
-              <td className="px-4 py-3 font-mono">{entry.runtimeMs} ms</td>
+              <td className="px-4 py-3 font-mono">
+                {executionMetricText(entry, brokenAgent)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -144,7 +156,7 @@ export function ChallengeRankingView({
   } else if (challenge.playable) {
     cliHint = `chofex challenge query --challenge ${challenge.slug}`;
   }
-  if (brokenAgent) {
+  if (brokenAgent && !challenge.closed) {
     cliHint = "chofex challenge init --challenge broken-agent";
   }
   let challengeState = "En vivo";
@@ -168,14 +180,14 @@ export function ChallengeRankingView({
   if (challenge.slug === blackBoxChallengeSlug && !challenge.closed) {
     challengeGuide = <BlackBoxChallengeGuide />;
   }
-  if (challenge.slug === brokenAgentChallengeSlug) {
+  if (challenge.slug === brokenAgentChallengeSlug && !challenge.closed) {
     challengeGuide = <BrokenAgentChallengeGuide />;
   }
   let rankingDescription =
     "Ranking público de solo lectura: accuracy, empates por predicciones exactas y menos queries. Las implementaciones no se publican.";
   if (brokenAgent) {
     rankingDescription =
-      "Ranking público de solo lectura: score de producción, menos evaluaciones oficiales, runtime y, al final, hora de envío. Los casos ocultos y las implementaciones no se publican.";
+      "Ranking público de solo lectura: puntaje de producción, menos evaluaciones oficiales, costo determinístico y, al final, hora de envío. Aparecen todos los puntajes válidos de personas con una postulación enviada; los casos ocultos y las implementaciones no se publican.";
   }
 
   return (

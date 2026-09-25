@@ -64,11 +64,13 @@ export const challengeCatalog: ReadonlyArray<ChallengeDefinition> = [
     theme: "Broken Agent",
     title: "The Scheduler",
     summary:
-      "Take a plausible AI-generated job scheduler whose public tests already pass and harden it against production reality.",
-    coreSkill: "Production correctness & reliability",
+      "Audita un job scheduler generado por AI cuyos tests públicos ya pasan y hazlo confiable bajo condiciones reales de producción.",
+    coreSkill: "Correctitud y confiabilidad en producción",
     format: "accuracy",
-    formatLabel: "Production readiness score",
+    formatLabel: "Puntaje de preparación para producción",
     opensAt: "2026-09-24T19:25:00.000Z",
+    closesAt: "2026-10-02T05:00:00.000Z",
+    rankingVisibleAt: "2026-10-01T20:00:00.000Z",
     queryLimit: 0,
     evaluationLimit: 5,
     hiddenSampleSize: 100,
@@ -168,18 +170,18 @@ export const isChallengeRankingVisibleAt = (
 
 const challengeTimeZoneOffsetMs = 5 * 60 * 60 * 1_000;
 const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
 ] as const;
 
 export const formatChallengeOpeningInPeru = (opensAt: string): string => {
@@ -192,14 +194,14 @@ export const formatChallengeOpeningInPeru = (opensAt: string): string => {
   const year = localTime.getUTCFullYear();
   const hour = String(localTime.getUTCHours()).padStart(2, "0");
   const minute = String(localTime.getUTCMinutes()).padStart(2, "0");
-  return `${month} ${day}, ${year} at ${hour}:${minute} (UTC-5)`;
+  return `${day} de ${month} de ${year} a las ${hour}:${minute} (UTC-5)`;
 };
 
 export const challengeOpeningNotice = (
   title: string,
   opensAt: string,
 ): string =>
-  `${title} opens ${formatChallengeOpeningInPeru(opensAt)}. Queries and evaluations are disabled until then; no attempts will be consumed.`;
+  `${title} abre el ${formatChallengeOpeningInPeru(opensAt)}. Las consultas y evaluaciones están deshabilitadas hasta entonces; no se consumirá ningún intento.`;
 
 export const ChallengeSlugSchema = Schema.Literals([
   "black-box",
@@ -255,6 +257,7 @@ export const ChallengeScoreSchema = Schema.Struct({
   meanError: Schema.Number,
   queriesUsed: Schema.Number,
   runtimeMs: Schema.Number,
+  executionCost: Schema.optional(Schema.Number),
   evaluationsUsed: Schema.optional(Schema.Number),
   breakdown: Schema.optional(
     Schema.Struct({
@@ -367,6 +370,7 @@ const ChallengeEvaluationSummarySchema = Schema.Struct({
   meanError: Schema.Number,
   queriesUsed: Schema.Number,
   runtimeMs: Schema.Number,
+  executionCost: Schema.optional(Schema.Number),
   shareCode: Schema.String,
   rank: Schema.optional(Schema.Number),
   percentile: Schema.optional(Schema.Number),
@@ -419,6 +423,7 @@ export const ChallengeEvaluationResultSchema = Schema.Struct({
   meanError: Schema.Number,
   queriesUsed: Schema.Number,
   runtimeMs: Schema.Number,
+  executionCost: Schema.optional(Schema.Number),
   shareCode: Schema.String,
   rank: Schema.optional(Schema.Number),
   competitorCount: Schema.optional(Schema.Number),
@@ -446,6 +451,7 @@ export const ChallengeRankingEntrySchema = Schema.Struct({
   meanError: Schema.Number,
   queriesUsed: Schema.Number,
   runtimeMs: Schema.Number,
+  executionCost: Schema.optional(Schema.Number),
   evaluatedAt: Schema.String,
 });
 
@@ -525,6 +531,10 @@ export const compareChallengeScores = (
     ) {
       return left.evaluationsUsed - right.evaluationsUsed;
     }
+    const leftCost = left.executionCost ?? left.runtimeMs;
+    const rightCost = right.executionCost ?? right.runtimeMs;
+    if (leftCost !== rightCost) return leftCost - rightCost;
+    return 0;
   }
   if (left.runtimeMs !== right.runtimeMs) {
     return left.runtimeMs - right.runtimeMs;

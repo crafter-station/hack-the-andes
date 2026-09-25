@@ -312,8 +312,8 @@ const shareTextFor = (
   if (challenge.slug === brokenAgentChallengeSlug) {
     const lines = [
       `🛠️ BROKEN AGENT #${result.shareCode}`,
-      `${accuracyPercent} production readiness`,
-      `${challenge.evaluationLimit} official evaluations available`,
+      `${accuracyPercent} preparación para producción`,
+      `${challenge.evaluationLimit} evaluaciones oficiales disponibles`,
     ];
     if (result.rank !== undefined && result.competitorCount !== undefined) {
       const topPercent = percentileFor(
@@ -322,7 +322,9 @@ const shareTextFor = (
       ).toFixed(1);
       lines.push(`Top ${topPercent}%`);
     }
-    lines.push("The public tests were green. Would you ship it?");
+    lines.push(
+      "Los tests públicos estaban verdes. ¿Lo enviarías a producción?",
+    );
     return lines.join("\n");
   }
   const lines = [
@@ -352,6 +354,8 @@ const loadBestEvaluation = async (
       desc(challengeEvaluations.accuracy),
       desc(challengeEvaluations.exactCount),
       asc(challengeEvaluations.queriesUsed),
+      asc(challengeEvaluations.executionCost),
+      asc(challengeEvaluations.runtimeMs),
       asc(challengeEvaluations.createdAt),
       asc(challengeEvaluations.id),
     )
@@ -626,7 +630,7 @@ export const getChallengeAttempt = async (
     "Test against your notebook with `chofex challenge test --challenge black-box --source ./shipping.js`. Official evaluation consumes one attempt.";
   if (challenge.slug === brokenAgentChallengeSlug) {
     localTestHint =
-      "Run `npm test` inside broken-agent, then use `chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js`. Public tests are unlimited.";
+      "Ejecuta `npm test` dentro de broken-agent y luego `chofex challenge test --challenge broken-agent --source ./scheduler.js`. Los tests públicos son ilimitados.";
   }
 
   return {

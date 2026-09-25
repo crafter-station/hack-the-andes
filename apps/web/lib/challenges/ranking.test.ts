@@ -30,6 +30,7 @@ const evaluation = (
     meanError: 0,
     queriesUsed: 0,
     runtimeMs: 50,
+    executionCost: 50,
     evaluationsUsed: 1,
     breakdown,
     ...scoreOverrides,

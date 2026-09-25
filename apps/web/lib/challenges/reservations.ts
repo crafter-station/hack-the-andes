@@ -348,7 +348,8 @@ export const completeEvaluationReservation = async (
       ${score.sampleSize},
       ${score.meanError},
       ${score.queriesUsed},
-      ${score.runtimeMs}
+      ${score.runtimeMs},
+      ${score.executionCost ?? null}
     )
   `);
   const row = result.rows[0];

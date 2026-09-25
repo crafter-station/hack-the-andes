@@ -89,32 +89,32 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
   const evaluationsRemaining =
     progress.evaluationsLimit - progress.evaluationsUsed;
   if (challenge.slug === "broken-agent") {
-    let caseStatus = "READY TO AUDIT";
-    if (attempt.latestEvaluation) caseStatus = "EVALUATED";
+    let caseStatus = "LISTO PARA AUDITAR";
+    if (attempt.latestEvaluation) caseStatus = "EVALUADO";
     const lines = [
-      `${challenge.title.toUpperCase()} — CASE #${challenge.code}`,
+      `${challenge.title.toUpperCase()} — CASO #${challenge.code}`,
       challenge.summary,
       "",
-      `CASE STATUS: ${caseStatus}`,
+      `ESTADO DEL CASO: ${caseStatus}`,
       "",
-      "The public tests are green. Your job is to make the scheduler trustworthy under production conditions.",
-      "AI tools are allowed.",
+      "Los tests públicos están verdes. Tu trabajo es hacer que el scheduler sea confiable bajo condiciones de producción.",
+      "Las herramientas de AI están permitidas.",
       "",
-      `Evaluations    ${evaluationsRemaining} / ${progress.evaluationsLimit} remaining`,
+      `Evaluaciones   ${evaluationsRemaining} / ${progress.evaluationsLimit} restantes`,
     ];
     if (progress.bestAccuracy !== undefined) {
-      lines.push("", `Best score     ${percent(progress.bestAccuracy)}`);
+      lines.push("", `Mejor puntaje ${percent(progress.bestAccuracy)}`);
       if (progress.rank !== undefined)
-        lines.push(`Rank           #${progress.rank}`);
+        lines.push(`Puesto         #${progress.rank}`);
       if (progress.shareCode)
-        lines.push(`Share code     #${progress.shareCode}`);
+        lines.push(`Código         #${progress.shareCode}`);
     }
     lines.push(
       "",
-      "YOUR NEXT MOVE",
-      "Read the contract, audit scheduler.js, and keep the visible suite green.",
+      "SIGUIENTE PASO",
+      "Lee el contrato, audita scheduler.js y conserva verdes los tests visibles.",
       "  cd broken-agent && npm test",
-      "  chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js",
+      "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
     );
     return lines.join("\n");
   }
@@ -335,30 +335,30 @@ export const notebookCsvText = (
 export const challengeTestText = (result: ChallengeLocalTestResult): string => {
   if (result.kind === "broken_agent") {
     const lines = [
-      "PUBLIC SUITE — BROKEN AGENT",
-      `${result.matchedObservations} / ${result.observationCount} visible behaviors passing`,
+      "TESTS PÚBLICOS — BROKEN AGENT",
+      `${result.matchedObservations} / ${result.observationCount} comportamientos visibles pasan`,
     ];
     if (result.accuracy === 1) {
       lines.push(
         "",
-        "Everything passes.",
-        "Unfortunately, that does not mean the scheduler is production-correct.",
-        "Reason about concurrency, restarts, failures, and idempotency before evaluating.",
+        "Todo pasa.",
+        "Eso todavía no significa que el scheduler sea correcto en producción.",
+        "Razona sobre concurrencia, reinicios, fallas e idempotencia antes de evaluar.",
         "",
-        "Next: spend one official evaluation when you would ship it",
-        "  chofex challenge evaluate --challenge broken-agent --source ./broken-agent/scheduler.js",
+        "Siguiente: usa una evaluación oficial cuando lo enviarías a producción",
+        "  chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
       );
       return lines.join("\n");
     }
     if (result.mismatches.length > 0) {
-      lines.push("", "Visible failures:");
+      lines.push("", "Fallas visibles:");
       for (const mismatch of result.mismatches) {
         lines.push(`  ${String(mismatch.actual)}`);
       }
     }
     lines.push(
       "",
-      "Fix the public regressions before using an official evaluation.",
+      "Corrige las regresiones públicas antes de usar una evaluación oficial.",
     );
     return lines.join("\n");
   }
@@ -402,42 +402,43 @@ export const challengeEvaluateText = (
   result: ChallengeEvaluationResult,
 ): string => {
   if (result.breakdown) {
+    const executionCost = result.executionCost ?? result.runtimeMs;
     const capabilityLines = [
-      ["Core behavior", result.breakdown.coreBehavior],
-      ["Persistence", result.breakdown.persistence],
-      ["Concurrency", result.breakdown.concurrency],
-      ["Failure recovery", result.breakdown.failureRecovery],
-      ["Idempotency", result.breakdown.idempotency],
-      ["Regression safety", result.breakdown.regressionSafety],
-      ["Performance", result.breakdown.performance],
+      ["Comportamiento base", result.breakdown.coreBehavior],
+      ["Persistencia", result.breakdown.persistence],
+      ["Concurrencia", result.breakdown.concurrency],
+      ["Recuperación", result.breakdown.failureRecovery],
+      ["Idempotencia", result.breakdown.idempotency],
+      ["Sin regresiones", result.breakdown.regressionSafety],
+      ["Rendimiento", result.breakdown.performance],
     ] as const;
     const lines = [
-      "OFFICIAL VERDICT — BROKEN AGENT — PRODUCTION READINESS",
-      `Score               ${(result.accuracy * 100).toFixed(2)} / ${result.sampleSize}`,
-      `Runtime             ${result.runtimeMs} ms`,
+      "VEREDICTO OFICIAL — BROKEN AGENT — PREPARACIÓN PARA PRODUCCIÓN",
+      `Puntaje             ${(result.accuracy * 100).toFixed(2)} / ${result.sampleSize}`,
+      `Costo determinístico ${executionCost} ops`,
       "",
-      "Capability scores",
+      "Puntajes por capacidad",
       ...capabilityLines.map(
         ([label, score]) =>
           `${label.padEnd(20)}${score.earned.toFixed(2)} / ${score.available}`,
       ),
     ];
     if (result.rank !== undefined) {
-      lines.push(`Rank                 #${result.rank}`);
+      lines.push(`Puesto               #${result.rank}`);
     }
     lines.push(
-      `Official evaluations remaining ${result.evaluationsRemaining} / ${result.evaluationsLimit}`,
+      `Evaluaciones oficiales restantes ${result.evaluationsRemaining} / ${result.evaluationsLimit}`,
       "",
       result.shareText,
       "",
-      "Next: inspect the leaderboard",
+      "Siguiente: consulta el ranking",
       "  chofex challenge ranking --challenge broken-agent",
     );
     if (result.evaluationsRemaining > 0) {
       lines.push(
         "",
-        "The evaluator reports capabilities, not individual hidden cases. Reason before submitting again.",
-        "  chofex challenge test --challenge broken-agent --source ./broken-agent/scheduler.js",
+        "El evaluador reporta capacidades, no casos ocultos individuales. Razona antes de volver a enviar.",
+        "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
       );
     }
     return lines.join("\n");
@@ -482,17 +483,17 @@ export const challengeRankingText = (
   ) {
     lines.push(
       "",
-      `Ranking available ${formatChallengeOpeningInPeru(rankingVisibleAt)}.`,
+      `Ranking disponible ${formatChallengeOpeningInPeru(rankingVisibleAt)}.`,
     );
     return lines.join("\n");
   }
   lines.push("");
   if (ranking.entries.length === 0) {
-    lines.push("No official evaluations yet.");
+    lines.push("Todavía no hay evaluaciones oficiales.");
     return lines.join("\n");
   }
   if (ranking.challenge.slug === "broken-agent") {
-    lines.push("Rank  Score       Points       Runtime  Name");
+    lines.push("Psto  Puntaje     Puntos         Costo  Nombre");
     for (const entry of ranking.entries.slice(0, 20)) {
       const rank = String(entry.rank).padStart(4, " ");
       const accuracy = percent(entry.accuracy).padStart(8, " ");
@@ -500,7 +501,8 @@ export const challengeRankingText = (
         11,
         " ",
       );
-      const runtime = `${entry.runtimeMs}ms`.padStart(8, " ");
+      const executionCost = entry.executionCost ?? entry.runtimeMs;
+      const runtime = `${executionCost}ops`.padStart(8, " ");
       const profileLinks = [entry.githubUrl, entry.linkedInUrl].filter(Boolean);
       const participant = [entry.displayName, ...profileLinks].join(" ");
       lines.push(`${rank}  ${accuracy}  ${points}  ${runtime}  ${participant}`);

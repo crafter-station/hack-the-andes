@@ -101,20 +101,22 @@ shipping-price service with limited queries and evaluations.
 
 Broken Agent starts from an AI-generated job scheduler whose public tests are
 already green. Participants harden one `scheduler.js` implementation against
-hidden concurrency, persistence, recovery, idempotency, compatibility, and load
-scenarios. The contract is public, AI tools are allowed, and five official
-evaluations return capability-level scores without revealing individual cases.
+participant-seeded concurrency, persistence, recovery, idempotency,
+compatibility, and load scenarios. The normative contract is public, AI tools
+are allowed, and five official evaluations return capability-level scores
+without revealing individual cases. Broken Agent uses deterministic operation
+cost—not wall-clock runtime—as its final numeric tie-breaker.
 
 ```sh
 chofex challenge
 chofex challenge list
-chofex challenge init
-chofex challenge show
-chofex challenge query --distance 10 --weight 3 --hour 14 --fragile false --express false
-chofex challenge notebook
-chofex challenge test --source ./shipping.js
-chofex challenge evaluate --source ./shipping.js
-chofex challenge ranking
+chofex challenge init --challenge black-box
+chofex challenge show --challenge black-box
+chofex challenge query --challenge black-box --distance 10 --weight 3 --hour 14 --fragile false --express false
+chofex challenge notebook --challenge black-box
+chofex challenge test --challenge black-box --source ./shipping.js
+chofex challenge evaluate --challenge black-box --source ./shipping.js
+chofex challenge ranking --challenge black-box
 
 chofex challenge init --challenge broken-agent
 cd broken-agent && npm test
@@ -125,7 +127,7 @@ chofex challenge ranking --challenge broken-agent
 
 `list` and `ranking` are public. The other networked challenge commands require
 sign-in. For Black Box, `test` checks only saved notebook observations. For
-Broken Agent, it runs the four visible behavioral tests. Both are repeatable and
+Broken Agent, it runs the seven visible behavioral tests. Both are repeatable and
 do not consume an official evaluation; `query` and `evaluate` use limited
 attempt budgets.
 
