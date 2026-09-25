@@ -35,10 +35,21 @@ const workflow = [
     body: "El participante describe la falla, qué evidencia revisó, ship o block, su confianza y el riesgo restante. El review incluye el SHA-256 de scheduler.js, así que un cambio exige revisar de nuevo.",
   },
   {
-    title: "Solicita un veredicto oculto",
+    title: "Crea el handoff de evaluación",
     command:
       "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
-    body: "Recibirás puntajes por capacidad, pero no los nombres de los casos ocultos. Tienes 5 evaluaciones oficiales.",
+    body: "La primera llamada devuelve un enlace corto y todavía no consume una evaluación.",
+  },
+  {
+    title: "Aprueba personalmente",
+    command: "Abre approvalUrl en tu navegador",
+    body: "Revisa tu razonamiento vinculado al source exacto y confirma con Face ID, Touch ID, Windows Hello, PIN o llave de seguridad. El agente no puede completar este paso.",
+  },
+  {
+    title: "Solicita el veredicto oculto",
+    command:
+      "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
+    body: "Repite el comando antes de que venza la aprobación. Esta vez consume 1 de 5 evaluaciones oficiales y devuelve puntajes por capacidad.",
   },
 ] as const;
 
@@ -67,6 +78,13 @@ export function BrokenAgentChallengeGuide() {
           riesgo investigar, cuestionas su evidencia y decides si harías ship.
           La evaluación oficial no acepta solo código: incluye tu review
           vinculado a esa versión exacta del archivo.
+        </p>
+        <p className="mt-4 max-w-3xl text-sm font-semibold leading-relaxed text-[var(--hud-ink)]">
+          Los challenges son obligatorios para competir por un cupo. La
+          postulación no reserva una plaza; los mejores resultados de los
+          rankings serán seleccionados para el evento. El slug del challenge
+          siempre usa la versión vigente; los intentos legacy quedan solo como
+          historial.
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
           El contrato es público; cada participante recibe variantes

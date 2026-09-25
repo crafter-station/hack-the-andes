@@ -46,11 +46,15 @@ describe("challenge output", () => {
           evaluationLimit: 3,
           playable: true,
           open: false,
+          challengeVersion: "black-box-v2",
           rankingPath: "/challenges/black-box",
         },
       ],
     });
     expect(text).toContain("abre 17 de septiembre de 2026 a las 09:00 (UTC-5)");
+    expect(text).toContain("challenges técnicos son obligatorios");
+    expect(text).toContain("no reserva una plaza");
+    expect(text).toContain("Versión vigente: black-box-v2");
   });
 
   test("labels a finished challenge as closed", () => {

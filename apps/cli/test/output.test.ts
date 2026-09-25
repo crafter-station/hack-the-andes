@@ -79,6 +79,23 @@ const rejectedResult: RegistrationResult = {
   },
 };
 
+const submittedResult: RegistrationResult = {
+  registration: {
+    ...withdrawnResult.registration,
+    status: "submitted",
+  },
+  requirements: {
+    ...withdrawnResult.requirements,
+    canSubmitNewApplication: false,
+  },
+  admission: {
+    challengesMandatory: true,
+    selectionBasis: "challenge_rankings",
+    notice:
+      "Los challenges técnicos son obligatorios y los rankings determinan los cupos.",
+  },
+};
+
 describe("registration output", () => {
   test("shows that a withdrawn participant may apply again", () => {
     const expected = "Application withdrawn. You may submit a new application.";
@@ -105,6 +122,15 @@ describe("registration output", () => {
     expect(registrationText(rejectedResult)).toContain(
       "Review feedback: Please add a concrete example of something you shipped.",
     );
+  });
+
+  test("does not tell submitted applicants to wait instead of competing", () => {
+    const output = registrationText(submittedResult);
+
+    expect(output).toContain("A seat has not been assigned");
+    expect(output).toContain("challenges técnicos son obligatorios");
+    expect(output).toContain("Next command: chofex challenge");
+    expect(output).not.toContain("No action needed");
   });
 });
 

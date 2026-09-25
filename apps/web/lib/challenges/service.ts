@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   BrokenAgentEvaluationSolutionSchema,
+  type BrokenAgentHumanReview,
   blackBoxChallengeSlug,
   brokenAgentChallengeSlug,
   type ChallengeAttemptView,
@@ -12,6 +13,7 @@ import {
   type ChallengeQueryResult,
   type ChallengeScore,
   type ChallengeSolution,
+  challengeAdmissionNotice,
   challengeBySlug,
   challengeCatalog,
   compareChallengeScores,
@@ -42,6 +44,10 @@ import {
   challengeEngine,
   currentChallengeVersionFor,
 } from "./engine";
+import {
+  consumeEvaluationApproval,
+  createOrReuseEvaluationApproval,
+} from "./evaluation-approvals";
 import { isConfirmedSolutionExecutionFailure } from "./failure-policy";
 import { requireChallengeParticipationOpen } from "./participation-policy";
 import {
@@ -661,6 +667,11 @@ export const getChallengeAttempt = async (
   }
 
   return {
+    admission: {
+      challengesMandatory: true,
+      selectionBasis: "challenge_rankings",
+      notice: challengeAdmissionNotice,
+    },
     challenge: item,
     progress,
     observations,
@@ -805,9 +816,12 @@ export const evaluateChallenge = async (
   slug: string,
   rawInput: unknown,
   now: Date = currentChallengeTime(),
+  publicOrigin = "https://hacktheandes.com",
 ): Promise<ChallengeEvaluationResult> => {
   const challenge = requireImplementedChallenge(slug, now);
   let solution: ChallengeSolution;
+  let brokenAgentReview: BrokenAgentHumanReview | undefined;
+  let brokenAgentSourceDigest: string | undefined;
   if (challenge.slug === brokenAgentChallengeSlug) {
     if (!isRecord(rawInput) || rawInput.review === undefined) {
       const unreviewedSolution = parseInput(
@@ -838,13 +852,14 @@ export const evaluateChallenge = async (
         },
       );
     }
+    brokenAgentReview = reviewedSolution.review;
+    brokenAgentSourceDigest = sourceDigest;
     solution = reviewedSolution;
   } else {
     solution = parseInput(JavascriptSourceSolutionSchema, rawInput);
   }
   const participantId = await participantIdFor(clerkUserId);
   const attempt = await attemptFor(participantId, challenge);
-
   const reservation = await reserveChallengeUse(attempt.id, "evaluation");
 
   if (!reservation) {
@@ -853,6 +868,38 @@ export const evaluateChallenge = async (
       "EVALUATION_LIMIT_REACHED",
       `No official evaluations remaining (${attempt.evaluationsLimit}/${attempt.evaluationsLimit})`,
     );
+  }
+
+  if (brokenAgentReview && brokenAgentSourceDigest) {
+    const approved = await consumeEvaluationApproval(
+      attempt.id,
+      brokenAgentSourceDigest,
+      brokenAgentReview,
+    );
+    if (!approved) {
+      await releaseAfterFailure(reservation, "evaluation");
+      const approval = await createOrReuseEvaluationApproval(
+        attempt.id,
+        brokenAgentSourceDigest,
+        brokenAgentReview,
+      );
+      const approvalUrl = `${publicOrigin}/challenges/broken-agent/approve/${approval.id}`;
+      throw new HttpError(
+        428,
+        "HUMAN_APPROVAL_REQUIRED",
+        "The participant must review and approve this exact evaluation in the browser",
+        false,
+        {
+          approvalUrl,
+          expiresAt: approval.expiresAt,
+          sourceDigest: approval.sourceDigest,
+          evaluationsRemaining:
+            attempt.evaluationsLimit - attempt.evaluationsUsed,
+          retryCommand:
+            "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
+        },
+      );
+    }
   }
 
   let score: ChallengeScore;

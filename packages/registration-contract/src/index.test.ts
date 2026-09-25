@@ -418,7 +418,7 @@ describe("registration contract", () => {
     ]);
   });
 
-  test("lets a complete draft submit without a Black Box evaluation", () => {
+  test("keeps application submission separate from challenge eligibility", () => {
     const withoutChallenge = applicationRequirementsFor(
       registrationView({
         status: "draft",
@@ -429,7 +429,7 @@ describe("registration contract", () => {
     expect(withoutChallenge.missing).toEqual([]);
   });
 
-  test("keeps challenge performance from changing the application workflow", () => {
+  test("keeps challenge scores from blocking application submission", () => {
     const challenge = {
       slug: "black-box" as const,
       title: "The Shipping Machine",

@@ -3,6 +3,9 @@ import { Schema } from "effect";
 export const blackBoxChallengeSlug = "black-box" as const;
 export const brokenAgentChallengeSlug = "broken-agent" as const;
 
+export const challengeAdmissionNotice =
+  "Los challenges técnicos son obligatorios para competir por un cupo. Enviar la postulación solo crea tu candidatura: no reserva una plaza. Siempre compites en la versión vigente; los intentos legacy no cuentan. Los mejores resultados de los rankings serán seleccionados para el evento." as const;
+
 export type ChallengeSlug =
   | typeof blackBoxChallengeSlug
   | typeof brokenAgentChallengeSlug
@@ -400,6 +403,7 @@ export const ChallengeCatalogItemSchema = Schema.Struct({
   playable: Schema.Boolean,
   open: Schema.Boolean,
   closed: Schema.optional(Schema.Boolean),
+  challengeVersion: Schema.optional(Schema.String),
   rankingPath: Schema.String,
 });
 
@@ -421,6 +425,13 @@ const ChallengeEvaluationSummarySchema = Schema.Struct({
 });
 
 export const ChallengeAttemptViewSchema = Schema.Struct({
+  admission: Schema.optional(
+    Schema.Struct({
+      challengesMandatory: Schema.Literal(true),
+      selectionBasis: Schema.Literal("challenge_rankings"),
+      notice: Schema.String,
+    }),
+  ),
   challenge: ChallengeCatalogItemSchema,
   progress: ParticipantChallengeProgressSchema,
   observations: Schema.Array(ChallengeObservationSchema),
@@ -508,6 +519,13 @@ export const ChallengeRankingSchema = Schema.Struct({
 export type ChallengeRanking = typeof ChallengeRankingSchema.Type;
 
 export const ChallengeCatalogSchema = Schema.Struct({
+  admission: Schema.optional(
+    Schema.Struct({
+      challengesMandatory: Schema.Literal(true),
+      selectionBasis: Schema.Literal("challenge_rankings"),
+      notice: Schema.String,
+    }),
+  ),
   challenges: Schema.Array(ChallengeCatalogItemSchema),
 });
 

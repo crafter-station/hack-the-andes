@@ -57,9 +57,11 @@ export function BlackBoxChallengeGuide() {
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
           Este challenge ocurre antes de la hackathon. Las reglas están
-          personalizadas para cada participante, puedes usar AI y los mejores
-          resultados obtienen pase directo al evento. Para recibirlo, también
-          debes enviar tu postulación.
+          personalizadas para cada participante y puedes usar AI. Los challenges
+          técnicos son obligatorios para competir por un cupo: enviar la
+          postulación no reserva una plaza y los mejores resultados de los
+          rankings serán seleccionados para el evento. La CLI y la API siempre
+          usan la versión vigente; los intentos legacy no cuentan.
         </p>
 
         <dl className="mt-8 grid gap-px bg-[var(--hud-ink)]/10 sm:grid-cols-3">

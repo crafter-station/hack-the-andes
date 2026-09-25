@@ -162,6 +162,13 @@
       "when": 1790293984901,
       "tag": "0022_burly_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1790370760421,
+      "tag": "0023_breezy_sleeper",
+      "breakpoints": true
     }
   ]
 }

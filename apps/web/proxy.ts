@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 const clerk = clerkMiddleware();
 
 function isPublicMarketingPath(pathname: string) {
+  if (pathname.startsWith("/challenges/broken-agent/approve/")) {
+    return false;
+  }
   if (
     pathname === "/" ||
     pathname === "/terms" ||

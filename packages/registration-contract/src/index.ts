@@ -740,6 +740,13 @@ export type PictureUploadCompletion = typeof PictureUploadCompletionSchema.Type;
 export const RegistrationResultSchema = Schema.Struct({
   registration: RegistrationViewSchema,
   requirements: RegistrationRequirementsSchema,
+  admission: Schema.optional(
+    Schema.Struct({
+      challengesMandatory: Schema.Literal(true),
+      selectionBasis: Schema.Literal("challenge_rankings"),
+      notice: Schema.String,
+    }),
+  ),
 });
 
 export type RegistrationResult = typeof RegistrationResultSchema.Type;

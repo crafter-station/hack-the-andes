@@ -51,9 +51,12 @@ Acceptance creates a default badge from the Clerk profile visible to reviewers.
 while separately collecting the legal full name and venue details required for attendance. After confirmation,
 `chofex badge regenerate` can also update those public fields and the QR
 destination without changing the submitted application.
-The technical challenges do not block submission, but every challenge winner must submit
-an application before being accepted. Top results receive a direct pass; other
-scores give organizers another review metric.
+The technical challenges do not block application submission, but they are
+mandatory for admission. An application does not reserve a seat; organizers
+select the strongest engineers from challenge rankings. Broken Agent requires a
+participant-only browser handoff with passkey user verification before each
+official evaluation. Every challenge slug resolves to the current server
+version; legacy attempts do not count toward admission.
 
 The public ranking is read-only at `https://hacktheandes.com/challenges`.
 

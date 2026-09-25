@@ -3,6 +3,7 @@ import { Schema } from "effect";
 
 import {
   BrokenAgentEvaluationSolutionSchema,
+  challengeAdmissionNotice,
   challengeBySlug,
   challengeOpeningNotice,
   compareChallengeScores,
@@ -16,6 +17,14 @@ import {
 } from "./index.js";
 
 describe("challenge catalog", () => {
+  test("states that ranked challenges determine admission", () => {
+    expect(challengeAdmissionNotice).toContain("obligatorios");
+    expect(challengeAdmissionNotice).toContain("no reserva una plaza");
+    expect(challengeAdmissionNotice).toContain("versión vigente");
+    expect(challengeAdmissionNotice).toContain("intentos legacy no cuentan");
+    expect(challengeAdmissionNotice).toContain("rankings");
+  });
+
   test("keeps the first two challenges playable and later challenges locked", () => {
     expect(challengeBySlug("broken-agent")?.playable).toBe(true);
     expect(challengeBySlug("broken-agent")?.evaluationLimit).toBe(5);

@@ -130,7 +130,7 @@ describe("CLI JSON mode", () => {
       step: 1,
       command: "chofex login",
     });
-    expect(document.data.workflow).toHaveLength(10);
+    expect(document.data.workflow).toHaveLength(12);
     expect(document.data.workflow).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -696,6 +696,90 @@ describe("CLI JSON mode", () => {
       expect(submitted.exitCode).toBe(0);
       expect(JSON.parse(submitted.stdout)).toMatchObject({ ok: true });
       expect(submittedBody).toMatchObject({ review });
+    } finally {
+      server.stop(true);
+      await unlink(sourcePath).catch(() => undefined);
+      await unlink(reviewPath).catch(() => undefined);
+    }
+  });
+
+  test("prints the participant-only browser handoff without consuming an evaluation", async () => {
+    const sourcePath = join(
+      cliDirectory,
+      `.scheduler-${crypto.randomUUID()}.js`,
+    );
+    const reviewPath = join(
+      cliDirectory,
+      `.review-${crypto.randomUUID()}.json`,
+    );
+    const source = "function createScheduler() { return {}; }\n";
+    const review = {
+      sourceDigest: createHash("sha256").update(source).digest("hex"),
+      focus: "concurrency",
+      failureScenario:
+        "Dos workers reclaman el mismo job y ambos aplican el efecto antes de completar.",
+      evidence:
+        "Revisé una prueba con dos runDue simultáneos y observé una sola llamada al executor.",
+      decision: "ship",
+      confidence: 80,
+      remainingRisk:
+        "El store de producción todavía podría tener latencias distintas a las del test.",
+    };
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        return Response.json(
+          {
+            version: 1,
+            ok: false,
+            requestId: "request-human-approval",
+            error: {
+              code: "HUMAN_APPROVAL_REQUIRED",
+              message: "Participant approval required",
+              retryable: false,
+              details: {
+                approvalUrl:
+                  "https://hacktheandes.com/challenges/broken-agent/approve/approval_1",
+                expiresAt: "2026-09-25T23:00:00.000Z",
+                evaluationsRemaining: 5,
+                retryCommand:
+                  "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
+              },
+            },
+          },
+          { status: 428 },
+        );
+      },
+    });
+
+    try {
+      await writeFile(sourcePath, source, "utf8");
+      await writeFile(reviewPath, JSON.stringify(review), "utf8");
+      const result = await runCli(
+        "--api-url",
+        server.url.toString().replace(/\/$/, ""),
+        "--token",
+        "test-token",
+        "challenge",
+        "evaluate",
+        "--challenge",
+        "broken-agent",
+        "--source",
+        sourcePath,
+        "--review",
+        reviewPath,
+      );
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain(
+        "INTERVENCIÓN DEL PARTICIPANTE REQUERIDA",
+      );
+      expect(result.stderr).toContain("todavía no consumió un intento");
+      expect(result.stderr).toContain(
+        "https://hacktheandes.com/challenges/broken-agent/approve/approval_1",
+      );
+      expect(result.stderr).toContain("Después de aprobar, repite:");
     } finally {
       server.stop(true);
       await unlink(sourcePath).catch(() => undefined);

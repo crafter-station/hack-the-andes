@@ -1,4 +1,5 @@
 import type { ParticipantChallengeProgress } from "@chofex/challenges-contract";
+import { challengeAdmissionNotice } from "@chofex/challenges-contract";
 import { db } from "@chofex/db";
 import { and, desc, eq, sql } from "@chofex/db/orm";
 import {
@@ -184,6 +185,11 @@ const resultFor = async (
   return {
     registration,
     requirements: applicationRequirementsFor(registration),
+    admission: {
+      challengesMandatory: true,
+      selectionBasis: "challenge_rankings",
+      notice: challengeAdmissionNotice,
+    },
   };
 };
 

@@ -1,3 +1,4 @@
+import { challengeAdmissionNotice } from "@chofex/challenges-contract";
 import {
   type ApiSuccess,
   type BadgeResult,
@@ -95,8 +96,13 @@ const requirementsText = (result: RegistrationResult): string => {
   if (requirements.stage === "draft") {
     return `Application draft in progress.${registrationPartsText(result)}`;
   }
-  if (requirements.stage === "review")
-    return "No action needed while your application is reviewed.";
+  if (requirements.stage === "review") {
+    return [
+      "Application received. A seat has not been assigned.",
+      result.admission?.notice ?? challengeAdmissionNotice,
+      "Next command: chofex challenge",
+    ].join("\n");
+  }
   let feedback = "";
   const rejectionReason =
     requirements.rejectionReason ?? registration.rejectionReason;

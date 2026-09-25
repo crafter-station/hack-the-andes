@@ -214,6 +214,20 @@ export const requireAuthenticatedParticipantProfile = async (
   };
 };
 
+export const requireBrowserParticipantProfile = async (
+  request: Request,
+): Promise<AuthenticatedParticipantProfile> => {
+  const participant = await requireAuthenticatedParticipantProfile(request);
+  if (participant.tokenType !== "session_token") {
+    throw new HttpError(
+      403,
+      "BROWSER_SESSION_REQUIRED",
+      "This action must be completed by the participant in an authenticated browser session",
+    );
+  }
+  return participant;
+};
+
 export const requireParticipantUserId = async (
   request: Request,
 ): Promise<string> => {

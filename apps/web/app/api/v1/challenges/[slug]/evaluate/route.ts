@@ -5,6 +5,7 @@ import {
   enqueueChallengeFinishReminderBestEffort,
 } from "@/lib/funnel-reminders/enqueue";
 import { captureProductEvent } from "@/lib/posthog-server";
+import { publicRequestOrigin } from "@/lib/public-origin";
 import {
   HttpError,
   jsonSuccess,
@@ -25,7 +26,13 @@ export const POST = (
     const input = await readJson(request);
     let result: Awaited<ReturnType<typeof evaluateChallenge>>;
     try {
-      result = await evaluateChallenge(clerkUserId, slug, input);
+      result = await evaluateChallenge(
+        clerkUserId,
+        slug,
+        input,
+        undefined,
+        publicRequestOrigin(request),
+      );
     } catch (error) {
       if (
         error instanceof HttpError &&

@@ -48,6 +48,9 @@ test("the live challenge page includes the brief and CLI instructions", async ()
   expect(guide).toContain("curl -fsSL https://hacktheandes.com/install | bash");
   expect(guide).toContain("chofex challenge query");
   expect(guide).toContain("chofex challenge evaluate --source ./shipping.js");
+  expect(guide).toContain("técnicos son obligatorios");
+  expect(guide).toContain("no reserva una plaza");
+  expect(guide).toContain("intentos legacy no cuentan");
   expect(ranking).toContain("BlackBoxChallengeGuide");
 });
 
@@ -87,6 +90,9 @@ test("the Broken Agent page publishes the contract without hidden cases", async 
   expect(guide).toContain("--review ./review.json");
   expect(guide).toContain("participante elige");
   expect(guide).toContain("ship o block");
+  expect(guide).toContain("obligatorios para competir por un cupo");
+  expect(guide).toContain("Face ID");
+  expect(guide).toContain("intentos legacy quedan solo como");
   expect(guide).not.toContain("worker_crash_after_side_effect");
   expect(ranking).toContain("BrokenAgentChallengeGuide");
 });

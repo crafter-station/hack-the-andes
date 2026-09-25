@@ -111,6 +111,15 @@ trace to investigate and submits a source-bound engineering review with their
 evidence, release decision, confidence, and remaining risk. An agent may
 implement and explain, but may not invent that judgment.
 
+Technical challenges are mandatory for admission. An application creates a
+candidacy but does not reserve a seat; organizers select the strongest engineers
+from challenge rankings. Broken Agent official evaluations also require a
+short-lived participant browser approval bound to the exact source and review.
+The first CLI request creates that handoff without consuming an attempt; the
+approved retry performs the evaluation. Challenge slugs resolve only to their
+latest configured versions; legacy attempts remain historical and cannot satisfy
+admission eligibility.
+
 ```sh
 chofex challenge
 chofex challenge list

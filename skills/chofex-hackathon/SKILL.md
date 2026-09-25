@@ -85,8 +85,12 @@ chofex --output json status
 If one exists, report its status and follow **Next steps**. Start an application
 when there is no application, resume and submit it when the status is `draft`,
 or let a rejected participant apply again. A rejected application remains in
-history. The Black Box does not need to be completed before applying. Every
-challenge winner must still submit an application before being accepted.
+history. The participant may submit the application before completing a
+challenge, but the application alone never reserves a seat. Technical challenges
+are mandatory for admission, and organizers select the strongest engineers from
+their ranked results. Only the latest server-advertised challenge version counts;
+legacy attempts remain historical. Every selected engineer must also have a
+submitted application before being accepted.
 
 Get a fresh input template instead of relying on a memorized schema:
 
@@ -173,12 +177,13 @@ require rebuilding it.
 
 ## Black Box challenge
 
-**The Shipping Machine** is not required to submit an application. Top-ranked
-applicants receive a direct pass; other results provide organizers with another
-review metric. Winning does not replace the application, and organizers record
-acceptance manually on that application. Ask whether the participant wants to
-try it before or after submitting. If they do, list challenges, then inspect
-their personalized Black Box:
+**The Shipping Machine** is one of the technical admission challenges. It does
+not block application submission, but challenge participation is mandatory to
+compete for a seat. Rankings—not the application prose alone—identify the
+strongest engineers, and organizers record acceptance manually on the submitted
+application. The challenge slug always resolves to the latest version; never use
+a historical attempt as completion. List challenges, then inspect the currently
+available challenge:
 
 ```sh
 chofex --output json challenge list
@@ -205,10 +210,11 @@ chofex --output json challenge evaluate --source "$PWD/shipping.js"
 ```
 
 Never ask the participant to paste a solution that they did not run. Application
-submission does not depend on the challenge. Report success only when the
-envelope has `ok: true` and
-`registration.status` is `submitted`. Then proactively read status once and give
-one concise result with next steps.
+submission and challenge completion are separate operations, but both belong to
+the admission path. Report application success only when the envelope has
+`ok: true` and `registration.status` is `submitted`. Never describe that state as
+waiting with no action: proceed to the open challenge and explain that a seat is
+earned through ranked challenge performance.
 
 Public rankings are read-only:
 
@@ -241,11 +247,13 @@ Interpret the returned state as follows:
 
 - `draft`: this is an application left by an older CLI flow. Show
   `requirements.parts` and missing fields, collect the complete application,
-  and use `chofex register` to submit it. Offer the Black Box as a route to a
-  direct pass, but do not delay submission for it.
-- `submitted`, `under_review`, or `waitlisted`: report the exact
-  status and requirements. When the requirements stage is `review`, no action
-  is needed while organizers review the application.
+  and use `chofex register` to submit it. Then continue to the open mandatory
+  admission challenge; do not delay application submission for challenge work.
+- `submitted`, `under_review`, or `waitlisted`: report the exact status and
+  requirements. Make clear that the application has been received but no seat
+  is assigned. Run `chofex challenge list`, identify the open challenge, and
+  continue its required human–agent flow. Never tell the participant to merely
+  wait while an admission challenge is open.
 - `rejected`: show the review feedback when present. Offer a new application
   only if `canSubmitNewApplication` is true. Interactive `chofex register`
   presents the rejected application's answers as editable defaults. Obtain a

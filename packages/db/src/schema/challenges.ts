@@ -1,9 +1,13 @@
+import { sql } from "drizzle-orm";
 import {
+  bigint,
+  boolean,
   doublePrecision,
   index,
   integer,
   jsonb,
   pgTable,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
@@ -59,6 +63,60 @@ export const challengeReservations = pgTable(
   },
   (table) => [
     index("challenge_reservations_attempt_expiry_index").on(
+      table.attemptId,
+      table.expiresAt,
+    ),
+  ],
+);
+
+export const participantPasskeys = pgTable(
+  "participant_passkeys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participantId: uuid("participant_id")
+      .notNull()
+      .references(() => participants.id, { onDelete: "cascade" }),
+    credentialId: text("credential_id").notNull(),
+    publicKey: text("public_key").notNull(),
+    counter: bigint("counter", { mode: "number" }).default(0).notNull(),
+    transports: jsonb("transports").$type<string[]>().default([]).notNull(),
+    deviceType: varchar("device_type", { length: 16 }).notNull(),
+    backedUp: boolean("backed_up").default(false).notNull(),
+    ...auditTimestamps(),
+  },
+  (table) => [
+    uniqueIndex("participant_passkeys_credential_id_unique").on(
+      table.credentialId,
+    ),
+    index("participant_passkeys_participant_id_index").on(table.participantId),
+  ],
+);
+
+export const challengeEvaluationApprovals = pgTable(
+  "challenge_evaluation_approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    attemptId: uuid("attempt_id")
+      .notNull()
+      .references(() => challengeAttempts.id, { onDelete: "cascade" }),
+    sourceDigest: varchar("source_digest", { length: 64 }).notNull(),
+    reviewDigest: varchar("review_digest", { length: 64 }).notNull(),
+    review: jsonb("review").notNull(),
+    ceremonyChallenge: text("ceremony_challenge"),
+    ceremonyKind: varchar("ceremony_kind", { length: 16 }),
+    webauthnOrigin: text("webauthn_origin"),
+    relyingPartyId: varchar("relying_party_id", { length: 255 }),
+    credentialId: text("credential_id"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    ...auditTimestamps(),
+  },
+  (table) => [
+    uniqueIndex("challenge_evaluation_approvals_active_unique")
+      .on(table.attemptId, table.sourceDigest, table.reviewDigest)
+      .where(sql`${table.consumedAt} is null`),
+    index("challenge_evaluation_approvals_attempt_index").on(
       table.attemptId,
       table.expiresAt,
     ),
@@ -137,6 +195,9 @@ export const challengeBestEvaluations = pgTable("challenge_best_evaluations", {
 
 export type ChallengeAttempt = typeof challengeAttempts.$inferSelect;
 export type ChallengeReservation = typeof challengeReservations.$inferSelect;
+export type ParticipantPasskey = typeof participantPasskeys.$inferSelect;
+export type ChallengeEvaluationApproval =
+  typeof challengeEvaluationApprovals.$inferSelect;
 export type ChallengeObservation = typeof challengeObservations.$inferSelect;
 export type ChallengeEvaluation = typeof challengeEvaluations.$inferSelect;
 export type ChallengeBestEvaluation =

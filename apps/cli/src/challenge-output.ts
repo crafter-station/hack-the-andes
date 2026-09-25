@@ -8,6 +8,7 @@ import type {
   ChallengeRanking,
 } from "@chofex/challenges-contract";
 import {
+  challengeAdmissionNotice,
   challengeOpeningNotice,
   formatChallengeOpeningInPeru,
   isChallengeRankingVisibleAt,
@@ -50,7 +51,12 @@ export const challengeParticipationNotice = (
 export const challengeListText = (
   catalog: ChallengeCatalogResponse,
 ): string => {
-  const lines = [`${eventName} challenges`, ""];
+  const lines = [
+    `${eventName} challenges`,
+    "",
+    catalog.admission?.notice ?? challengeAdmissionNotice,
+    "",
+  ];
   for (const challenge of catalog.challenges) {
     let state = `abre ${formatChallengeOpeningInPeru(challenge.opensAt)}`;
     if (challenge.closed) {
@@ -67,6 +73,9 @@ export const challengeListText = (
     lines.push(
       `    ${challenge.coreSkill} · ${challenge.formatLabel} · ${state}`,
     );
+    if (challenge.challengeVersion) {
+      lines.push(`    Versión vigente: ${challenge.challengeVersion}`);
+    }
     lines.push(`    Ranking: ${challenge.rankingPath}`);
     lines.push("");
   }
@@ -94,6 +103,10 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
     const lines = [
       `${challenge.title.toUpperCase()} — CASO #${challenge.code}`,
       challenge.summary,
+      "",
+      attempt.admission?.notice ?? challengeAdmissionNotice,
+      "",
+      `VERSIÓN VIGENTE: ${challenge.challengeVersion ?? "administrada por el servidor"}`,
       "",
       `ESTADO DEL CASO: ${caseStatus}`,
       "",
@@ -128,6 +141,10 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
   const lines = [
     `${challenge.title.toUpperCase()} — CASE #${challenge.code}`,
     challenge.summary,
+    "",
+    attempt.admission?.notice ?? challengeAdmissionNotice,
+    "",
+    `CURRENT VERSION: ${challenge.challengeVersion ?? "server-managed"}`,
     "",
     `CASE STATUS: ${caseStatus}`,
     "",

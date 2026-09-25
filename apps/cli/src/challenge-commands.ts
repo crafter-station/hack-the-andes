@@ -36,7 +36,7 @@ import {
   createChallengeScaffold,
 } from "./challenge-scaffold.js";
 import { root } from "./cli-root.js";
-import { cliError } from "./errors.js";
+import { type CliError, cliError } from "./errors.js";
 import { execute, printJson } from "./output.js";
 
 const challengeQuickstart = {
@@ -48,6 +48,8 @@ const challengeQuickstart = {
   mission:
     "Audita scheduler.js, conserva createScheduler(dependencies) y haz que el sistema cumpla el contrato de producción.",
   rules: [
+    "Los challenges son obligatorios: enviar la postulación no reserva un cupo.",
+    "Los mejores resultados de los rankings serán seleccionados para el evento.",
     "Tienes 5 evaluaciones oficiales contra variantes ocultas y determinísticas por participante.",
     "Los tests locales y públicos son ilimitados.",
     "Gana el puntaje total; los empates usan menos evaluaciones, costo determinístico y hora del mejor envío.",
@@ -105,13 +107,26 @@ const challengeQuickstart = {
     },
     {
       step: 9,
-      action: "Solicita un veredicto oculto",
+      action: "Crea el handoff de evaluación",
       command:
         "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
-      note: "Úsalo solo cuando enviarías la implementación a producción.",
+      note: "Devuelve un enlace de aprobación sin consumir una evaluación oficial.",
     },
     {
       step: 10,
+      action: "El participante aprueba en el navegador",
+      command: "Abre approvalUrl personalmente",
+      note: "Revisa el razonamiento y confirma con Face ID, Touch ID, Windows Hello, PIN o llave de seguridad. El agente no puede completar este paso.",
+    },
+    {
+      step: 11,
+      action: "Solicita el veredicto oculto",
+      command:
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
+      note: "Repite el mismo comando antes de que venza la aprobación; recién entonces consume una evaluación.",
+    },
+    {
+      step: 12,
       action: "Consulta el ranking",
       command: "chofex challenge ranking --challenge broken-agent",
       note: "Se revela el 1 de octubre a las 15:00, hora de Perú.",
@@ -194,6 +209,32 @@ const reviewFlag = optionalString(
   "review",
   "Participant-authored Broken Agent engineering review JSON",
 );
+
+const evaluationErrorText = (error: CliError): string | undefined => {
+  if (error.code !== "HUMAN_APPROVAL_REQUIRED") return undefined;
+  if (!error.details || typeof error.details !== "object") return undefined;
+  const details = error.details as Record<string, unknown>;
+  if (typeof details.approvalUrl !== "string") return undefined;
+  let retryCommand =
+    "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json";
+  if (typeof details.retryCommand === "string") {
+    retryCommand = details.retryCommand;
+  }
+  const lines = [
+    "INTERVENCIÓN DEL PARTICIPANTE REQUERIDA",
+    "La evaluación todavía no consumió un intento.",
+    "",
+    "El participante debe abrir personalmente este enlace, revisar sus respuestas y aprobar con Face ID, Touch ID, Windows Hello, PIN o llave de seguridad:",
+    `  ${details.approvalUrl}`,
+    "",
+    "Después de aprobar, repite:",
+    `  ${retryCommand}`,
+  ];
+  if (typeof details.expiresAt === "string") {
+    lines.push("", `La aprobación vence: ${details.expiresAt}`);
+  }
+  return lines.join("\n");
+};
 
 const inputFlag = optionalString("input", "JSON file, or - for stdin");
 
@@ -505,11 +546,16 @@ const evaluateCommand = Command.make(
         solution,
       );
     });
-    yield* execute(options.output, operation, challengeEvaluateText);
+    yield* execute(
+      options.output,
+      operation,
+      challengeEvaluateText,
+      evaluationErrorText,
+    );
   }),
 ).pipe(
   Command.withDescription(
-    "Score a solution on hidden cases. This consumes one limited official evaluation. Requires sign-in.",
+    "Score a solution on hidden cases. Broken Agent requires participant browser approval before a limited evaluation is consumed.",
   ),
   Command.withExamples([
     {
@@ -609,7 +655,7 @@ export const challengeCommand = Command.make(
   }),
 ).pipe(
   Command.withDescription(
-    "Compite en challenges técnicos. Ejecuta el comando sin subcomandos para abrir la guía del challenge actual.",
+    "Compite en challenges técnicos obligatorios por un cupo. Ejecuta el comando sin subcomandos para abrir la guía del challenge actual.",
   ),
   Command.withExamples([
     {

@@ -24,6 +24,7 @@ import { enqueueBadgeGeneration } from "@/lib/badges/enqueue";
 import { HttpError } from "@/lib/registration/http";
 import { rankedEvaluationsFor } from "../challenges/ranking";
 import { challengeActivityForParticipants } from "../challenges/service";
+import { participantHasLatestRankedChallengeResult } from "./admission-policy";
 import { candidateAvatarUrl, candidateBadgePictureUrl } from "./avatars";
 import { sortCandidatesByChallengeRanking } from "./candidate-ranking";
 import { type ApplicationDecision, buildDecisionEmail } from "./decision-email";
@@ -608,6 +609,31 @@ export const decideCandidate = async (
       "MESSAGE_TOO_LONG",
       "The optional message must be 2,000 characters or fewer",
     );
+  }
+
+  if (input.decision === "accepted") {
+    const [application] = await db
+      .select({ participantId: applications.participantId })
+      .from(applications)
+      .where(eq(applications.id, input.applicationId))
+      .limit(1);
+    if (!application) {
+      throw new HttpError(
+        404,
+        "APPLICATION_NOT_FOUND",
+        "Application not found",
+      );
+    }
+    const hasRankedResult = await participantHasLatestRankedChallengeResult(
+      application.participantId,
+    );
+    if (!hasRankedResult) {
+      throw new HttpError(
+        409,
+        "CHALLENGE_RESULT_REQUIRED",
+        "A ranked result from the latest technical challenge version is required before acceptance",
+      );
+    }
   }
 
   const [updatedApplication] = await db

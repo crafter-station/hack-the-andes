@@ -1,12 +1,14 @@
 import {
   type ChallengeCatalogItem,
   type ChallengeDefinition,
+  challengeAdmissionNotice,
   challengeCatalog,
   isChallengeClosedAt,
   isChallengeOpenAt,
 } from "@chofex/challenges-contract";
 
 import { challengesForceOpen, currentChallengeTime } from "./clock";
+import { currentChallengeVersionFor } from "./engine";
 
 export const rankingPathFor = (slug: string): string => `/challenges/${slug}`;
 
@@ -37,6 +39,10 @@ export const catalogItemFor = (
     rankingPath: rankingPathFor(challenge.slug),
   };
   let publicItem = item;
+  const challengeVersion = currentChallengeVersionFor(challenge.slug);
+  if (challengeVersion) {
+    publicItem = { ...publicItem, challengeVersion };
+  }
   if (challenge.closesAt) {
     publicItem = { ...publicItem, closesAt: challenge.closesAt };
   }
@@ -56,6 +62,18 @@ export const publicChallengeCatalog = (
 
 export const listPublicChallenges = (
   now: Date = currentChallengeTime(),
-): { challenges: ReadonlyArray<ChallengeCatalogItem> } => ({
+): {
+  admission: {
+    challengesMandatory: true;
+    selectionBasis: "challenge_rankings";
+    notice: string;
+  };
+  challenges: ReadonlyArray<ChallengeCatalogItem>;
+} => ({
+  admission: {
+    challengesMandatory: true,
+    selectionBasis: "challenge_rankings",
+    notice: challengeAdmissionNotice,
+  },
   challenges: publicChallengeCatalog(now),
 });

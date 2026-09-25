@@ -12,6 +12,8 @@ The participant's public name used in the admin dashboard, challenge rankings, a
 
 One attempt by a participant to enter the hackathon. A rejected or withdrawn application remains part of the participant's history; either outcome permits the participant to create a new application.
 
+Submitting an application creates a candidacy but does not reserve a seat. A participant must also produce a ranked result in an admission challenge before the application can be accepted.
+
 ## Active application
 
 An application that is being drafted, awaiting a decision, or has been accepted. A participant may have only one active application at a time. Rejected and withdrawn applications are not active.
@@ -34,4 +36,4 @@ The public presentation of an accepted participant's badge: display name, one-li
 
 ## Challenge placement
 
-A participant's best exact rank across the current playable challenge versions. It is recognition printed on the badge, not a claim that the challenge caused the participant's acceptance.
+A participant's best exact rank across the latest playable challenge versions. Challenge rankings are the engineering selection mechanism for seats: only participants with a ranked result from a latest challenge version are eligible for acceptance, and organizers select the strongest results. Attempts from superseded versions remain historical and do not confer eligibility. The best placement is also printed on the participant's badge.

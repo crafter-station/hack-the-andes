@@ -27,6 +27,6 @@ export const root = Command.make("chofex").pipe(
     ),
   }),
   Command.withDescription(
-    `Register for and manage your ${eventName} application`,
+    `Apply to ${eventName} and compete for a seat through the mandatory technical challenges`,
   ),
 );

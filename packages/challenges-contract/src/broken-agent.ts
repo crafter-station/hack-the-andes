@@ -187,6 +187,10 @@ contra escenarios ocultos. Las herramientas de AI están permitidas, pero este e
 un challenge de colaboración: el agente implementa y el participante toma las
 decisiones de ingeniería.
 
+Los challenges técnicos son obligatorios para competir por un cupo. Enviar la
+postulación solo crea tu candidatura: no reserva una plaza. Los mejores
+resultados de los rankings serán seleccionados para el evento.
+
 ## Protocolo humano–agente
 
 No le pidas al agente que resuelva todo en silencio. Antes de modificar el
@@ -227,6 +231,13 @@ Cada respuesta de texto debe tener entre 20 y 1,000 caracteres. El agente puede
 explicar, debatir y guardar tus respuestas, pero no puede elegir el foco, inventar
 tu razonamiento ni tomar la decisión de release por ti. Si cambias
 \`scheduler.js\`, vuelve a revisar la evidencia antes de reemplazar el review.
+
+La primera ejecución de \`challenge evaluate\` crea un enlace corto de
+aprobación y **no consume** una evaluación. Abre ese enlace personalmente,
+revisa el review vinculado al SHA-256 exacto y confirma con Face ID, Touch ID,
+Windows Hello, PIN del dispositivo o una llave de seguridad. Después repite el
+mismo comando para ejecutar la evaluación oficial. Cada evaluación requiere una
+aprobación nueva; la sesión OAuth del CLI no puede aprobarla.
 
 ## Contrato normativo
 
