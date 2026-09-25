@@ -179,11 +179,54 @@ Repara \`scheduler.js\` sin cambiar la interfaz exportada
 \`\`\`sh
 npm test
 chofex challenge test --challenge broken-agent --source ./scheduler.js
-chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
+chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json
 \`\`\`
 
 Los tests locales y públicos son ilimitados. Tienes **5 evaluaciones oficiales**
-contra escenarios ocultos. Las herramientas de AI están permitidas.
+contra escenarios ocultos. Las herramientas de AI están permitidas, pero este es
+un challenge de colaboración: el agente implementa y el participante toma las
+decisiones de ingeniería.
+
+## Protocolo humano–agente
+
+No le pidas al agente que resuelva todo en silencio. Antes de modificar el
+scheduler, el agente debe presentarte al menos tres trazas de falla concretas del
+starter. Tú eliges cuál investigar primero y explicas qué resultado nunca debería
+ocurrir. El agente convierte esa decisión en una prueba y luego implementa.
+
+Cuando los tests estén verdes, el agente debe enseñarte el cambio, la evidencia y
+los supuestos que todavía no verificó. La evaluación oficial requiere
+\`review.json\` con tus propias palabras:
+
+- \`focus\`: \`concurrency\`, \`persistence\`, \`lease_recovery\`,
+  \`retry_idempotency\`, \`regression_safety\` o \`performance\`;
+- \`sourceDigest\`: SHA-256 de \`scheduler.js\` para vincular el juicio al cambio
+  exacto (el agente puede calcular este valor mecánico);
+- \`failureScenario\`: una secuencia concreta de eventos y su resultado
+  incorrecto;
+- \`evidence\`: la prueba o inspección que revisaste y qué demostró;
+- \`decision\`: \`ship\` o \`block\`;
+- \`confidence\`: un entero de 0 a 100;
+- \`remainingRisk\`: el riesgo que aceptas o que todavía bloquea el release.
+
+Forma del archivo (reemplaza cada valor entre <...>):
+
+\`\`\`json
+{
+  "sourceDigest": "<sha256 de scheduler.js>",
+  "focus": "<área elegida>",
+  "failureScenario": "<tu traza concreta>",
+  "evidence": "<la evidencia que revisaste>",
+  "decision": "<ship o block>",
+  "confidence": 0,
+  "remainingRisk": "<el riesgo que queda>"
+}
+\`\`\`
+
+Cada respuesta de texto debe tener entre 20 y 1,000 caracteres. El agente puede
+explicar, debatir y guardar tus respuestas, pero no puede elegir el foco, inventar
+tu razonamiento ni tomar la decisión de release por ti. Si cambias
+\`scheduler.js\`, vuelve a revisar la evidencia antes de reemplazar el review.
 
 ## Contrato normativo
 

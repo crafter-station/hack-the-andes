@@ -27,7 +27,7 @@ chofex challenge ranking --challenge black-box
 chofex challenge init --challenge broken-agent
 cd broken-agent && npm test
 chofex challenge test --challenge broken-agent --source ./scheduler.js
-chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
+chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json
 chofex challenge ranking --challenge broken-agent
 chofex confirm
 chofex badge

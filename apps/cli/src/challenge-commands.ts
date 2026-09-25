@@ -15,6 +15,7 @@ import {
   testChallenge,
 } from "./api-client.js";
 import {
+  challengeEvaluationInput,
   defaultChallengeSlug,
   javascriptSourceFromPath,
   shipmentInput,
@@ -50,7 +51,7 @@ const challengeQuickstart = {
     "Tienes 5 evaluaciones oficiales contra variantes ocultas y determinísticas por participante.",
     "Los tests locales y públicos son ilimitados.",
     "Gana el puntaje total; los empates usan menos evaluaciones, costo determinístico y hora del mejor envío.",
-    "Las herramientas de AI están permitidas.",
+    "Las herramientas de AI están permitidas, pero el participante toma las decisiones de ingeniería.",
   ],
   workflow: [
     {
@@ -79,26 +80,38 @@ const challengeQuickstart = {
     },
     {
       step: 5,
-      action: "Audita y repara",
-      command: "$EDITOR scheduler.js",
-      note: "Razona sobre claims únicos, leases, reinicios, carreras, cancelación, reintentos e idempotencia.",
+      action: "Elige el riesgo con el participante",
+      command: "Discute tres trazas de falla concretas",
+      note: "El participante elige cuál investigar primero y explica qué resultado nunca debería ocurrir. El agente no puede decidirlo por su cuenta.",
     },
     {
       step: 6,
+      action: "Audita y repara",
+      command: "$EDITOR scheduler.js",
+      note: "Convierte la traza elegida en evidencia reproducible y luego endurece claims, leases, reinicios, carreras, cancelación, reintentos e idempotencia.",
+    },
+    {
+      step: 7,
       action: "Ejecuta los tests públicos",
       command:
         "chofex challenge test --challenge broken-agent --source ./scheduler.js",
       note: "Es seguro repetirlos y no consumen evaluaciones oficiales.",
     },
     {
-      step: 7,
+      step: 8,
+      action: "Obtén el juicio del participante",
+      command: "Crea review.json con sus propias palabras",
+      note: "Debe describir una traza de falla, la evidencia revisada, ship o block, confianza y riesgo restante. Cambiar el código exige revisar de nuevo.",
+    },
+    {
+      step: 9,
       action: "Solicita un veredicto oculto",
       command:
-        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
       note: "Úsalo solo cuando enviarías la implementación a producción.",
     },
     {
-      step: 8,
+      step: 10,
       action: "Consulta el ranking",
       command: "chofex challenge ranking --challenge broken-agent",
       note: "Se revela el 1 de octubre a las 15:00, hora de Perú.",
@@ -175,6 +188,11 @@ const challengeFlag = Flag.string("challenge").pipe(
 const sourceFlag = optionalString(
   "source",
   "JavaScript challenge solution file",
+);
+
+const reviewFlag = optionalString(
+  "review",
+  "Participant-authored Broken Agent engineering review JSON",
 );
 
 const inputFlag = optionalString("input", "JSON file, or - for stdin");
@@ -467,13 +485,18 @@ const testCommand = Command.make(
 
 const evaluateCommand = Command.make(
   "evaluate",
-  { challenge: challengeFlag, source: sourceFlag },
-  Effect.fn("challengeEvaluateCommand")(function* ({ challenge, source }) {
+  { challenge: challengeFlag, source: sourceFlag, review: reviewFlag },
+  Effect.fn("challengeEvaluateCommand")(function* ({
+    challenge,
+    source,
+    review,
+  }) {
     const options = yield* root;
     const token = Option.getOrUndefined(options.token);
     const operation = Effect.gen(function* () {
-      const solution = yield* javascriptSourceFromPath(
+      const solution = yield* challengeEvaluationInput(
         Option.getOrUndefined(source),
+        Option.getOrUndefined(review),
         challenge,
       );
       return yield* evaluateChallenge(
@@ -491,7 +514,7 @@ const evaluateCommand = Command.make(
   Command.withExamples([
     {
       command:
-        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
       description:
         "Consume una evaluación oficial cuando tu solución esté lista",
     },

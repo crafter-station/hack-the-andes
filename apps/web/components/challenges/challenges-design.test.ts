@@ -84,6 +84,9 @@ test("the Broken Agent page publishes the contract without hidden cases", async 
   expect(guide).toContain("createScheduler");
   expect(guide).toContain("npm test");
   expect(guide).toContain("--challenge broken-agent");
+  expect(guide).toContain("--review ./review.json");
+  expect(guide).toContain("participante elige");
+  expect(guide).toContain("ship o block");
   expect(guide).not.toContain("worker_crash_after_side_effect");
   expect(ranking).toContain("BrokenAgentChallengeGuide");
 });

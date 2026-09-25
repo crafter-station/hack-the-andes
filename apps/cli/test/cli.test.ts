@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -129,7 +130,19 @@ describe("CLI JSON mode", () => {
       step: 1,
       command: "chofex login",
     });
-    expect(document.data.workflow).toHaveLength(8);
+    expect(document.data.workflow).toHaveLength(10);
+    expect(document.data.workflow).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          step: 5,
+          action: "Elige el riesgo con el participante",
+        }),
+        expect.objectContaining({
+          step: 8,
+          action: "Obtén el juicio del participante",
+        }),
+      ]),
+    );
     expect(document.data.story).not.toEqual([]);
     expect(document.data.rules).not.toEqual([]);
   });
@@ -246,7 +259,7 @@ describe("CLI JSON mode", () => {
       ],
       [
         "evaluate",
-        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
       ],
       ["ranking", "chofex challenge ranking --challenge broken-agent"],
     ]);
@@ -527,6 +540,8 @@ describe("CLI JSON mode", () => {
       const local = await runCli(
         ...commonArguments,
         "test",
+        "--challenge",
+        "black-box",
         "--source",
         sourcePath,
       );
@@ -537,6 +552,8 @@ describe("CLI JSON mode", () => {
       const official = await runCli(
         ...commonArguments,
         "evaluate",
+        "--challenge",
+        "black-box",
         "--source",
         sourcePath,
       );
@@ -547,6 +564,142 @@ describe("CLI JSON mode", () => {
     } finally {
       server.stop(true);
       await unlink(sourcePath).catch(() => undefined);
+    }
+  });
+
+  test("stops Broken Agent evaluation until the participant provides a review", async () => {
+    const sourcePath = join(
+      cliDirectory,
+      `.scheduler-${crypto.randomUUID()}.js`,
+    );
+    try {
+      await writeFile(sourcePath, "function createScheduler() {}\n", "utf8");
+      const result = await runCli(
+        "--output",
+        "json",
+        "challenge",
+        "evaluate",
+        "--challenge",
+        "broken-agent",
+        "--source",
+        sourcePath,
+      );
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: false,
+        error: {
+          code: "HUMAN_REVIEW_REQUIRED",
+          details: {
+            sourceDigest: createHash("sha256")
+              .update("function createScheduler() {}\n")
+              .digest("hex"),
+            requiredFields: [
+              "sourceDigest",
+              "focus",
+              "failureScenario",
+              "evidence",
+              "decision",
+              "confidence",
+              "remainingRisk",
+            ],
+          },
+        },
+      });
+    } finally {
+      await unlink(sourcePath).catch(() => undefined);
+    }
+  });
+
+  test("binds the participant review to the exact Broken Agent source", async () => {
+    const sourcePath = join(
+      cliDirectory,
+      `.scheduler-${crypto.randomUUID()}.js`,
+    );
+    const reviewPath = join(
+      cliDirectory,
+      `.review-${crypto.randomUUID()}.json`,
+    );
+    const source = "function createScheduler() { return {}; }\n";
+    let submittedBody: unknown;
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        submittedBody = await request.json();
+        return Response.json({
+          version: 1,
+          ok: true,
+          requestId: "request-reviewed-evaluate",
+          data: {
+            accuracy: 1,
+            exactCount: 100,
+            sampleSize: 100,
+            meanError: 0,
+            queriesUsed: 0,
+            runtimeMs: 0,
+            executionCost: 500,
+            shareCode: "ABCD",
+            evaluationsUsed: 1,
+            evaluationsRemaining: 4,
+            evaluationsLimit: 5,
+            rankingPath: "/challenges/broken-agent",
+            shareText: "100 preparación para producción",
+          },
+        });
+      },
+    });
+    const review = {
+      sourceDigest: "0".repeat(64),
+      focus: "concurrency",
+      failureScenario:
+        "Dos workers reclaman el mismo job y ambos aplican el efecto antes de completar.",
+      evidence:
+        "Revisé una prueba con dos runDue simultáneos y observé una sola llamada al executor.",
+      decision: "ship",
+      confidence: 80,
+      remainingRisk:
+        "El store de producción todavía podría tener latencias distintas a las del test.",
+    };
+
+    try {
+      await writeFile(sourcePath, source, "utf8");
+      await writeFile(reviewPath, JSON.stringify(review), "utf8");
+      const commonArguments = [
+        "--api-url",
+        server.url.toString().replace(/\/$/, ""),
+        "--token",
+        "test-token",
+        "--output",
+        "json",
+        "challenge",
+        "evaluate",
+        "--challenge",
+        "broken-agent",
+        "--source",
+        sourcePath,
+        "--review",
+        reviewPath,
+      ] as const;
+
+      const stale = await runCli(...commonArguments);
+      expect(stale.exitCode).toBe(2);
+      expect(JSON.parse(stale.stdout)).toMatchObject({
+        ok: false,
+        error: { code: "STALE_HUMAN_REVIEW" },
+      });
+      expect(submittedBody).toBeUndefined();
+
+      review.sourceDigest = createHash("sha256").update(source).digest("hex");
+      await writeFile(reviewPath, JSON.stringify(review), "utf8");
+      const submitted = await runCli(...commonArguments);
+      expect(submitted.exitCode).toBe(0);
+      expect(JSON.parse(submitted.stdout)).toMatchObject({ ok: true });
+      expect(submittedBody).toMatchObject({ review });
+    } finally {
+      server.stop(true);
+      await unlink(sourcePath).catch(() => undefined);
+      await unlink(reviewPath).catch(() => undefined);
     }
   });
 

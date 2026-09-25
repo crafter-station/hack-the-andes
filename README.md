@@ -105,7 +105,11 @@ participant-seeded concurrency, persistence, recovery, idempotency,
 compatibility, and load scenarios. The normative contract is public, AI tools
 are allowed, and five official evaluations return capability-level scores
 without revealing individual cases. Broken Agent uses deterministic operation
-cost—not wall-clock runtime—as its final numeric tie-breaker.
+cost—not wall-clock runtime—as its final numeric tie-breaker. It is explicitly a
+human–agent collaboration challenge: the participant chooses an adversarial
+trace to investigate and submits a source-bound engineering review with their
+evidence, release decision, confidence, and remaining risk. An agent may
+implement and explain, but may not invent that judgment.
 
 ```sh
 chofex challenge
@@ -121,7 +125,7 @@ chofex challenge ranking --challenge black-box
 chofex challenge init --challenge broken-agent
 cd broken-agent && npm test
 chofex challenge test --challenge broken-agent --source ./scheduler.js
-chofex challenge evaluate --challenge broken-agent --source ./scheduler.js
+chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json
 chofex challenge ranking --challenge broken-agent
 ```
 
@@ -129,7 +133,8 @@ chofex challenge ranking --challenge broken-agent
 sign-in. For Black Box, `test` checks only saved notebook observations. For
 Broken Agent, it runs the seven visible behavioral tests. Both are repeatable and
 do not consume an official evaluation; `query` and `evaluate` use limited
-attempt budgets.
+attempt budgets. Broken Agent evaluation also requires the participant-authored
+`review.json`; its `sourceDigest` must match the exact submitted source.
 
 ### Agent and script usage
 

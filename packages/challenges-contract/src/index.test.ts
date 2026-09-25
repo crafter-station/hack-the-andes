@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
 
 import {
+  BrokenAgentEvaluationSolutionSchema,
   challengeBySlug,
   challengeOpeningNotice,
   compareChallengeScores,
@@ -224,5 +225,54 @@ describe("challenge inputs", () => {
     expect(decode(base)).toEqual(base);
     expect(() => decode({ ...base, distanceKm: 10.5 })).toThrow();
     expect(() => decode({ ...base, weightKg: 3.5 })).toThrow();
+  });
+
+  test("requires a substantive human review for Broken Agent evaluations", () => {
+    const decode = Schema.decodeUnknownSync(
+      BrokenAgentEvaluationSolutionSchema,
+      {
+        onExcessProperty: "error",
+      },
+    );
+    const solution = {
+      kind: "javascript_source",
+      source: "function createScheduler() {}",
+      review: {
+        sourceDigest:
+          "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        focus: "lease_recovery",
+        failureScenario:
+          "Un worker vence mientras ejecuta y su resultado tardío pisa el claim nuevo.",
+        evidence:
+          "Revisé el test con dos workers y confirmé que el claim obsoleto no cambia el estado.",
+        decision: "ship",
+        confidence: 82,
+        remainingRisk:
+          "Todavía falta observar el comportamiento del store real bajo carga sostenida.",
+      },
+    };
+
+    expect(decode(solution).review.focus).toBe("lease_recovery");
+    expect(() =>
+      decode({ kind: solution.kind, source: solution.source }),
+    ).toThrow();
+    expect(() =>
+      decode({
+        ...solution,
+        review: { ...solution.review, failureScenario: "Agent says it works" },
+      }),
+    ).toThrow();
+    expect(() =>
+      decode({
+        ...solution,
+        review: { ...solution.review, evidence: " ".repeat(80) },
+      }),
+    ).toThrow();
+    expect(() =>
+      decode({
+        ...solution,
+        review: { ...solution.review, confidence: 101 },
+      }),
+    ).toThrow();
   });
 });

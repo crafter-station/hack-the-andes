@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import {
+  BrokenAgentEvaluationSolutionSchema,
   blackBoxChallengeSlug,
   brokenAgentChallengeSlug,
   type ChallengeAttemptView,
@@ -9,11 +11,12 @@ import {
   type ChallengeObservation,
   type ChallengeQueryResult,
   type ChallengeScore,
-  ChallengeSolutionSchema,
+  type ChallengeSolution,
   challengeBySlug,
   challengeCatalog,
   compareChallengeScores,
   isChallengeRankingVisibleAt,
+  JavascriptSourceSolutionSchema,
   type ParticipantChallengeMilestone,
   type ParticipantChallengeProgress,
   type Shipment,
@@ -108,6 +111,30 @@ const parseInput = <S extends Schema.ConstraintDecoder<unknown>>(
     );
   }
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const reviewRequiredError = (sourceDigest: string): HttpError =>
+  new HttpError(
+    428,
+    "HUMAN_REVIEW_REQUIRED",
+    "Broken Agent requires the participant's engineering review before an official evaluation",
+    false,
+    {
+      sourceDigest,
+      requiredFields: [
+        "sourceDigest",
+        "focus",
+        "failureScenario",
+        "evidence",
+        "decision",
+        "confidence",
+        "remainingRisk",
+      ],
+      next: "Discuss the implementation with the participant, preserve their answers in review.json, then retry with --review review.json.",
+    },
+  );
 
 const requireChallenge = (slug: string): ChallengeDefinition => {
   const challenge = challengeBySlug(slug);
@@ -630,7 +657,7 @@ export const getChallengeAttempt = async (
     "Test against your notebook with `chofex challenge test --challenge black-box --source ./shipping.js`. Official evaluation consumes one attempt.";
   if (challenge.slug === brokenAgentChallengeSlug) {
     localTestHint =
-      "Ejecuta `npm test` dentro de broken-agent y luego `chofex challenge test --challenge broken-agent --source ./scheduler.js`. Los tests públicos son ilimitados.";
+      "Ejecuta `npm test` dentro de broken-agent y luego `chofex challenge test --challenge broken-agent --source ./scheduler.js`. Los tests públicos son ilimitados. Antes de evaluar, el participante debe elegir una traza de falla y completar su review vinculado al source.";
   }
 
   return {
@@ -715,7 +742,7 @@ export const testChallengeSolution = async (
   now: Date = currentChallengeTime(),
 ): Promise<ChallengeLocalTestResult> => {
   const challenge = requireImplementedChallenge(slug, now);
-  const solution = parseInput(ChallengeSolutionSchema, rawInput);
+  const solution = parseInput(JavascriptSourceSolutionSchema, rawInput);
   const participantId = await participantIdFor(clerkUserId);
   const attempt = await attemptFor(participantId, challenge);
   if (challenge.slug === brokenAgentChallengeSlug) {
@@ -780,7 +807,41 @@ export const evaluateChallenge = async (
   now: Date = currentChallengeTime(),
 ): Promise<ChallengeEvaluationResult> => {
   const challenge = requireImplementedChallenge(slug, now);
-  const solution = parseInput(ChallengeSolutionSchema, rawInput);
+  let solution: ChallengeSolution;
+  if (challenge.slug === brokenAgentChallengeSlug) {
+    if (!isRecord(rawInput) || rawInput.review === undefined) {
+      const unreviewedSolution = parseInput(
+        JavascriptSourceSolutionSchema,
+        rawInput,
+      );
+      const sourceDigest = createHash("sha256")
+        .update(unreviewedSolution.source)
+        .digest("hex");
+      throw reviewRequiredError(sourceDigest);
+    }
+    const reviewedSolution = parseInput(
+      BrokenAgentEvaluationSolutionSchema,
+      rawInput,
+    );
+    const sourceDigest = createHash("sha256")
+      .update(reviewedSolution.source)
+      .digest("hex");
+    if (reviewedSolution.review.sourceDigest !== sourceDigest) {
+      throw new HttpError(
+        409,
+        "STALE_HUMAN_REVIEW",
+        "The participant's review does not match the submitted source",
+        false,
+        {
+          expectedSourceDigest: sourceDigest,
+          reviewSourceDigest: reviewedSolution.review.sourceDigest,
+        },
+      );
+    }
+    solution = reviewedSolution;
+  } else {
+    solution = parseInput(JavascriptSourceSolutionSchema, rawInput);
+  }
   const participantId = await participantIdFor(clerkUserId);
   const attempt = await attemptFor(participantId, challenge);
 

@@ -1,6 +1,12 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-import { type Shipment, ShipmentSchema } from "@chofex/challenges-contract";
+import {
+  type BrokenAgentHumanReview,
+  BrokenAgentHumanReviewSchema,
+  type Shipment,
+  ShipmentSchema,
+} from "@chofex/challenges-contract";
 import { Effect, Schema } from "effect";
 import { Prompt } from "effect/unstable/cli";
 import type * as PromptModule from "effect/unstable/cli/Prompt";
@@ -49,6 +55,97 @@ export const javascriptSourceFromPath = (
     Effect.map((source) => ({ kind: "javascript_source" as const, source })),
   );
 };
+
+const humanReviewRequiredDetails = {
+  requiredFields: [
+    "sourceDigest",
+    "focus",
+    "failureScenario",
+    "evidence",
+    "decision",
+    "confidence",
+    "remainingRisk",
+  ],
+  next: "Ask the participant to reason about the patch and provide these answers in review.json, then pass --review review.json.",
+};
+
+export const brokenAgentReviewFromPath = (
+  path: string | undefined,
+): Effect.Effect<BrokenAgentHumanReview, CliError> => {
+  if (!path) {
+    return Effect.fail(
+      cliError(
+        "HUMAN_REVIEW_REQUIRED",
+        "Broken Agent requires the participant's engineering review before an official evaluation",
+        false,
+        humanReviewRequiredDetails,
+      ),
+    );
+  }
+  return readTextFile(path).pipe(
+    Effect.flatMap((contents) =>
+      Effect.try({
+        try: () => JSON.parse(contents) as unknown,
+        catch: (error) =>
+          cliError(
+            "INVALID_REVIEW_FILE",
+            `Could not parse JSON review: ${String(error)}`,
+          ),
+      }),
+    ),
+    Effect.flatMap((input) =>
+      Schema.decodeUnknownEffect(BrokenAgentHumanReviewSchema, {
+        onExcessProperty: "error",
+      })(input).pipe(
+        Effect.mapError((error) =>
+          cliError("INVALID_HUMAN_REVIEW", error.message, false, {
+            ...humanReviewRequiredDetails,
+            issues: String(error),
+          }),
+        ),
+      ),
+    ),
+  );
+};
+
+export const challengeEvaluationInput = (
+  sourcePath: string | undefined,
+  reviewPath: string | undefined,
+  challenge: string,
+) =>
+  Effect.gen(function* () {
+    const solution = yield* javascriptSourceFromPath(sourcePath, challenge);
+    if (challenge !== "broken-agent") return solution;
+    const sourceDigest = createHash("sha256")
+      .update(solution.source)
+      .digest("hex");
+    if (!reviewPath) {
+      return yield* Effect.fail(
+        cliError(
+          "HUMAN_REVIEW_REQUIRED",
+          "Broken Agent requires the participant's engineering review before an official evaluation",
+          false,
+          { ...humanReviewRequiredDetails, sourceDigest },
+        ),
+      );
+    }
+    const review = yield* brokenAgentReviewFromPath(reviewPath);
+    if (review.sourceDigest !== sourceDigest) {
+      return yield* Effect.fail(
+        cliError(
+          "STALE_HUMAN_REVIEW",
+          "review.json does not match the current scheduler.js",
+          false,
+          {
+            expectedSourceDigest: sourceDigest,
+            reviewSourceDigest: review.sourceDigest,
+            next: "Show the participant the updated evidence, obtain a fresh decision, and replace review.json.",
+          },
+        ),
+      );
+    }
+    return { ...solution, review };
+  });
 
 const requiredInteger = (message: string): Prompt.Prompt<string> =>
   Prompt.text({

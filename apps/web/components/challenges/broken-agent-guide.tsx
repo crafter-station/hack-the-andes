@@ -14,9 +14,14 @@ const workflow = [
     body: "Everything passes. Ese es el problema: los happy paths no demuestran que el scheduler sea seguro en producción.",
   },
   {
+    title: "Elige una falla con el participante",
+    command: "Discute tres trazas adversas antes de editar",
+    body: "El agente explica riesgos concretos. El participante elige cuál probar primero y define qué resultado sería inaceptable; el agente no responde por él.",
+  },
+  {
     title: "Audita y repara",
     command: "$EDITOR scheduler.js",
-    body: "Mantén createScheduler y razona sobre claims únicos, concurrencia, persistencia, leases de 30 segundos, reintentos, cancelación e idempotencia.",
+    body: "Primero convierte la traza elegida en una prueba. Después mantén createScheduler y endurece claims únicos, concurrencia, persistencia, leases de 30 segundos, reintentos, cancelación e idempotencia.",
   },
   {
     title: "Protege el comportamiento visible",
@@ -25,9 +30,14 @@ const workflow = [
     body: "Los tests públicos son ilimitados. No uses una evaluación oficial mientras tengas regresiones visibles.",
   },
   {
+    title: "Toma la decisión de release",
+    command: "Crea review.json con las palabras del participante",
+    body: "El participante describe la falla, qué evidencia revisó, ship o block, su confianza y el riesgo restante. El review incluye el SHA-256 de scheduler.js, así que un cambio exige revisar de nuevo.",
+  },
+  {
     title: "Solicita un veredicto oculto",
     command:
-      "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+      "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
     body: "Recibirás puntajes por capacidad, pero no los nombres de los casos ocultos. Tienes 5 evaluaciones oficiales.",
   },
 ] as const;
@@ -50,6 +60,13 @@ export function BrokenAgentChallengeGuide() {
           implementada y todos los tests públicos pasan. Tu trabajo es convertir
           una solución plausible en software que realmente enviarías a
           producción.
+        </p>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
+          Este no es un benchmark para dejar al agente trabajando solo. El
+          agente puede auditar, programar y ejecutar pruebas; tú eliges qué
+          riesgo investigar, cuestionas su evidencia y decides si harías ship.
+          La evaluación oficial no acepta solo código: incluye tu review
+          vinculado a esa versión exacta del archivo.
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
           El contrato es público; cada participante recibe variantes

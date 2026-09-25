@@ -98,7 +98,7 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
       `ESTADO DEL CASO: ${caseStatus}`,
       "",
       "Los tests públicos están verdes. Tu trabajo es hacer que el scheduler sea confiable bajo condiciones de producción.",
-      "Las herramientas de AI están permitidas.",
+      "Las herramientas de AI están permitidas: el agente implementa; tú eliges el riesgo, revisas la evidencia y decides ship o block.",
       "",
       `Evaluaciones   ${evaluationsRemaining} / ${progress.evaluationsLimit} restantes`,
     ];
@@ -112,7 +112,7 @@ export const challengeShowText = (attempt: ChallengeAttemptView): string => {
     lines.push(
       "",
       "SIGUIENTE PASO",
-      "Lee el contrato, audita scheduler.js y conserva verdes los tests visibles.",
+      "Lee el contrato. Antes de editar, discute tres trazas de falla y elige cuál investigar primero.",
       "  cd broken-agent && npm test",
       "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
     );
@@ -343,10 +343,11 @@ export const challengeTestText = (result: ChallengeLocalTestResult): string => {
         "",
         "Todo pasa.",
         "Eso todavía no significa que el scheduler sea correcto en producción.",
-        "Razona sobre concurrencia, reinicios, fallas e idempotencia antes de evaluar.",
+        "Antes de evaluar, el participante debe revisar la evidencia y tomar la decisión de release.",
         "",
-        "Siguiente: usa una evaluación oficial cuando lo enviarías a producción",
-        "  chofex challenge evaluate --challenge broken-agent --source ./scheduler.js",
+        "Siguiente: discutan una traza de falla concreta y creen review.json con las palabras del participante.",
+        "Luego usa una evaluación oficial solo si su decisión lo permite",
+        "  chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
       );
       return lines.join("\n");
     }

@@ -1,6 +1,6 @@
 ---
 name: chofex-hackathon
-description: Apply to Hack the Andes for a human with the Chofex CLI, check an existing application, or guide accepted-participant next steps. Use when a person wants an agent to apply, check their Hack the Andes status, understand requirements, reapply after rejection, or confirm attendance.
+description: Apply to Hack the Andes for a human with the Chofex CLI, work through a challenge with them, check an existing application, or guide accepted-participant next steps. Use when a person wants an agent to apply, solve a Hack the Andes challenge, check status, understand requirements, reapply after rejection, or confirm attendance.
 ---
 
 # Hack the Andes
@@ -18,6 +18,7 @@ Batch participant questions into the fewest practical turns. Pause only for:
 - confirmation that the authenticated email belongs to the participant;
 - application answers that are missing or genuinely ambiguous;
 - the participant's own consent decisions;
+- challenge risk selection, evidence review, and release judgment;
 - final submission approval; and
 - private accepted-participant details.
 
@@ -214,6 +215,15 @@ Public rankings are read-only:
 ```sh
 chofex --output json challenge ranking --challenge black-box
 ```
+
+## Broken Agent challenge
+
+When the participant asks to solve, submit, or evaluate challenge 2 or
+`broken-agent`—including when the default `chofex challenge` guide identifies
+Broken Agent—read and follow
+[`references/broken-agent.md`](references/broken-agent.md). It defines the
+required human–agent reasoning loop and the source-bound review needed before an
+official evaluation.
 
 ## Next steps
 

@@ -237,7 +237,49 @@ export const JavascriptSourceSolutionSchema = Schema.Struct({
 export type JavascriptSourceSolution =
   typeof JavascriptSourceSolutionSchema.Type;
 
-export const ChallengeSolutionSchema = JavascriptSourceSolutionSchema;
+const HumanReviewAnswerSchema = Schema.Trim.pipe(
+  Schema.check(Schema.isMinLength(20), Schema.isMaxLength(1_000)),
+);
+
+export const BrokenAgentHumanReviewSchema = Schema.Struct({
+  sourceDigest: Schema.String.pipe(
+    Schema.check(
+      Schema.isPattern(/^[a-f0-9]{64}$/, {
+        identifier: "SHA-256 source digest",
+      }),
+    ),
+  ),
+  focus: Schema.Literals([
+    "concurrency",
+    "persistence",
+    "lease_recovery",
+    "retry_idempotency",
+    "regression_safety",
+    "performance",
+  ]),
+  failureScenario: HumanReviewAnswerSchema,
+  evidence: HumanReviewAnswerSchema,
+  decision: Schema.Literals(["ship", "block"]),
+  confidence: Schema.Int.pipe(
+    Schema.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+  ),
+  remainingRisk: HumanReviewAnswerSchema,
+});
+
+export type BrokenAgentHumanReview = typeof BrokenAgentHumanReviewSchema.Type;
+
+export const BrokenAgentEvaluationSolutionSchema = Schema.Struct({
+  ...JavascriptSourceSolutionSchema.fields,
+  review: BrokenAgentHumanReviewSchema,
+});
+
+export type BrokenAgentEvaluationSolution =
+  typeof BrokenAgentEvaluationSolutionSchema.Type;
+
+export const ChallengeSolutionSchema = Schema.Union([
+  JavascriptSourceSolutionSchema,
+  BrokenAgentEvaluationSolutionSchema,
+]);
 
 export type ChallengeSolution = typeof ChallengeSolutionSchema.Type;
 
