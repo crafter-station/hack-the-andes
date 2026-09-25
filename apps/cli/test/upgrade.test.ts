@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import {
   autoUpdateCli,
   shouldAutoUpdateCli,
+  updateChofex,
   upgradeCli,
 } from "../src/upgrade.js";
 
@@ -208,6 +209,65 @@ describe("automatic CLI updates", () => {
 });
 
 describe("CLI upgrade", () => {
+  test("updates the CLI and globally refreshes the agent skill", async () => {
+    const npmCalls: Array<ReadonlyArray<string>> = [];
+    const skillCalls: Array<ReadonlyArray<string>> = [];
+
+    await updateChofex({
+      npmRunner: async (arguments_) => {
+        npmCalls.push(arguments_);
+        return { exitCode: 0, stderr: "" };
+      },
+      skillRunner: async (arguments_) => {
+        skillCalls.push(arguments_);
+        return { exitCode: 0, stderr: "" };
+      },
+    });
+
+    expect(npmCalls).toHaveLength(1);
+    expect(skillCalls).toEqual([
+      [
+        "--yes",
+        "skills",
+        "add",
+        "https://github.com/crafter-station/hack-the-andes",
+        "--skill",
+        "chofex-hackathon",
+        "-g",
+        "-y",
+      ],
+    ]);
+  });
+
+  test("does not update the skill when the CLI update fails", async () => {
+    let skillUpdateCount = 0;
+
+    await expect(
+      updateChofex({
+        npmRunner: async () => ({ exitCode: 1, stderr: "permission denied" }),
+        skillRunner: async () => {
+          skillUpdateCount += 1;
+          return { exitCode: 0, stderr: "" };
+        },
+      }),
+    ).rejects.toThrow("npm exited with code 1: permission denied");
+    expect(skillUpdateCount).toBe(0);
+  });
+
+  test("reports skill update failures after updating the CLI", async () => {
+    await expect(
+      updateChofex({
+        npmRunner: async () => ({ exitCode: 0, stderr: "" }),
+        skillRunner: async () => ({
+          exitCode: 1,
+          stderr: "skill install failed",
+        }),
+      }),
+    ).rejects.toThrow(
+      "skill installer exited with code 1: skill install failed",
+    );
+  });
+
   test("forces npm to refresh the latest package", async () => {
     const calls: Array<ReadonlyArray<string>> = [];
     let cacheDirectory = "";

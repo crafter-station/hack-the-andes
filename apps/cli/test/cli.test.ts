@@ -85,7 +85,9 @@ describe("CLI JSON mode", () => {
     expect(help.exitCode).toBe(0);
     expect(help.stdout).toContain("update");
     expect(help.stdout).toContain("upgrade");
-    expect(help.stdout).toContain("Update chofex-cli to the latest version");
+    expect(help.stdout).toContain(
+      "Actualiza chofex-cli y su skill de agente a la última versión",
+    );
   });
 
   test("advertises mini technical challenges", async () => {

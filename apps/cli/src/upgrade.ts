@@ -7,6 +7,8 @@ import { rootValueFlagNames } from "./cli-root.js";
 
 export const cliPackageName = "chofex-cli";
 export const upgradeVersion = "latest";
+export const skillName = "chofex-hackathon";
+const skillRepository = "https://github.com/crafter-station/hack-the-andes";
 const npmRegistryUrl = `https://registry.npmjs.org/${cliPackageName}/latest`;
 
 const npmUpgradeArguments = (cacheDirectory: string, version: string) => [
@@ -33,11 +35,19 @@ export type InstallerRunner = (
   version: string,
 ) => Promise<ProcessResult>;
 
+export type SkillRunner = (
+  arguments_: ReadonlyArray<string>,
+) => Promise<ProcessResult>;
+
 type UpgradeOptions = {
   readonly standalone?: boolean;
   readonly version?: string;
   readonly npmRunner?: NpmRunner;
   readonly installerRunner?: InstallerRunner;
+};
+
+type UpdateChofexOptions = UpgradeOptions & {
+  readonly skillRunner?: SkillRunner;
 };
 
 type AutoUpdateOptions = {
@@ -117,6 +127,11 @@ const runNpm: NpmRunner = (arguments_) => {
   return runProcess(executable, arguments_);
 };
 
+const runSkillInstaller: SkillRunner = (arguments_) => {
+  const executable = process.platform === "win32" ? "npx.cmd" : "npx";
+  return runProcess(executable, arguments_);
+};
+
 const installerUrl = "https://hacktheandes.com/install";
 
 const runInstaller: InstallerRunner = async (installDirectory, version) => {
@@ -171,6 +186,25 @@ export const upgradeCli = async (
   } finally {
     await rm(cacheDirectory, { recursive: true, force: true });
   }
+};
+
+export const updateChofex = async (
+  options: UpdateChofexOptions = {},
+): Promise<void> => {
+  await upgradeCli(options);
+
+  const runner = options.skillRunner ?? runSkillInstaller;
+  const result = await runner([
+    "--yes",
+    "skills",
+    "add",
+    skillRepository,
+    "--skill",
+    skillName,
+    "-g",
+    "-y",
+  ]);
+  assertSuccessful(result, "skill installer");
 };
 
 type ParsedVersion = {

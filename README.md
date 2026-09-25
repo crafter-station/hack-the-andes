@@ -42,7 +42,7 @@ The CLI authenticates through Clerk OAuth with PKCE. Access and refresh tokens
 are stored in Keychain on macOS, Secret Service on Linux, or Password Vault on
 Windows. Run `chofex logout` to revoke and remove stored credentials, or
 `chofex update` to install the latest release through the same installation
-method you originally used.
+method you originally used and refresh the globally installed agent skill.
 
 ### Application flow
 
@@ -165,6 +165,8 @@ The skill guides an agent through application and post-acceptance flows while
 keeping authentication, personal answers, consent, and final submission
 approval with the participant. Its source is
 [`skills/chofex-hackathon/SKILL.md`](skills/chofex-hackathon/SKILL.md).
+Running `chofex update` (or its `chofex upgrade` alias) refreshes both the CLI
+and the globally installed skill.
 
 ## Local development
 

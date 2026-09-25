@@ -32,7 +32,12 @@ import {
   requirementsOnlyText,
 } from "./output.js";
 import { uploadPicture } from "./picture-upload.js";
-import { cliPackageName, upgradeCli, upgradeVersion } from "./upgrade.js";
+import {
+  cliPackageName,
+  skillName,
+  updateChofex,
+  upgradeVersion,
+} from "./upgrade.js";
 
 type InputStage = "application" | "acceptance";
 
@@ -441,7 +446,7 @@ const makeUpgradeCommand = (name: "update" | "upgrade") =>
       const options = yield* root;
       const operation = Effect.tryPromise({
         try: async () => {
-          await upgradeCli();
+          await updateChofex();
           return {
             version: 1 as const,
             ok: true as const,
@@ -449,13 +454,14 @@ const makeUpgradeCommand = (name: "update" | "upgrade") =>
             data: {
               packageName: cliPackageName,
               requestedVersion: upgradeVersion,
+              skillName,
             },
           };
         },
         catch: (error) =>
           cliError(
             "UPGRADE_FAILED",
-            `Could not update ${cliPackageName}`,
+            `No se pudieron actualizar ${cliPackageName} y ${skillName}`,
             false,
             String(error),
           ),
@@ -463,10 +469,15 @@ const makeUpgradeCommand = (name: "update" | "upgrade") =>
       yield* execute(
         options.output,
         operation,
-        () => `Updated ${cliPackageName} to the ${upgradeVersion} version.`,
+        () =>
+          `Se actualizó ${cliPackageName} a la versión ${upgradeVersion} y se refrescó ${skillName}.`,
       );
     }),
-  ).pipe(Command.withDescription("Update chofex-cli to the latest version"));
+  ).pipe(
+    Command.withDescription(
+      "Actualiza chofex-cli y su skill de agente a la última versión",
+    ),
+  );
 
 const updateCommand = makeUpgradeCommand("update");
 const upgradeCommand = makeUpgradeCommand("upgrade");
