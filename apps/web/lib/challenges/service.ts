@@ -73,22 +73,30 @@ import { attemptSeed, shareCodeFromSeed } from "./seed";
 type AttemptRecord = typeof challengeAttempts.$inferSelect;
 type EvaluationRecord = typeof challengeEvaluations.$inferSelect;
 
-const engineHttpError = (error: ChallengeEngineError): HttpError => {
+const engineHttpError = (
+  error: ChallengeEngineError,
+  kind: "query" | "evaluation" = "evaluation",
+): HttpError => {
   if (isConfirmedSolutionExecutionFailure(error)) {
     return new HttpError(422, error.code, error.message, false);
   }
-  return new HttpError(
-    503,
-    "CHALLENGE_ENGINE_UNAVAILABLE",
-    "The challenge engine is temporarily unavailable",
-  );
+  if (kind === "query") {
+    return new HttpError(
+      503,
+      "CHALLENGE_ENGINE_UNAVAILABLE",
+      "The challenge engine is temporarily unavailable",
+      true,
+    );
+  }
+  return engineUnavailableError();
 };
 
 const engineUnavailableError = (): HttpError =>
   new HttpError(
     503,
     "CHALLENGE_ENGINE_UNAVAILABLE",
-    "The challenge engine is temporarily unavailable",
+    "The official evaluation could not be completed. This attempt was not consumed.",
+    true,
   );
 
 const duplicateQueryError = (): HttpError =>
@@ -717,7 +725,7 @@ export const queryChallenge = async (
   } catch (error) {
     await releaseAfterFailure(reservation, "query");
     if (error instanceof ChallengeEngineError) {
-      throw engineHttpError(error);
+      throw engineHttpError(error, "query");
     }
     console.error("Challenge engine query failed", error);
     throw engineUnavailableError();

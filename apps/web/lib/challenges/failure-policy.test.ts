@@ -9,6 +9,15 @@ describe("challenge evaluation failure policy", () => {
         new ChallengeEngineError(
           422,
           "SOLUTION_EXECUTION_FAILED",
+          "Define function createScheduler(dependencies)",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      isConfirmedSolutionExecutionFailure(
+        new ChallengeEngineError(
+          422,
+          "SOLUTION_EXECUTION_FAILED",
           "Solution failed",
         ),
       ),
@@ -19,6 +28,18 @@ describe("challenge evaluation failure policy", () => {
           503,
           "SOLUTION_EXECUTION_FAILED",
           "Engine failed",
+        ),
+      ),
+    ).toBe(false);
+  });
+
+  test("does not charge the sanitized engine catch-all as a used attempt", () => {
+    expect(
+      isConfirmedSolutionExecutionFailure(
+        new ChallengeEngineError(
+          422,
+          "SOLUTION_EXECUTION_FAILED",
+          "Submitted solution could not be evaluated",
         ),
       ),
     ).toBe(false);
