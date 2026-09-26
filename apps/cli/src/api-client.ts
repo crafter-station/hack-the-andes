@@ -71,11 +71,15 @@ const resolveAuthentication = (
   });
 };
 
+const defaultRequestTimeoutMs = 20_000;
+export const challengeEvaluateRequestTimeoutMs = 30_000;
+
 const sendRequest = (
   options: ApiClientOptions,
   path: string,
   init: RequestInit,
   credentials?: Credentials,
+  timeoutMs = defaultRequestTimeoutMs,
 ): Effect.Effect<Response, CliError> =>
   Effect.tryPromise({
     try: () => {
@@ -97,7 +101,7 @@ const sendRequest = (
       return fetch(endpoint(options.apiUrl, path), {
         ...init,
         headers,
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     },
     catch: (error) =>
@@ -160,6 +164,7 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
   path: string,
   init: RequestInit,
   decodeResponse: (input: unknown) => Effect.Effect<ApiSuccess<A>, unknown, R>,
+  timeoutMs = defaultRequestTimeoutMs,
 ): Effect.fn.Return<ApiSuccess<A>, CliError, R> {
   const suppliedToken = options.token ?? process.env.CHOFEX_TOKEN;
   const authenticate = options.authenticate ?? authentication;
@@ -168,7 +173,13 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
     options.campaignAttribution,
     authenticate,
   );
-  let response = yield* sendRequest(options, path, init, credentials);
+  let response = yield* sendRequest(
+    options,
+    path,
+    init,
+    credentials,
+    timeoutMs,
+  );
   if (response.status === 401 && !suppliedToken) {
     const refreshed = yield* resolveAuthentication(
       undefined,
@@ -180,7 +191,13 @@ const request = Effect.fn("apiRequest")(function* <A, R>(
       Effect.catch(() => Effect.succeed({ ok: false as const })),
     );
     if (refreshed.ok) {
-      response = yield* sendRequest(options, path, init, refreshed.value);
+      response = yield* sendRequest(
+        options,
+        path,
+        init,
+        refreshed.value,
+        timeoutMs,
+      );
     }
   }
   return yield* decodeHttpBody(response, decodeResponse);
@@ -393,6 +410,7 @@ export const evaluateChallenge = (
     `/api/v1/challenges/${slug}/evaluate`,
     { method: "POST", body: JSON.stringify(input) },
     decodeChallengeEvaluation,
+    challengeEvaluateRequestTimeoutMs,
   );
 
 export const getChallengeRanking = (
