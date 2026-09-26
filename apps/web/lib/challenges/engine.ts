@@ -13,6 +13,9 @@ export type CurrentChallengeVersion =
   | typeof currentChallengeVersion
   | typeof brokenAgentChallengeVersion;
 
+export const challengeEngineQueryTimeoutMs = 8_000;
+export const challengeEngineEvaluateTimeoutMs = 25_000;
+
 export const currentChallengeVersionFor = (
   slug: ChallengeSlug | string,
 ): CurrentChallengeVersion | undefined => {
@@ -148,7 +151,11 @@ const parseScore = (value: unknown): ChallengeScore | undefined => {
 
 export const createChallengeEngine = (options: ChallengeEngineOptions) => {
   const baseUrl = options.baseUrl.replace(/\/$/, "");
-  const post = async (path: string, payload: unknown): Promise<unknown> => {
+  const post = async (
+    path: string,
+    payload: unknown,
+    timeoutMs: number,
+  ): Promise<unknown> => {
     let response: Response;
     try {
       response = await options.fetch(`${baseUrl}${path}`, {
@@ -159,7 +166,7 @@ export const createChallengeEngine = (options: ChallengeEngineOptions) => {
         },
         body: JSON.stringify(payload),
         cache: "no-store",
-        signal: AbortSignal.timeout(8_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
       console.error("Challenge engine request failed", error);
@@ -187,12 +194,16 @@ export const createChallengeEngine = (options: ChallengeEngineOptions) => {
   return {
     query: async (participantKey: string, input: Shipment): Promise<number> => {
       const result = record(
-        await post("/api/v1/query", {
-          version: 1,
-          challengeVersion: currentChallengeVersion,
-          participantKey,
-          input,
-        }),
+        await post(
+          "/api/v1/query",
+          {
+            version: 1,
+            challengeVersion: currentChallengeVersion,
+            participantKey,
+            input,
+          },
+          challengeEngineQueryTimeoutMs,
+        ),
       );
       const output = finiteNumber(result?.output);
       if (result?.version !== 1 || output === undefined) {
@@ -211,13 +222,17 @@ export const createChallengeEngine = (options: ChallengeEngineOptions) => {
       queriesUsed: number,
     ): Promise<ChallengeScore> => {
       const result = record(
-        await post("/api/v1/evaluate", {
-          version: 1,
-          challengeVersion,
-          participantKey,
-          source,
-          queriesUsed,
-        }),
+        await post(
+          "/api/v1/evaluate",
+          {
+            version: 1,
+            challengeVersion,
+            participantKey,
+            source,
+            queriesUsed,
+          },
+          challengeEngineEvaluateTimeoutMs,
+        ),
       );
       const score = parseScore(result?.score);
       if (result?.version !== 1 || !score) {

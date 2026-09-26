@@ -787,6 +787,81 @@ describe("CLI JSON mode", () => {
     }
   });
 
+  test("explains that an unfinished official evaluation did not consume an attempt", async () => {
+    const sourcePath = join(
+      cliDirectory,
+      `.scheduler-${crypto.randomUUID()}.js`,
+    );
+    const reviewPath = join(
+      cliDirectory,
+      `.review-${crypto.randomUUID()}.json`,
+    );
+    const source = "function createScheduler() { return {}; }\n";
+    const review = {
+      sourceDigest: createHash("sha256").update(source).digest("hex"),
+      focus: "concurrency",
+      failureScenario:
+        "Dos workers reclaman el mismo job y ambos aplican el efecto antes de completar.",
+      evidence:
+        "Revisé una prueba con dos runDue simultáneos y observé una sola llamada al executor.",
+      decision: "ship",
+      confidence: 80,
+      remainingRisk:
+        "El store de producción todavía podría tener latencias distintas a las del test.",
+    };
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        return Response.json(
+          {
+            version: 1,
+            ok: false,
+            requestId: "request-engine-unavailable",
+            error: {
+              code: "CHALLENGE_ENGINE_UNAVAILABLE",
+              message:
+                "The official evaluation could not be completed. This attempt was not consumed.",
+              retryable: true,
+            },
+          },
+          { status: 503 },
+        );
+      },
+    });
+
+    try {
+      await writeFile(sourcePath, source, "utf8");
+      await writeFile(reviewPath, JSON.stringify(review), "utf8");
+      const result = await runCli(
+        "--api-url",
+        server.url.toString().replace(/\/$/, ""),
+        "--token",
+        "test-token",
+        "challenge",
+        "evaluate",
+        "--challenge",
+        "broken-agent",
+        "--source",
+        sourcePath,
+        "--review",
+        reviewPath,
+      );
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("no se pudo completar");
+      expect(result.stderr).toContain("No es un error de tu computadora");
+      expect(result.stderr).toContain("este intento no se consumió");
+      expect(result.stderr).toContain(
+        "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
+      );
+    } finally {
+      server.stop(true);
+      await unlink(sourcePath).catch(() => undefined);
+      await unlink(reviewPath).catch(() => undefined);
+    }
+  });
+
   test("advertises local input validation", async () => {
     const help = await runCli("--help");
 

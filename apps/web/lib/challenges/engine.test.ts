@@ -5,6 +5,8 @@ import type { Shipment } from "@chofex/challenges-contract";
 import {
   brokenAgentChallengeVersion,
   ChallengeEngineError,
+  challengeEngineEvaluateTimeoutMs,
+  challengeEngineQueryTimeoutMs,
   createChallengeEngine,
   currentChallengeVersion,
 } from "./engine";
@@ -20,6 +22,23 @@ const shipment: Shipment = {
 describe("private challenge engine adapter", () => {
   test("pins Broken Agent submissions to the current admission version", () => {
     expect(brokenAgentChallengeVersion).toBe("broken-agent-v3");
+  });
+
+  test("gives official evaluations longer than a query", () => {
+    expect(challengeEngineEvaluateTimeoutMs).toBeGreaterThan(
+      challengeEngineQueryTimeoutMs,
+    );
+    expect(challengeEngineEvaluateTimeoutMs).toBeGreaterThanOrEqual(25_000);
+  });
+
+  test("keeps the official evaluate route alive for the engine budget", async () => {
+    const route = await Bun.file(
+      new URL(
+        "../../app/api/v1/challenges/[slug]/evaluate/route.ts",
+        import.meta.url,
+      ),
+    ).text();
+    expect(route).toContain("export const maxDuration = 30");
   });
 
   test("authenticates and maps query and evaluation responses", async () => {
@@ -102,6 +121,52 @@ describe("private challenge engine adapter", () => {
     expect(JSON.parse(String(requests[1]?.init.body))).toMatchObject({
       challengeVersion: currentChallengeVersion,
     });
+  });
+
+  test("gives official evaluations a longer abort budget than queries", async () => {
+    const originalTimeout = AbortSignal.timeout;
+    const timeouts: Array<number> = [];
+    AbortSignal.timeout = ((ms: number) => {
+      timeouts.push(ms);
+      return originalTimeout(ms);
+    }) as typeof AbortSignal.timeout;
+
+    try {
+      const queryEngine = createChallengeEngine({
+        baseUrl: "https://private-engine.example",
+        apiSecret: "private-secret",
+        fetch: async () => Response.json({ version: 1, output: 14 }),
+      });
+      await queryEngine.query("participant_1", shipment);
+      expect(timeouts).toEqual([challengeEngineQueryTimeoutMs]);
+
+      timeouts.length = 0;
+      const evaluateEngine = createChallengeEngine({
+        baseUrl: "https://private-engine.example",
+        apiSecret: "private-secret",
+        fetch: async () =>
+          Response.json({
+            version: 1,
+            score: {
+              accuracy: 1,
+              exactCount: 100,
+              sampleSize: 100,
+              meanError: 0,
+              queriesUsed: 0,
+              runtimeMs: 1,
+            },
+          }),
+      });
+      await evaluateEngine.evaluate(
+        brokenAgentChallengeVersion,
+        "participant_1",
+        "function createScheduler() { return {}; }",
+        0,
+      );
+      expect(timeouts).toEqual([challengeEngineEvaluateTimeoutMs]);
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+    }
   });
 
   test("returns a typed error without leaking an invalid engine response", async () => {

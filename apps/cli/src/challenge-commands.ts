@@ -210,13 +210,24 @@ const reviewFlag = optionalString(
   "Participant-authored Broken Agent engineering review JSON",
 );
 
+const officialEvaluateRetryCommand =
+  "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json";
+
 const evaluationErrorText = (error: CliError): string | undefined => {
+  if (error.code === "CHALLENGE_ENGINE_UNAVAILABLE") {
+    return [
+      "La evaluación oficial no se pudo completar.",
+      "No es un error de tu computadora, y este intento no se consumió.",
+      "",
+      "Vuelve a ejecutar el mismo comando en unos segundos:",
+      `  ${officialEvaluateRetryCommand}`,
+    ].join("\n");
+  }
   if (error.code !== "HUMAN_APPROVAL_REQUIRED") return undefined;
   if (!error.details || typeof error.details !== "object") return undefined;
   const details = error.details as Record<string, unknown>;
   if (typeof details.approvalUrl !== "string") return undefined;
-  let retryCommand =
-    "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json";
+  let retryCommand = officialEvaluateRetryCommand;
   if (typeof details.retryCommand === "string") {
     retryCommand = details.retryCommand;
   }
