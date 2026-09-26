@@ -67,7 +67,7 @@ import {
   reserveChallengeUse,
 } from "./reservations";
 import { runShippingSolution } from "./sandbox";
-import { scoreFromStored } from "./score";
+import { participantVisibleScore, scoreFromStored } from "./score";
 import { attemptSeed, shareCodeFromSeed } from "./seed";
 
 type AttemptRecord = typeof challengeAttempts.$inferSelect;
@@ -387,7 +387,6 @@ const loadBestEvaluation = async (
       desc(challengeEvaluations.accuracy),
       desc(challengeEvaluations.exactCount),
       asc(challengeEvaluations.queriesUsed),
-      asc(challengeEvaluations.executionCost),
       asc(challengeEvaluations.runtimeMs),
       asc(challengeEvaluations.createdAt),
       asc(challengeEvaluations.id),
@@ -974,7 +973,7 @@ export const evaluateChallenge = async (
   }
 
   return {
-    ...score,
+    ...participantVisibleScore(score),
     shareCode: completed.shareCode,
     ...rankingResult,
     evaluationsUsed: completed.evaluationsUsed,

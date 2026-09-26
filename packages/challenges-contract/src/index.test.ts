@@ -189,7 +189,7 @@ describe("challenge scoring", () => {
     ).toBeLessThan(0);
   });
 
-  test("breaks Broken Agent ties by fewer evaluations and deterministic cost", () => {
+  test("breaks Broken Agent ties by fewer evaluations, not by execution cost", () => {
     const breakdown = {
       coreBehavior: { earned: 10, available: 10 },
       persistence: { earned: 15, available: 15 },
@@ -214,9 +214,9 @@ describe("challenge scoring", () => {
     expect(
       compareChallengeScores(base, { ...base, evaluationsUsed: 3 }),
     ).toBeLessThan(0);
-    expect(
-      compareChallengeScores(base, { ...base, executionCost: 60 }),
-    ).toBeLessThan(0);
+    expect(compareChallengeScores(base, { ...base, executionCost: 60 })).toBe(
+      0,
+    );
   });
 });
 

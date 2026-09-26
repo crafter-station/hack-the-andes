@@ -419,27 +419,10 @@ export const challengeTestText = (result: ChallengeLocalTestResult): string => {
 export const challengeEvaluateText = (
   result: ChallengeEvaluationResult,
 ): string => {
-  if (result.breakdown) {
-    const executionCost = result.executionCost ?? result.runtimeMs;
-    const capabilityLines = [
-      ["Comportamiento base", result.breakdown.coreBehavior],
-      ["Persistencia", result.breakdown.persistence],
-      ["Concurrencia", result.breakdown.concurrency],
-      ["Recuperación", result.breakdown.failureRecovery],
-      ["Idempotencia", result.breakdown.idempotency],
-      ["Sin regresiones", result.breakdown.regressionSafety],
-      ["Rendimiento", result.breakdown.performance],
-    ] as const;
+  if (result.rankingPath === "/challenges/broken-agent") {
     const lines = [
       "VEREDICTO OFICIAL — BROKEN AGENT — PREPARACIÓN PARA PRODUCCIÓN",
       `Puntaje             ${(result.accuracy * 100).toFixed(2)} / ${result.sampleSize}`,
-      `Costo determinístico ${executionCost} ops`,
-      "",
-      "Puntajes por capacidad",
-      ...capabilityLines.map(
-        ([label, score]) =>
-          `${label.padEnd(20)}${score.earned.toFixed(2)} / ${score.available}`,
-      ),
     ];
     if (result.rank !== undefined) {
       lines.push(`Puesto               #${result.rank}`);
@@ -455,7 +438,7 @@ export const challengeEvaluateText = (
     if (result.evaluationsRemaining > 0) {
       lines.push(
         "",
-        "El evaluador reporta capacidades, no casos ocultos individuales. Razona antes de volver a enviar.",
+        "El veredicto es un solo puntaje. No dice qué caso falló. Razona antes de volver a enviar.",
         "  chofex challenge test --challenge broken-agent --source ./scheduler.js",
       );
     }
@@ -511,7 +494,7 @@ export const challengeRankingText = (
     return lines.join("\n");
   }
   if (ranking.challenge.slug === "broken-agent") {
-    lines.push("Psto  Puntaje     Puntos         Costo  Nombre");
+    lines.push("Psto  Puntaje     Puntos   Nombre");
     for (const entry of ranking.entries.slice(0, 20)) {
       const rank = String(entry.rank).padStart(4, " ");
       const accuracy = percent(entry.accuracy).padStart(8, " ");
@@ -519,11 +502,9 @@ export const challengeRankingText = (
         11,
         " ",
       );
-      const executionCost = entry.executionCost ?? entry.runtimeMs;
-      const runtime = `${executionCost}ops`.padStart(8, " ");
       const profileLinks = [entry.githubUrl, entry.linkedInUrl].filter(Boolean);
       const participant = [entry.displayName, ...profileLinks].join(" ");
-      lines.push(`${rank}  ${accuracy}  ${points}  ${runtime}  ${participant}`);
+      lines.push(`${rank}  ${accuracy}  ${points}  ${participant}`);
     }
     return lines.join("\n");
   }

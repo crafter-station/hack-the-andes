@@ -81,6 +81,10 @@ evaluation:
 chofex --output json challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json
 ```
 
+The official result is one score out of 100. It does not include a capability
+breakdown or an execution cost, and those figures are not ranking signals.
+Do not spend evaluations hunting a hidden axis or a cheaper operation count.
+
 The first valid request returns `HUMAN_APPROVAL_REQUIRED` without consuming an
 evaluation. Give the participant the returned `approvalUrl`; they must open it
 in their authenticated browser, inspect the source-bound review, and approve it

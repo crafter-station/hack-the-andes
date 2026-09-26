@@ -19,11 +19,7 @@ import { RankingCountdown } from "./ranking-countdown-view";
 
 const executionMetricText = (
   entry: ChallengeRanking["entries"][number],
-  brokenAgent: boolean,
-): string => {
-  if (brokenAgent) return `${entry.executionCost ?? entry.runtimeMs} ops`;
-  return `${entry.runtimeMs} ms`;
-};
+): string => `${entry.runtimeMs} ms`;
 
 const GitHubIcon = () => (
   <svg
@@ -77,7 +73,7 @@ const RankingResults = ({
             </th>
             <th className="px-4 py-3">{brokenAgent ? "Puntos" : "Exactas"}</th>
             {!brokenAgent && <th className="px-4 py-3">Queries</th>}
-            <th className="px-4 py-3">{brokenAgent ? "Costo" : "Runtime"}</th>
+            {!brokenAgent && <th className="px-4 py-3">Runtime</th>}
           </tr>
         </thead>
         <tbody>
@@ -129,9 +125,11 @@ const RankingResults = ({
               {!brokenAgent && (
                 <td className="px-4 py-3 font-mono">{entry.queriesUsed}</td>
               )}
-              <td className="px-4 py-3 font-mono">
-                {executionMetricText(entry, brokenAgent)}
-              </td>
+              {!brokenAgent && (
+                <td className="px-4 py-3 font-mono">
+                  {executionMetricText(entry)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -187,7 +185,7 @@ export function ChallengeRankingView({
     "Ranking público de solo lectura: accuracy, empates por predicciones exactas y menos queries. Las implementaciones no se publican.";
   if (brokenAgent) {
     rankingDescription =
-      "Ranking público de solo lectura: puntaje de producción, menos evaluaciones oficiales, costo determinístico y, al final, hora de envío. Aparecen todos los puntajes válidos de personas con una postulación enviada; los casos ocultos y las implementaciones no se publican.";
+      "Ranking público de solo lectura: puntaje de producción, menos evaluaciones oficiales y, al final, hora de envío. Aparecen todos los puntajes válidos de personas con una postulación enviada; los casos ocultos y las implementaciones no se publican.";
   }
 
   return (

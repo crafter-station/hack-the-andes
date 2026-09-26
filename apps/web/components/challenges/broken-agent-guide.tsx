@@ -49,7 +49,7 @@ const workflow = [
     title: "Solicita el veredicto oculto",
     command:
       "chofex challenge evaluate --challenge broken-agent --source ./scheduler.js --review ./review.json",
-    body: "Repite el comando antes de que venza la aprobación. Esta vez consume 1 de 5 evaluaciones oficiales y devuelve puntajes por capacidad.",
+    body: "Repite el comando antes de que venza la aprobación. Esta vez consume 1 de 5 evaluaciones oficiales y devuelve un solo puntaje.",
   },
 ] as const;
 
@@ -94,14 +94,11 @@ export function BrokenAgentChallengeGuide() {
           Code, Codex, Cursor o cualquier otra AI.
         </p>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-[var(--hud-muted)]">
-          Puntaje: comportamiento base 10, persistencia 15, concurrencia 20,
-          recuperación 20, idempotencia 15, seguridad contra regresiones 15 y
-          rendimiento 5. Los empates se resuelven por menos evaluaciones
-          oficiales, costo determinístico de operaciones —no tiempo del
-          servidor— y, al final, hora del mejor envío. El ranking se revela el 1
-          de octubre a las 15:00 y el challenge cierra el 2 de octubre a las
-          00:00, hora de Perú. Todos los puntajes válidos con una postulación
-          enviada aparecen en el ranking.
+          El veredicto oficial es un solo puntaje sobre 100. Los empates se
+          resuelven por menos evaluaciones oficiales y, al final, por la hora
+          del mejor envío. El ranking se revela el 1 de octubre a las 15:00 y el
+          challenge cierra el 2 de octubre a las 00:00, hora de Perú. Todos los
+          puntajes válidos con una postulación enviada aparecen en el ranking.
         </p>
 
         <dl className="mt-8 grid gap-px bg-[var(--hud-ink)]/10 sm:grid-cols-3">

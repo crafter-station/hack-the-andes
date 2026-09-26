@@ -591,9 +591,6 @@ export const compareChallengeScores = (
     ) {
       return left.evaluationsUsed - right.evaluationsUsed;
     }
-    const leftCost = left.executionCost ?? left.runtimeMs;
-    const rightCost = right.executionCost ?? right.runtimeMs;
-    if (leftCost !== rightCost) return leftCost - rightCost;
     return 0;
   }
   if (left.runtimeMs !== right.runtimeMs) {

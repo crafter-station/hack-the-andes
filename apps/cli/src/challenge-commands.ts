@@ -52,7 +52,7 @@ const challengeQuickstart = {
     "Los mejores resultados de los rankings serán seleccionados para el evento.",
     "Tienes 5 evaluaciones oficiales contra variantes ocultas y determinísticas por participante.",
     "Los tests locales y públicos son ilimitados.",
-    "Gana el puntaje total; los empates usan menos evaluaciones, costo determinístico y hora del mejor envío.",
+    "Gana el puntaje total; los empates usan menos evaluaciones y la hora del mejor envío.",
     "Las herramientas de AI están permitidas, pero el participante toma las decisiones de ingeniería.",
   ],
   workflow: [

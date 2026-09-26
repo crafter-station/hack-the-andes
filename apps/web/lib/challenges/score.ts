@@ -52,3 +52,20 @@ export const scoreFromStored = (
 
 export const formatChallengeScore = (accuracy: number): string =>
   `${(accuracy * 100).toFixed(2)}%`;
+
+export const participantVisibleScore = (
+  score: ChallengeScore,
+): ChallengeScore => {
+  const visible: ChallengeScore = {
+    accuracy: score.accuracy,
+    exactCount: score.exactCount,
+    sampleSize: score.sampleSize,
+    meanError: score.meanError,
+    queriesUsed: score.queriesUsed,
+    runtimeMs: score.runtimeMs,
+  };
+  if (score.evaluationsUsed !== undefined) {
+    return { ...visible, evaluationsUsed: score.evaluationsUsed };
+  }
+  return visible;
+};

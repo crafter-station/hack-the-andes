@@ -8,7 +8,7 @@ import {
 } from "@chofex/challenges-contract";
 
 export const currentChallengeVersion = "black-box-v2" as const;
-export const brokenAgentChallengeVersion = "broken-agent-v2" as const;
+export const brokenAgentChallengeVersion = "broken-agent-v3" as const;
 export type CurrentChallengeVersion =
   | typeof currentChallengeVersion
   | typeof brokenAgentChallengeVersion;

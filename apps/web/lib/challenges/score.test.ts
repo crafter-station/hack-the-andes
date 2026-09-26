@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 
-import { formatChallengeScore, scoreFromStored } from "./score";
+import {
+  formatChallengeScore,
+  participantVisibleScore,
+  scoreFromStored,
+} from "./score";
 
 test("formats challenge scores consistently for public and admin rankings", () => {
   expect(formatChallengeScore(0.98765)).toBe("98.77%");
@@ -32,4 +36,9 @@ test("restores Broken Agent deterministic cost without calling it runtime", () =
   expect(score.runtimeMs).toBe(0);
   expect(score.executionCost).toBe(4321);
   expect(score.breakdown?.concurrency.earned).toBe(8);
+
+  const visible = participantVisibleScore(score);
+  expect(visible.executionCost).toBeUndefined();
+  expect(visible.breakdown).toBeUndefined();
+  expect(visible.exactCount).toBe(80);
 });

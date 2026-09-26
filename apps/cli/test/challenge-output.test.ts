@@ -133,7 +133,7 @@ describe("challenge output", () => {
     expect(text).toContain("BLACK BOX #7A3F");
   });
 
-  test("prints Broken Agent capability scores without hidden test names", () => {
+  test("prints a single Broken Agent score without capability or cost detail", () => {
     const text = challengeEvaluateText({
       accuracy: 0.82,
       exactCount: 82,
@@ -161,9 +161,9 @@ describe("challenge output", () => {
 
     expect(text).toContain("BROKEN AGENT — PREPARACIÓN PARA PRODUCCIÓN");
     expect(text).toContain("82.00 / 100");
-    expect(text).toContain("Concurrencia");
-    expect(text).toContain("16.00 / 20");
-    expect(text).toContain("4321 ops");
+    expect(text).not.toContain("Concurrencia");
+    expect(text).not.toContain("16.00 / 20");
+    expect(text).not.toContain("4321 ops");
     expect(text).not.toContain("worker_crash");
   });
 

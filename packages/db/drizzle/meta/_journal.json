@@ -169,6 +169,13 @@
       "when": 1790370760421,
       "tag": "0023_breezy_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790460000000,
+      "tag": "0024_broken_agent_rank",
+      "breakpoints": true
     }
   ]
 }

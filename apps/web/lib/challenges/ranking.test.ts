@@ -38,6 +38,15 @@ const evaluation = (
 });
 
 describe("challenge ranking", () => {
+  test("does not let a cheaper Broken Agent run outrank an earlier equal score", () => {
+    const ranked = [
+      evaluation("2026-09-25T15:00:00.000Z", { executionCost: 900 }),
+      evaluation("2026-09-25T15:01:00.000Z", { executionCost: 100 }),
+    ];
+
+    expect(competitionRanksForEvaluations(ranked)).toEqual([1, 2]);
+  });
+
   test("uses submission time as the final Broken Agent tie breaker", () => {
     const ranked = [
       evaluation("2026-09-25T15:00:00.000Z"),

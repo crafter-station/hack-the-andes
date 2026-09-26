@@ -17,6 +17,7 @@ const migration = [
   "0011_boring_bushwacker.sql",
   "0018_rank_challenge_runtime.sql",
   "0022_burly_mesmero.sql",
+  "0024_broken_agent_rank.sql",
 ]
   .map((name) =>
     readFileSync(
@@ -409,7 +410,7 @@ describe("challenge reservations", () => {
     expect(result.rows[0]?.runtime_ms).toBe(1);
   });
 
-  test("promotes a tied Broken Agent evaluation with a lower deterministic cost", async () => {
+  test("keeps the earlier Broken Agent evaluation when a later one only costs less", async () => {
     const first = await reserveChallengeUse(attemptId, "evaluation", database);
     if (!first) throw new Error("missing first reservation");
     await completeEvaluationReservation(
@@ -452,6 +453,6 @@ describe("challenge reservations", () => {
       where attempt.id = $1`,
       [attemptId],
     );
-    expect(result.rows[0]?.execution_cost).toBe(700);
+    expect(result.rows[0]?.execution_cost).toBe(900);
   });
 });

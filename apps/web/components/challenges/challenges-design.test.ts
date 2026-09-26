@@ -80,9 +80,9 @@ test("the Broken Agent page publishes the contract without hidden cases", async 
   expect(guide).toContain("Everything passes");
   expect(guide).toContain("7/7 tests verdes");
   expect(guide).toContain("5 evaluaciones oficiales");
-  expect(guide).toContain("concurrencia 20");
+  expect(guide).toContain("un solo puntaje sobre 100");
   expect(guide).toContain("menos evaluaciones");
-  expect(guide).toContain("costo determinístico");
+  expect(guide).not.toContain("costo determinístico");
   expect(guide).toContain("2 de octubre");
   expect(guide).toContain("createScheduler");
   expect(guide).toContain("npm test");

@@ -18,8 +18,8 @@ const shipment: Shipment = {
 };
 
 describe("private challenge engine adapter", () => {
-  test("isolates the strengthened Broken Agent evaluator in version 2", () => {
-    expect(brokenAgentChallengeVersion).toBe("broken-agent-v2");
+  test("pins Broken Agent submissions to the current admission version", () => {
+    expect(brokenAgentChallengeVersion).toBe("broken-agent-v3");
   });
 
   test("authenticates and maps query and evaluation responses", async () => {

@@ -273,13 +273,13 @@ aprobación nueva; la sesión OAuth del CLI no puede aprobarla.
 - El store sobrevive nuevas instancias del scheduler y reinicios del proceso.
 - Varios workers, incluso instancias que reutilizan un \`workerId\` después de
   reiniciar, pueden llamar \`runDue()\` contra el mismo store.
-- \`runDue()\` intenta una vez cada job vencido al inicio de esa llamada. Un job
-  que falla queda pendiente para una llamada posterior y no bloquea otros jobs.
-- Cada ejecución debe reclamarse atómicamente antes de llamar al executor. El
-  claim dura 30 segundos y necesita una identidad única distinta de
-  \`workerId\`. Cuando \`clock.now()\` alcanza el deadline, otro worker puede
-  reclamarlo. Un worker obsoleto nunca puede completar ni reabrir un claim más
-  nuevo.
+- \`runDue()\` reclama un job antes de llamar al executor. Un job que falla
+  queda pendiente para una llamada posterior y no bloquea otros jobs.
+- Cada ejecución debe reclamarse atómicamente. El claim dura 30 segundos.
+  Cuando \`clock.now()\` alcanza ese deadline, otro worker puede reclamar el
+  job. Un worker que ya no es dueño del claim, incluido un proceso que vuelve
+  con el mismo \`workerId\`, no puede completarlo, marcarlo como fallido ni
+  reabrirlo.
 - Un intento se cuenta al reclamar el job. Después de 3 ejecuciones fallidas el
   job queda failed.
 - \`execute(job)\` puede fallar antes o después de aplicar el efecto. El adapter
@@ -296,24 +296,13 @@ ofrece operaciones síncronas \`get(id)\`, \`put(job)\`, \`delete(id)\` y
 
 ## Evaluación
 
-El evaluador usa variantes determinísticas por participante para probar el
-contrato bajo concurrencia, reinicios, fallas, idempotencia, compatibilidad y
-carga. Reporta puntajes por capacidad, no casos ocultos individuales.
-
-- Comportamiento base: 10 puntos
-- Persistencia: 15 puntos
-- Concurrencia: 20 puntos
-- Recuperación ante fallas: 20 puntos
-- Idempotencia: 15 puntos
-- Seguridad contra regresiones: 15 puntos
-- Rendimiento: 5 puntos, solo si la carga termina correctamente y sin perder
-  seguridad de concurrencia
+El evaluador usa variantes determinísticas por participante. El veredicto
+oficial es un solo puntaje sobre 100. No incluye casos ocultos, un desglose por
+capacidad ni un costo de ejecución.
 
 El ranking exige una postulación enviada o revisada. Ordena por puntaje total,
-menos evaluaciones oficiales, costo determinístico de ejecución y hora del mejor
-envío. El costo es \`transacciones + ceil(jobs recorridos por tx.list / 10)\` en
-una carga equivalente para todos; no usa tiempo de servidor. Todos los puntajes
-válidos aparecen en el ranking.
+luego por menos evaluaciones oficiales y, al final, por la hora del mejor
+envío. Todos los puntajes válidos aparecen en el ranking.
 `;
 
 export const brokenAgentPublicTestSource = `const test = require("node:test");
